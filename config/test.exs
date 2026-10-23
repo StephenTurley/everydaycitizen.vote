@@ -41,3 +41,17 @@ config :phoenix_live_view,
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# Federal adapter: no rate limiting, no network, fast retries
+config :the_floor, :federal_rate_limits,
+  congress_gov: 0,
+  govinfo: 0,
+  house_docs: 0,
+  senate_gov: 0
+
+config :the_floor, :congress_gov_api_key, "test-key"
+
+config :the_floor, :federal_req_options,
+  plug: {Req.Test, TheFloor.Federal},
+  retry_delay: 0,
+  retry_log_level: false

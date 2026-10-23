@@ -50,3 +50,6 @@ needed for M1 coverage checks; it lands with the redline engine in M4.
 Unique index on (person_id, body_id, role, start_date) uses `NULLS NOT DISTINCT`
 (PG >= 15) so undated committee memberships upsert instead of duplicating.
 Known limitation: members who leave a committee are not end-dated in M1.
+
+## 2026-10-23 — Federal rate limiters live in an adapter supervisor
+`TheFloor.Adapters.Federal.Supervisor` starts the named limiters (intervals from `:federal_rate_limits`); `application.ex` only lists it, and `Ingest.RateLimiter` stays generic. Keeps the jurisdiction boundary intact.
