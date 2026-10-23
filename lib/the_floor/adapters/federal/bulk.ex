@@ -26,9 +26,9 @@ defmodule TheFloor.Adapters.Federal.Bulk do
       path =
         Path.join(System.tmp_dir!(), "the_floor-bulk-#{System.unique_integer([:positive])}.zip")
 
-      File.write!(path, raw)
-
       try do
+        File.write!(path, raw)
+
         case :zip.zip_open(String.to_charlist(path), [:memory]) do
           {:ok, handle} ->
             zip = %Zip{
@@ -58,9 +58,14 @@ defmodule TheFloor.Adapters.Federal.Bulk do
 
   @doc """
   Folds `fun.({name, bytes, source}, acc)` over the zip's `.xml` entries, in
-  archive order, reading one entry into memory at a time.
+  archive order, reading one entry into memory at a time. An entry that cannot be
+  read is passed as `{name, {:error, reason}, nil}`.
   """
-  @spec reduce_entries(Zip.t(), acc, ({String.t(), binary(), SourceRef.t()}, acc -> acc)) :: acc
+  @spec reduce_entries(
+          Zip.t(),
+          acc,
+          ({String.t(), binary() | {:error, term()}, SourceRef.t() | nil}, acc -> acc)
+        ) :: acc
         when acc: term()
   def reduce_entries(%Zip{handle: handle} = zip, acc, fun) do
     {:ok, listing} = :zip.zip_list_dir(handle)
@@ -70,9 +75,14 @@ defmodule TheFloor.Adapters.Federal.Bulk do
         String.ends_with?(name, ".xml"),
         reduce: acc do
       acc ->
-        {:ok, {_, bytes}} = :zip.zip_get(String.to_charlist(name), handle)
-        source = SourceRef.new(zip.base_url <> Path.basename(name), bytes, zip.fetched_at)
-        fun.({Path.basename(name), bytes, source}, acc)
+        case :zip.zip_get(String.to_charlist(name), handle) do
+          {:ok, {_, bytes}} ->
+            source = SourceRef.new(zip.base_url <> Path.basename(name), bytes, zip.fetched_at)
+            fun.({Path.basename(name), bytes, source}, acc)
+
+          {:error, reason} ->
+            fun.({Path.basename(name), {:error, reason}, nil}, acc)
+        end
     end
   end
 end

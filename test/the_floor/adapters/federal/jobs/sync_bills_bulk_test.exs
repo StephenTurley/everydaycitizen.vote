@@ -102,6 +102,28 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillsBulkTest do
     assert run.stats["fallback"] == 1
   end
 
+  test "an entry that raises falls back to the API and the run continues" do
+    # textVersions with a non-item child reads as a map, which the fix-up cannot walk.
+    raising = """
+    <billStatus><bill><number>8</number><type>HR</type><congress>119</congress>
+    <title>T</title><textVersions><odd><url>x</url></odd></textVersions></bill></billStatus>
+    """
+
+    stub(%{
+      @hr_zip =>
+        zip([
+          {"BILLSTATUS-119hr8.xml", raising},
+          {"BILLSTATUS-119hr22.xml", File.read!(@bulk_fixture)}
+        ])
+    })
+
+    assert :ok = perform_job(SyncBills, %{"congress" => 119})
+    assert Repo.get_by(Bill, external_id: "119-hr-22")
+
+    assert [%{args: %{"type" => "hr", "number" => "8"}}] = all_enqueued(worker: SyncBill)
+    assert Provenance.last_succeeded_run("federal", "sync_bills").stats["fallback"] == 1
+  end
+
   test "a later run uses the API listing with the cursor" do
     {:ok, run} = Provenance.start_run("federal", "sync_bills")
     {:ok, _} = Provenance.finish_run(run, :succeeded, %{}, nil)

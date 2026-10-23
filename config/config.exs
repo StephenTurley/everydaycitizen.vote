@@ -44,7 +44,9 @@ config :the_floor, Oban,
   queues: [ingest: 4, text: 2],
   plugins: [
     # Rescue jobs left executing by a crashed node; prune finished jobs after a week.
-    {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(30)},
+    # rescue_after must exceed every worker's timeout (the bulk bill and text
+    # backfills allow 90 minutes), or a still-running job would be started twice.
+    {Oban.Plugins.Lifeline, rescue_after: :timer.hours(2)},
     {Oban.Plugins.Pruner, max_age: 7 * 24 * 60 * 60},
     {Oban.Plugins.Cron,
      timezone: "America/New_York",

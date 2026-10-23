@@ -60,4 +60,19 @@ defmodule TheFloor.Adapters.Federal.BulkTest do
     stub(404, "nope")
     assert {:error, {:http_status, 404}} = Bulk.with_zip(@url, fn _ -> flunk("called") end)
   end
+
+  # Lifeline makes a job still `executing` after `rescue_after` runnable again, even
+  # if it is still running; a bulk job must time out first, or two copies would run.
+  test "bulk jobs time out before Lifeline would rescue them" do
+    plugins = Config.Reader.read!("config/config.exs", env: :prod)[:the_floor][Oban][:plugins]
+    {_, opts} = List.keyfind(plugins, Oban.Plugins.Lifeline, 0)
+
+    for worker <- [
+          TheFloor.Adapters.Federal.Jobs.SyncBills,
+          TheFloor.Adapters.Federal.Jobs.BackfillBillText
+        ] do
+      timeout = worker.timeout(%Oban.Job{args: %{}})
+      assert is_integer(timeout) and timeout < opts[:rescue_after], inspect(worker)
+    end
+  end
 end

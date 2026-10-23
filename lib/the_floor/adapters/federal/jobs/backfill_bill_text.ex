@@ -17,6 +17,11 @@ defmodule TheFloor.Adapters.Federal.Jobs.BackfillBillText do
   @bulk "https://www.govinfo.gov/bulkdata/BILLS"
   @types ~w(hr s hjres sjres hconres sconres hres sres)
 
+  # The bulk load runs for minutes; it must end before Lifeline (2 h) would
+  # treat it as orphaned and start it again.
+  @impl Oban.Worker
+  def timeout(_job), do: :timer.minutes(90)
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
     congress = args["congress"] || Application.fetch_env!(:the_floor, :federal)[:congress]
@@ -56,17 +61,28 @@ defmodule TheFloor.Adapters.Federal.Jobs.BackfillBillText do
     end
   end
 
+  # A version whose entry is unreadable, unparseable or fails to store (raised or
+  # returned) stays in `missing` and falls back to `SyncBillText`.
+  defp entry({_name, {:error, _}, nil}, acc), do: acc
+
   defp entry({name, xml, source}, {missing, stored} = acc) do
     with {:ok, key} <- version_key(name),
          true <- MapSet.member?(missing, key),
          false <- HTTP.html?(xml),
-         {:ok, text} <- XmlText.plain_text(xml) do
-      {bill_id, code} = key
-      :ok = SyncBillText.store(xml, text, source, bill_id, code)
+         {:ok, text} <- XmlText.plain_text(xml),
+         :ok <- store(xml, text, source, key) do
       {MapSet.delete(missing, key), stored + 1}
     else
       _ -> acc
     end
+  end
+
+  defp store(xml, text, source, {bill_id, code} = key) do
+    SyncBillText.store(xml, text, source, bill_id, code)
+  rescue
+    e ->
+      Logger.warning("backfill_bill_text: #{inspect(key)} not stored: #{Exception.message(e)}")
+      :error
   end
 
   # `BILLS-119hr152ih.xml` -> {"119-hr-152", "ih"}

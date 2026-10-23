@@ -28,6 +28,11 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBills do
   @bulk "https://www.govinfo.gov/bulkdata/BILLSTATUS"
   @types ~w(hr s hjres sjres hconres sconres hres sres)
 
+  # The bulk load runs for minutes; it must end before Lifeline (2 h) would
+  # treat it as orphaned and start it again.
+  @impl Oban.Worker
+  def timeout(_job), do: :timer.minutes(90)
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
     congress = args["congress"] || Application.fetch_env!(:the_floor, :federal)[:congress]
@@ -103,15 +108,28 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBills do
     end
   end
 
+  # Any failure on one entry, raised or returned, falls back to the API for that
+  # bill, so a single bad file never blocks the backfill.
   defp entry({name, xml, source}, acc, congress, run_id) do
-    with {:ok, parts} <- BillStatus.parse(xml),
-         {:ok, _id} <- BillWriter.write(bulk_parts(parts, source), run_id) do
-      %{acc | written: acc.written + 1}
-    else
+    case write_entry(xml, source, run_id) do
+      :ok ->
+        %{acc | written: acc.written + 1}
+
       error ->
         Logger.warning("sync_bills: bulk entry #{name} failed (#{inspect(error)}); using the API")
         fallback(name, congress, run_id, acc)
     end
+  end
+
+  defp write_entry({:error, _} = error, _source, _run_id), do: error
+
+  defp write_entry(xml, source, run_id) do
+    with {:ok, parts} <- BillStatus.parse(xml),
+         {:ok, _id} <- BillWriter.write(bulk_parts(parts, source), run_id) do
+      :ok
+    end
+  rescue
+    e -> {:exception, Exception.message(e)}
   end
 
   defp bulk_parts(parts, source) do
