@@ -62,3 +62,6 @@ Known limitation: members who leave a committee are not end-dated in M1.
 
 ## 2026-10-23 — Votes keep unknown people; events keep unresolved bill labels and raw status
 `vote_positions.person_id` is nullable: positions for people not yet ingested are saved with `raw_label` rather than failing the vote, and a vote's positions are replaced as a set (delete then insert in one transaction). A vote with an unknown bill saves `bill_id: nil`; an unknown body or session is an error. Events link resolved bills through `event_bills` (replaced as a set) and store everything unresolved (adapter raw labels plus ids not found) in `unresolved_bill_labels`. `events.status` keeps the raw source status so cancelled events retain their row.
+
+## 2026-10-23 — Federal session = congress; sub-sessions for vote numbering
+A federal legislative session is the congress (`119`); each congressional session is a child session (`119-1`, `119-2`) because roll-call numbering restarts per session. Sub-session dates are the earliest start / latest end across chambers; the congress is open-ended while any session is. Every list-level job runs inside `Federal.Job.run/2`, which records the ingest run and never advances the cursor on failure.
