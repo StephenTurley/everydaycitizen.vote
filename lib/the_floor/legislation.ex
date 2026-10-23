@@ -43,4 +43,16 @@ defmodule TheFloor.Legislation do
     |> limit(^limit)
     |> Repo.all()
   end
+
+  @doc "`{bill_external_id, code}` of every version in the jurisdiction with no text stored."
+  @spec version_keys_missing_text(String.t()) :: [{String.t(), String.t()}]
+  def version_keys_missing_text(jurisdiction_key) do
+    BillVersion
+    |> join(:inner, [v], b in Bill, on: b.id == v.bill_id)
+    |> join(:inner, [_v, b], j in Jurisdiction, on: j.id == b.jurisdiction_id)
+    |> where([v, _b, j], j.key == ^jurisdiction_key and is_nil(v.text_source_id))
+    |> order_by([v], asc: v.id)
+    |> select([v, b], {b.external_id, v.code})
+    |> Repo.all()
+  end
 end

@@ -52,7 +52,8 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillText do
     end
   end
 
-  defp store(xml, text, source, bill_id, code) do
+  @doc "Stores a version's XML and plain text with the source they came from."
+  def store(xml, text, source, bill_id, code) do
     {:ok, _} =
       Ingest.write(
         %BillVersionText{
