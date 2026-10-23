@@ -86,10 +86,11 @@ defmodule TheFloor.Adapters.Federal.Normalize.Bill do
   @doc "Builds version metadata from the `textVersions` list; entries without a package code are dropped."
   @spec versions([map()], String.t(), SourceRef.t()) :: [BillVersion.t()]
   def versions(text_versions, bill_external_id, %SourceRef{} = source) do
+    # Bindings via a one-element generator: a bare `x = nil` in `for` is a
+    # filter and would drop versions that lack one of the formats.
     for v <- text_versions,
         formats = Map.new(v["formats"] || [], &{&1["type"], &1["url"]}),
-        xml_url = formats["Formatted XML"],
-        text_url = formats["Formatted Text"],
+        {xml_url, text_url} <- [{formats["Formatted XML"], formats["Formatted Text"]}],
         code = code(xml_url || text_url),
         not is_nil(code) do
       %BillVersion{
