@@ -11,7 +11,6 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncCommitteeMeetings do
 
   alias TheFloor.Adapters.Federal.{CongressGov, Job}
   alias TheFloor.Adapters.Federal.Jobs.SyncCommitteeMeeting
-  alias TheFloor.Adapters.Federal.Normalize.CommitteeMeeting
   alias TheFloor.Calendar
 
   @chambers ["house", "senate"]
@@ -44,10 +43,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncCommitteeMeetings do
   defp list(congress, chamber, cursor) do
     "/committee-meeting/#{congress}/#{chamber}"
     |> CongressGov.paginate("committeeMeetings", from_param(cursor))
-    |> Enum.flat_map(fn {item, _source} ->
-      CommitteeMeeting.list(%{"committeeMeetings" => [item]})
-    end)
-    |> Enum.map(&{chamber, &1.event_id})
+    |> Enum.map(fn {item, _source} -> {chamber, item["eventId"]} end)
   end
 
   defp from_param(nil), do: []

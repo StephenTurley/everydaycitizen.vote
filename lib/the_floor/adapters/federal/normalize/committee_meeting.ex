@@ -3,8 +3,8 @@ defmodule TheFloor.Adapters.Federal.Normalize.CommitteeMeeting do
   Normalizes Congress.gov `committee-meeting` JSON (House and Senate) into a
   `Records.Event`.
 
-  * `list/1` reads a `/committee-meeting/{congress}/{chamber}` listing.
-  * `event/2` reads one meeting detail document.
+  `event/2` reads one meeting detail document. A missing or unparseable `date`
+  gives `start_at: nil`; the job skips such meetings.
 
   Type mapping: `Hearing`, `Open Hearing` and `Closed Hearing` are hearings,
   `Markup` is a markup, everything else (`Meeting`, `Open Business Meeting`, ...)
@@ -25,20 +25,6 @@ defmodule TheFloor.Adapters.Federal.Normalize.CommitteeMeeting do
     "Closed Hearing" => "hearing",
     "Markup" => "markup"
   }
-
-  @doc "`%{chamber, event_id, updated_at}` for each item of a meeting listing."
-  @spec list(map()) :: [
-          %{chamber: String.t(), event_id: String.t(), updated_at: DateTime.t() | nil}
-        ]
-  def list(body) do
-    for item <- Map.get(body, "committeeMeetings", []) do
-      %{
-        chamber: String.downcase(item["chamber"]),
-        event_id: item["eventId"],
-        updated_at: parse_datetime(item["updateDate"])
-      }
-    end
-  end
 
   @doc "External id of a committee meeting."
   @spec external_id(String.t()) :: String.t()
@@ -96,10 +82,12 @@ defmodule TheFloor.Adapters.Federal.Normalize.CommitteeMeeting do
     |> then(fn {linked, raw} -> {Enum.reverse(linked), Enum.reverse(raw)} end)
   end
 
-  defp parse_datetime(nil), do: nil
-
-  defp parse_datetime(string) do
-    {:ok, datetime, _offset} = DateTime.from_iso8601(string)
-    datetime
+  defp parse_datetime(string) when is_binary(string) do
+    case DateTime.from_iso8601(string) do
+      {:ok, datetime, _offset} -> datetime
+      _ -> nil
+    end
   end
+
+  defp parse_datetime(_), do: nil
 end

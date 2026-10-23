@@ -7,6 +7,8 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncCommitteeMeeting do
   """
   use Oban.Worker, queue: :ingest, max_attempts: 5
 
+  require Logger
+
   alias TheFloor.Adapters.Federal.CongressGov
   alias TheFloor.Adapters.Federal.Normalize.CommitteeMeeting
   alias TheFloor.Ingest
@@ -17,11 +19,18 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncCommitteeMeeting do
         args: %{"congress" => congress, "chamber" => chamber, "event_id" => id} = args
       }) do
     with {:ok, detail, source} <-
-           CongressGov.get("/committee-meeting/#{congress}/#{chamber}/#{id}"),
-         event = known_body(CommitteeMeeting.event(detail, source)),
-         {:ok, _event} <- Ingest.write(event, args["run_id"]) do
-      :ok
+           CongressGov.get("/committee-meeting/#{congress}/#{chamber}/#{id}") do
+      write(CommitteeMeeting.event(detail, source), id, args["run_id"])
     end
+  end
+
+  defp write(%{start_at: nil}, id, _run_id) do
+    Logger.warning("Skipping committee meeting #{id}: missing or invalid date")
+    :ok
+  end
+
+  defp write(event, _id, run_id) do
+    with {:ok, _event} <- Ingest.write(known_body(event), run_id), do: :ok
   end
 
   defp known_body(%{body_external_id: nil} = event), do: event

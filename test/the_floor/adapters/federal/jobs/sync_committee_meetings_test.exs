@@ -71,6 +71,24 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncCommitteeMeetingsTest do
       assert Enum.sort(event.unresolved_bill_labels) == ["119-hr-8340", "119-hr-8467"]
     end
 
+    @tag :capture_log
+    test "a meeting without a date is skipped with a warning, not failed" do
+      detail = @dir |> Path.join("committee_meeting_house_118809.json") |> File.read!()
+
+      detail =
+        detail |> Jason.decode!() |> update_in(["committeeMeeting"], &Map.delete(&1, "date"))
+
+      Req.Test.stub(TheFloor.Federal, fn conn -> Req.Test.json(conn, detail) end)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok = perform_job(SyncCommitteeMeeting, args("house", "118809"))
+        end)
+
+      assert log =~ "118809"
+      assert Repo.aggregate(Event, :count) == 0
+    end
+
     test "a canceled meeting is kept with its status" do
       stub_detail("house_118405")
       assert :ok = perform_job(SyncCommitteeMeeting, args("house", "118405"))

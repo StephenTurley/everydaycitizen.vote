@@ -10,12 +10,6 @@ defmodule TheFloor.Adapters.Federal.Normalize.CommitteeMeetingTest do
   defp source, do: SourceRef.new("https://example.test/meeting.json", "x")
   defp event(name), do: CommitteeMeeting.event(json("committee_meeting_#{name}.json"), source())
 
-  test "list/1 returns chamber, event id and update date per item" do
-    assert [first | _] = items = CommitteeMeeting.list(json("committee_meeting_list.json"))
-    assert length(items) == 3
-    assert %{chamber: "senate", event_id: "338781", updated_at: ~U[2026-09-30 16:08:20Z]} = first
-  end
-
   test "a House hearing" do
     assert %Event{} = event = event("house_118809")
     assert event.jurisdiction == "federal"
@@ -86,5 +80,13 @@ defmodule TheFloor.Adapters.Federal.Normalize.CommitteeMeetingTest do
     detail = json("committee_meeting_house_118809.json")
     detail = update_in(detail, ["committeeMeeting"], &Map.delete(&1, "location"))
     assert CommitteeMeeting.event(detail, source()).location == nil
+  end
+
+  test "a missing or unparseable date gives a nil start_at" do
+    detail = json("committee_meeting_house_118809.json")
+    missing = update_in(detail, ["committeeMeeting"], &Map.delete(&1, "date"))
+    bad = put_in(detail, ["committeeMeeting", "date"], "soon")
+    assert CommitteeMeeting.event(missing, source()).start_at == nil
+    assert CommitteeMeeting.event(bad, source()).start_at == nil
   end
 end
