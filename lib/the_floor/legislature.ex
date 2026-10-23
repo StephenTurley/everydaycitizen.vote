@@ -24,6 +24,17 @@ defmodule TheFloor.Legislature do
     |> Repo.one()
   end
 
+  @doc "Sessions nested directly under the session with the given identifier."
+  @spec child_sessions(String.t(), String.t()) :: [Session.t()]
+  def child_sessions(jurisdiction_key, parent_identifier) do
+    Session
+    |> join(:inner, [s], j in Jurisdiction, on: j.id == s.jurisdiction_id)
+    |> join(:inner, [s], p in Session, on: p.id == s.parent_id)
+    |> where([s, j, p], j.key == ^jurisdiction_key and p.identifier == ^parent_identifier)
+    |> order_by([s], s.identifier)
+    |> Repo.all()
+  end
+
   @spec get_person_by_identifier(String.t(), String.t()) :: Person.t() | nil
   def get_person_by_identifier(scheme, value) do
     Person

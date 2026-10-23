@@ -28,6 +28,13 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncSenateVoteTest do
       source: src()
     })
 
+    write!(%Records.LegislativeSession{
+      jurisdiction: "federal",
+      identifier: "119-2",
+      parent_identifier: "119",
+      source: src()
+    })
+
     write!(%Records.Body{
       jurisdiction: "federal",
       external_id: "senate",
@@ -100,6 +107,40 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncSenateVoteTest do
     assert TheFloor.Provenance.last_succeeded_run("federal", "sync_senate_votes")
   end
 
+  test "without a session arg every stored session of the congress is synced" do
+    Req.Test.stub(TheFloor.Federal, fn conn ->
+      count = if conn.request_path =~ "vote_menu_119_1", do: 2, else: 3
+      Plug.Conn.send_resp(conn, 200, menu_xml(count))
+    end)
+
+    assert :ok = perform_job(SyncSenateVotes, %{})
+
+    pairs =
+      for %{args: %{"session" => s, "roll" => r}} <- all_enqueued(worker: SyncSenateVote),
+          do: {s, r}
+
+    assert Enum.sort(pairs) == [{1, 1}, {1, 2}, {2, 1}, {2, 2}, {2, 3}]
+  end
+
+  test "with a session arg only that session is synced" do
+    Req.Test.stub(TheFloor.Federal, fn conn ->
+      assert conn.request_path =~ "vote_menu_119_2"
+      Plug.Conn.send_resp(conn, 200, menu_xml(1))
+    end)
+
+    assert :ok = perform_job(SyncSenateVotes, %{"session" => 2})
+    assert [%{args: %{"session" => 2, "roll" => 1}}] = all_enqueued(worker: SyncSenateVote)
+  end
+
+  defp menu_xml(count) do
+    votes =
+      for n <- count..1//-1 do
+        "<vote><vote_number>#{String.pad_leading("#{n}", 5, "0")}</vote_number></vote>"
+      end
+
+    "<vote_summary><votes>#{Enum.join(votes)}</votes></vote_summary>"
+  end
+
   defp stub_vote(file) do
     Req.Test.stub(TheFloor.Federal, fn conn ->
       Plug.Conn.send_resp(conn, 200, File.read!(Path.join(@dir, file)))
@@ -107,12 +148,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncSenateVoteTest do
   end
 
   defp stub_menu(count) do
-    votes =
-      for n <- count..1//-1 do
-        "<vote><vote_number>#{String.pad_leading("#{n}", 5, "0")}</vote_number></vote>"
-      end
-
-    xml = "<vote_summary><votes>#{Enum.join(votes)}</votes></vote_summary>"
+    xml = menu_xml(count)
     Req.Test.stub(TheFloor.Federal, fn conn -> Plug.Conn.send_resp(conn, 200, xml) end)
   end
 

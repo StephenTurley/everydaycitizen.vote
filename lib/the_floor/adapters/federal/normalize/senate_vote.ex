@@ -30,6 +30,10 @@ defmodule TheFloor.Adapters.Federal.Normalize.SenateVote do
     |> Enum.map(fn vote -> vote |> text("vote_number") |> String.to_integer() end)
   end
 
+  @doc "External id of a Senate roll-call vote."
+  @spec external_id(integer() | String.t(), integer() | String.t(), integer()) :: String.t()
+  def external_id(congress, session, roll), do: "senate-#{congress}-#{session}-#{roll}"
+
   @spec vote(binary(), SourceRef.t()) :: Vote.t()
   def vote(xml, %SourceRef{} = source) do
     root = parse!(xml)
@@ -42,7 +46,7 @@ defmodule TheFloor.Adapters.Federal.Normalize.SenateVote do
       jurisdiction: "federal",
       body_external_id: "senate",
       session_identifier: "#{congress}-#{session}",
-      external_id: "senate-#{congress}-#{session}-#{roll}",
+      external_id: external_id(congress, session, roll),
       identifier: "Roll Call #{roll}",
       question: blank_to_nil(text(root, "question")),
       result: result,
