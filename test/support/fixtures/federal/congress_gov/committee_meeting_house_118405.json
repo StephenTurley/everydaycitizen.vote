@@ -1,0 +1,31 @@
+{
+  "committeeMeeting": {
+    "chamber": "House",
+    "committees": [
+      {
+        "name": "House Education and Workforce Subcommittee on Higher Education and Workforce Development",
+        "systemCode": "hsed13",
+        "url": "https://api.congress.gov/v3/committee/house/hsed13?format=json"
+      }
+    ],
+    "congress": 119,
+    "date": "2025-06-24T18:00:00Z",
+    "eventId": "118405",
+    "isManuallyCurated": true,
+    "location": {
+      "building": "Longworth House Office Building",
+      "room": "1324"
+    },
+    "meetingStatus": "Canceled",
+    "title": "\"Enhancing Educational Outcomes in Indian Country: Postsecondary Education at the Bureau of Indian Education\"",
+    "type": "Meeting",
+    "updateDate": "2026-10-19T15:27:53Z"
+  },
+  "request": {
+    "chamber": "house",
+    "congress": "119",
+    "contentType": "application/json",
+    "eventId": "118405",
+    "format": "json"
+  }
+}

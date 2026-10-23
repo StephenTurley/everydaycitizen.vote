@@ -1,0 +1,52 @@
+{
+  "committeeMeeting": {
+    "chamber": "Senate",
+    "committees": [
+      {
+        "name": "Senate Commerce, Science, and Transportation",
+        "systemCode": "sscm00",
+        "url": "https://api.congress.gov/v3/committee/senate/sscm00?format=json"
+      }
+    ],
+    "congress": 119,
+    "date": "2026-09-16T14:00:00Z",
+    "eventId": "338749",
+    "location": {
+      "building": "Russell Senate Office Building",
+      "room": "253"
+    },
+    "meetingStatus": "Scheduled",
+    "relatedItems": {
+      "bills": [
+        {
+          "congress": 119,
+          "number": "7022",
+          "type": "HR",
+          "url": "https://api.congress.gov/v3/bill/119/hr/7022?format=json"
+        },
+        {
+          "congress": 119,
+          "number": "2586",
+          "type": "S",
+          "url": "https://api.congress.gov/v3/bill/119/s/2586?format=json"
+        },
+        {
+          "congress": 119,
+          "number": "3467",
+          "type": "S",
+          "url": "https://api.congress.gov/v3/bill/119/s/3467?format=json"
+        }
+      ]
+    },
+    "title": "Business meeting to consider S.3467, to reauthorize the Virginia Graeme Baker Pool and Spa Safety Act, S.3929, to require the Administrator of the Federal Aviation Administration to acquire and install certified airborne position reference tools at air traffic control towers, S.4573, to designate the Great Lakes Commission as a Regional Great Lakes Partnership, S.4749, to amend the Communications Act of 1934 to create a Federal cause of action to address jawboning, S.4938, to reduce trawl gear impacts on bycatch and seafloor habitat in the Bering Sea, Aleutian Islands, and Gulf of Alaska, to establish gear performance standards, seafloor contact detection, and salmon excluder requirements, to improve Council transparency and participation, to prioritize ecosystem analyses, to modernize electronic monitoring, to prohibit unsustainable foreign seafood imports, and to establish a Bycatch Mitigation and Habitat Protection Assistance Fund, S.4950, to amend the National Telecommunications and Information Administration Organization Act to codify the Institute for Telecommunication Sciences, to direct the Assistant Secretary of Commerce for Communications and Information to establish an initiative to support the development of emergency communication and tracking technologies, S.5188, to amend the Professional Boxing Safety Act of 1996 to establish requirements for unified boxing organizations and to further enhance the well-being of professional boxers, S.5224, to improve training for airport drivers in the movement area at commercial service airports through the establishment of a task force and the use of technology, H.R.7022, to provide for the transmission of emergency alerts by satellite, and promotions in the Coast Guard.",
+    "type": "Open Business Meeting",
+    "updateDate": "2026-09-15T22:38:23Z"
+  },
+  "request": {
+    "chamber": "senate",
+    "congress": "119",
+    "contentType": "application/json",
+    "eventId": "338749",
+    "format": "json"
+  }
+}

@@ -83,3 +83,7 @@ Senate roll calls are parsed from senate.gov XML with `Saxy.SimpleForm`; positio
 
 ## 2026-10-23 — House votes: members-sourced provenance, candidate votes as present, shared vote helpers
 House roll calls come from the Congress.gov `house-vote` detail and `/members` endpoints; the vote's `SourceRef` is the members response (positions dominate). Counts are the `votePartyTotal` entries summed (Speaker-election votes carry per-candidate totals, counted as `present`, and each candidate vote maps to `present` with the raw name kept). `startDate` has an explicit offset so it is converted to UTC directly. The list job enqueues unstored rolls plus rolls whose `updateDate` is at or after the cursor. Result-to-`passed` heuristics and Eastern-time conversion moved to `Federal.VoteSupport`, and session fan-out to `Federal.Sessions`, shared with the Senate jobs.
+
+## 2026-10-23 — Committee calendars from Congress.gov committee-meeting
+
+Committee calendars come from Congress.gov `committee-meeting` (both chambers, typed) instead of docs.house.gov + senate.gov: one primary source, one normalizer. Hearing/Open Hearing/Closed Hearing map to `hearing`, Markup to `markup`, other types (Meeting, Open Business Meeting) to `other` with the raw type kept; source status is stored lowercased and canceled meetings keep their row. Meetings in the next 14 days are re-fetched each run (their chamber is read from the stored source URL).
