@@ -11,6 +11,9 @@ config :the_floor,
   ecto_repos: [TheFloor.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# Time zone database (Senate vote times are America/New_York)
+config :elixir, :time_zone_database, Tz.TimeZoneDatabase
+
 # Configure the endpoint
 config :the_floor, TheFloorWeb.Endpoint,
   url: [host: "localhost"],

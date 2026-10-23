@@ -50,6 +50,7 @@ defmodule TheFloor.MixProject do
       {:lazy_html, ">= 0.1.0"},
       {:oban, "~> 2.20"},
       {:saxy, "~> 1.6"},
+      {:tz, "~> 0.28"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_live_dashboard, "~> 0.8.3"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
