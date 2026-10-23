@@ -55,4 +55,22 @@ defmodule TheFloor.Legislation do
     |> select([v, b], {b.external_id, v.code})
     |> Repo.all()
   end
+
+  @doc """
+  `{date, description}` of every action on the session's bills in the jurisdiction
+  whose description contains `text`.
+  """
+  @spec actions_containing(String.t(), String.t(), String.t()) :: [{Date.t() | nil, String.t()}]
+  def actions_containing(jurisdiction_key, session_identifier, text) do
+    pattern = "%" <> String.replace(text, ~w(\\ % _), &("\\" <> &1)) <> "%"
+
+    BillAction
+    |> join(:inner, [a], b in Bill, on: b.id == a.bill_id)
+    |> join(:inner, [_a, b], s in assoc(b, :session))
+    |> join(:inner, [_a, b], j in Jurisdiction, on: j.id == b.jurisdiction_id)
+    |> where([a, _b, s, j], j.key == ^jurisdiction_key and s.identifier == ^session_identifier)
+    |> where([a], like(a.description, ^pattern))
+    |> select([a], {a.date, a.description})
+    |> Repo.all()
+  end
 end

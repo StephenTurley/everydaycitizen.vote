@@ -29,7 +29,8 @@ defmodule TheFloor.Adapters.Federal.FullIngestTest do
 
   @house_people ~w(R000614 G000597 M000317 F000475 C001116 H001077
                    A000055 A000148 A000369 A000370 B001281 D000600)
-  @senators ~w(S428 S275 S288 S348)
+  # Senators who cast votes in roll call 1 of the Voteview fixture.
+  @senators ~w(G000386 M000133 S000148 W000779)
 
   setup do
     Req.Test.stub(TheFloor.Federal, &respond/1)
@@ -61,8 +62,8 @@ defmodule TheFloor.Adapters.Federal.FullIngestTest do
     assert Enum.all?(house_vote.positions, & &1.person_id)
 
     senate_vote = Repo.get_by!(Vote, external_id: "senate-119-1-1") |> Repo.preload(:positions)
-    assert senate_vote.positions != []
-    assert Enum.all?(senate_vote.positions, & &1.person_id)
+    linked = senate_vote.positions |> Enum.filter(& &1.person_id) |> length()
+    assert linked == length(@senators)
 
     meeting = Repo.get_by!(Event, external_id: "meeting-118405")
     assert meeting.body_id
@@ -70,6 +71,7 @@ defmodule TheFloor.Adapters.Federal.FullIngestTest do
     names = Repo.all(from c in CoverageCheck, select: c.name)
     assert "votes:house:119-1" in names
     assert "votes:senate:119-1" in names
+    assert "votes:senate:tallies" in names
     assert "bills:119" in names
   end
 
@@ -123,14 +125,17 @@ defmodule TheFloor.Adapters.Federal.FullIngestTest do
   defp respond(%Plug.Conn{host: "docs.house.gov"} = conn),
     do: reply(conn, 200, "<!DOCTYPE html><html><body>No schedule</body></html>")
 
-  defp respond(%Plug.Conn{host: "www.senate.gov", request_path: path} = conn) do
-    cond do
-      path =~ "vote_menu_119_1.xml" -> reply(conn, 200, menu([1]))
-      path =~ "vote_menu_119_2.xml" -> reply(conn, 200, menu([]))
-      path =~ "vote_119_1_00001.xml" -> reply(conn, 200, read("senate/vote_119_1_00001.xml"))
-      path =~ "floor_schedule" -> reply(conn, 200, read("senate/floor_schedule_SYNTHETIC.htm"))
-      true -> reply(conn, 404, "")
+  defp respond(%Plug.Conn{host: "voteview.com", request_path: path} = conn) do
+    case Regex.run(~r{/(rollcalls|votes|members)/S119_\1\.csv$}, path) do
+      [_, kind] -> reply(conn, 200, read("voteview/S119_#{kind}.csv"))
+      _ -> reply(conn, 404, "")
     end
+  end
+
+  defp respond(%Plug.Conn{host: "www.senate.gov", request_path: path} = conn) do
+    if path =~ "floor_schedule",
+      do: reply(conn, 200, read("senate/floor_schedule_SYNTHETIC.htm")),
+      else: reply(conn, 404, "")
   end
 
   defp congress_gov(conn, "/congress/119"), do: reply(conn, 200, cg("congress_119.json"))
@@ -199,8 +204,8 @@ defmodule TheFloor.Adapters.Federal.FullIngestTest do
       end
 
     senators =
-      for {lis, n} <- Enum.with_index(@senators) do
-        legislator(%{bioguide: "S9#{n}0000", lis: lis}, "sen", [])
+      for id <- @senators do
+        legislator(%{bioguide: id}, "sen", [])
       end
 
     reps ++ senators
@@ -219,15 +224,6 @@ defmodule TheFloor.Adapters.Federal.FullIngestTest do
       )
 
     %{id: ids, name: %{first: "First", last: ids.bioguide}, terms: [term]}
-  end
-
-  defp menu(rolls) do
-    votes =
-      Enum.map_join(rolls, fn roll ->
-        "<vote><vote_number>#{String.pad_leading("#{roll}", 5, "0")}</vote_number></vote>"
-      end)
-
-    "<?xml version=\"1.0\"?><vote_summary><votes>#{votes}</votes></vote_summary>"
   end
 
   defp cg(file), do: read("congress_gov/" <> file)

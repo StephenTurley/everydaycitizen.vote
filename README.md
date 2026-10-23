@@ -10,7 +10,11 @@ Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 ## Ingest
 
 The ingest pipeline pulls from Congress.gov, GovInfo, the unitedstates/congress-legislators
-dataset, docs.house.gov and senate.gov. It needs one secret:
+dataset, docs.house.gov, senate.gov (floor schedule) and Voteview (Senate roll-call votes,
+because senate.gov blocks automated clients; see `docs/DECISIONS.md`). Voteview data:
+Lewis, Jeffrey B., Keith Poole, Howard Rosenthal, Adam Boche, Aaron Rudkin, and Luke Sonnet.
+*Voteview: Congressional Roll-Call Votes Database.* https://voteview.com/. It needs one
+secret:
 
 * `CONGRESS_GOV_API_KEY` (free, https://api.congress.gov/sign-up/). Copy `.env.example`
   to `.env` and export it before starting the app; `config/runtime.exs` reads it.

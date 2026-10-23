@@ -4,9 +4,8 @@ defmodule TheFloor.Adapters.Federal.Coverage do
   `expected_fun` asks the source (`{:ok, n} | {:error, reason}`); `actual_fun`
   counts what is stored. Tolerance is a fraction we may lag the source by.
   """
-  alias TheFloor.Adapters.Federal.{CongressGov, HTTP, Sessions}
-  alias TheFloor.Adapters.Federal.Jobs.SyncSenateVotes
-  alias TheFloor.Adapters.Federal.Normalize.SenateVote
+  alias TheFloor.Adapters.Federal.{CongressGov, Sessions, Voteview}
+  alias TheFloor.Adapters.Federal.Normalize.SenateVoteview
   alias TheFloor.{Legislation, Legislature, Votes}
 
   @jurisdiction "federal"
@@ -18,7 +17,9 @@ defmodule TheFloor.Adapters.Federal.Coverage do
 
   @spec checks(integer()) :: [check()]
   def checks(congress) do
-    [bills(congress)] ++ votes("house", congress) ++ votes("senate", congress) ++ members()
+    [bills(congress)] ++
+      votes("house", congress) ++
+      votes("senate", congress) ++ [senate_tallies(congress)] ++ members()
   end
 
   defp bills(congress) do
@@ -49,13 +50,47 @@ defmodule TheFloor.Adapters.Federal.Coverage do
 
   defp expected_votes("senate", congress, session) do
     fn ->
-      with {:ok, %{raw: raw}} <-
-             HTTP.get(SyncSenateVotes.menu_url(congress, session),
-               limiter: :senate_gov,
-               decode: :raw
-             ) do
-        {:ok, raw |> SenateVote.menu() |> length()}
+      with {:ok, csv} <- Voteview.rollcalls(congress) do
+        {:ok, csv |> SenateVoteview.rollcalls() |> Enum.count(&(&1.session == session))}
       end
+    end
+  end
+
+  # Senate votes come from Voteview, a third party; this checks them against an
+  # official source. Senate bill actions print each roll call's tally
+  # ("... by Yea-Nay Vote. 52 - 48. Record Vote Number: 123."), and every such roll
+  # call must be stored with the same yea and nay totals. The tolerance absorbs a
+  # vote recorded on a bill before Voteview has published it.
+  @tally ~r/(\d+)\s*-\s*(\d+)\.\s*Record Vote Number:\s*(\d+)/
+  @tally_tolerance 0.01
+
+  defp senate_tallies(congress) do
+    {"votes:senate:tallies", fn -> {:ok, map_size(recorded_tallies(congress))} end,
+     fn -> matching_tallies(congress) end, @tally_tolerance}
+  end
+
+  defp matching_tallies(congress) do
+    recorded = recorded_tallies(congress)
+    stored = recorded |> Map.keys() |> Votes.tallies()
+    Enum.count(recorded, fn {id, tally} -> stored[id] == tally end)
+  end
+
+  # `%{vote external id => {yea, nay}}` from the Senate tallies in bill actions.
+  defp recorded_tallies(congress) do
+    starts =
+      @jurisdiction
+      |> Legislature.child_sessions("#{congress}")
+      |> Enum.filter(& &1.start_date)
+      |> Enum.sort_by(& &1.start_date, {:desc, Date})
+
+    for {date, text} <-
+          Legislation.actions_containing(@jurisdiction, "#{congress}", "Record Vote Number"),
+        [_, yea, nay, roll] <- [Regex.run(@tally, text)],
+        %{identifier: session} <- [
+          date && Enum.find(starts, &(Date.compare(&1.start_date, date) != :gt))
+        ],
+        into: %{} do
+      {"senate-#{session}-#{roll}", {String.to_integer(yea), String.to_integer(nay)}}
     end
   end
 

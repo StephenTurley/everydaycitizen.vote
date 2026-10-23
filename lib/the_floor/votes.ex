@@ -21,4 +21,14 @@ defmodule TheFloor.Votes do
     |> Repo.all()
     |> MapSet.new()
   end
+
+  @doc "`%{external_id => {yea_count, nay_count}}` for the stored votes among `external_ids`."
+  @spec tallies([String.t()]) :: %{String.t() => {integer(), integer()}}
+  def tallies(external_ids) do
+    Vote
+    |> where([v], v.external_id in ^external_ids)
+    |> select([v], {v.external_id, {v.yea_count, v.nay_count}})
+    |> Repo.all()
+    |> Map.new()
+  end
 end

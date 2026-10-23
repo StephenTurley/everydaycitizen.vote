@@ -47,7 +47,8 @@ config :the_floor, :federal_rate_limits,
   congress_gov: 0,
   govinfo: 0,
   house_docs: 0,
-  senate_gov: 0
+  senate_gov: 0,
+  voteview: 0
 
 config :the_floor, :congress_gov_api_key, "test-key"
 

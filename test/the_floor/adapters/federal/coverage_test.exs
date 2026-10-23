@@ -70,6 +70,7 @@ defmodule TheFloor.Adapters.Federal.CoverageTest do
              "votes:house:119-2",
              "votes:senate:119-1",
              "votes:senate:119-2",
+             "votes:senate:tallies",
              "members:house",
              "members:senate"
            ]
@@ -103,18 +104,19 @@ defmodule TheFloor.Adapters.Federal.CoverageTest do
     assert :ok = perform_job(CoverageJob, %{})
 
     rows = Coverage.latest() |> Map.new(&{&1.name, &1})
-    assert map_size(rows) == 7
+    assert map_size(rows) == 8
     assert %{expected: 1, actual: 1, passed: true} = rows["members:house"]
     assert %{expected: 1, actual: 1, passed: true} = rows["members:senate"]
     assert %{expected: 0, actual: 0, passed: true} = rows["bills:119"]
     assert %{expected: 2, actual: 0, passed: false} = rows["votes:house:119-1"]
-    assert %{expected: 3, actual: 0, passed: false} = rows["votes:senate:119-2"]
+    # The Voteview fixture lists two session-1 roll calls and one in session 2.
+    assert %{expected: 1, actual: 0, passed: false} = rows["votes:senate:119-2"]
     assert TheFloor.Provenance.last_succeeded_run("federal", "coverage")
   end
 
   test "a failed expected-count fetch records a failed check and does not crash the job" do
     Req.Test.stub(TheFloor.Federal, fn conn ->
-      if conn.host == "www.senate.gov" do
+      if conn.host == "voteview.com" do
         Plug.Conn.send_resp(conn, 403, "denied")
       else
         respond(conn)
@@ -127,6 +129,80 @@ defmodule TheFloor.Adapters.Federal.CoverageTest do
     assert %{expected: nil, passed: false, error: error} = rows["votes:senate:119-1"]
     assert error =~ "403"
     assert rows["members:house"].passed
+  end
+
+  describe "votes:senate:tallies" do
+    setup do
+      for {s, start} <- [{1, ~D[2025-01-03]}, {2, ~D[2026-01-03]}] do
+        write!(%Records.LegislativeSession{
+          jurisdiction: "federal",
+          identifier: "119-#{s}",
+          parent_identifier: "119",
+          start_date: start,
+          source: src()
+        })
+      end
+
+      write!(%Records.Bill{
+        jurisdiction: "federal",
+        session_identifier: "119",
+        external_id: "119-s-5",
+        identifier: "S. 5",
+        classification: "bill",
+        title: "Example",
+        source: src()
+      })
+
+      actions = [
+        {~D[2025-01-09],
+         "Cloture invoked in Senate by Yea-Nay Vote. 84 - 9. Record Vote Number: 1."},
+        # The same roll call recorded again by another system counts once.
+        {~D[2025-01-09],
+         "Motion to invoke cloture agreed to by Yea-Nay Vote. 84 - 9. Record Vote Number: 1."},
+        {~D[2025-01-13],
+         "Motion to proceed agreed to by Yea-Nay Vote. 50 - 40. Record Vote Number: 2."},
+        {~D[2026-01-05], "Passed Senate by Yea-Nay Vote. 50 - 35. Record Vote Number: 1."},
+        {~D[2025-01-20], "Passed Senate without amendment by Voice Vote."}
+      ]
+
+      write!(%Records.BillActions{
+        jurisdiction: "federal",
+        bill_external_id: "119-s-5",
+        actions:
+          for {{date, text}, i} <- Enum.with_index(actions) do
+            %Records.BillAction{position: i, date: date, description: text}
+          end,
+        source: src()
+      })
+
+      for {id, session, yea, nay} <- [
+            {1, "119-1", 84, 9},
+            {2, "119-1", 82, 10},
+            {1, "119-2", 50, 35}
+          ] do
+        write!(%Records.Vote{
+          jurisdiction: "federal",
+          body_external_id: "senate",
+          session_identifier: session,
+          external_id: "senate-#{session}-#{id}",
+          voted_at: ~U[2025-01-09 05:00:00Z],
+          counts: %{yea: yea, nay: nay, present: 0, absent: 0},
+          positions: [],
+          source: src()
+        })
+      end
+
+      :ok
+    end
+
+    test "stored Senate totals must match the tallies printed in bill actions" do
+      {_, expected, actual, _tolerance} =
+        119 |> FederalCoverage.checks() |> List.keyfind("votes:senate:tallies", 0)
+
+      # Rolls 119-1-1 and 119-2-1 match; 119-1-2 is stored as 82-10, recorded as 50-40.
+      assert expected.() == {:ok, 3}
+      assert actual.() == 2
+    end
   end
 
   defp stub_sources, do: Req.Test.stub(TheFloor.Federal, &respond/1)
@@ -160,18 +236,13 @@ defmodule TheFloor.Adapters.Federal.CoverageTest do
           "pagination" => %{"count" => 2}
         })
 
-      "/legislative/LIS/roll_call_lists/vote_menu_119_" <> rest ->
-        n = if rest == "2.xml", do: 3, else: 0
-        Plug.Conn.send_resp(conn, 200, menu_xml(n))
+      "/static/data/out/rollcalls/S119_rollcalls.csv" ->
+        csv = File.read!("test/support/fixtures/federal/voteview/S119_rollcalls.csv")
+        Plug.Conn.send_resp(conn, 200, csv)
     end
   end
 
   defp term(chamber, year), do: %{"chamber" => chamber, "startYear" => year}
-
-  defp menu_xml(n) do
-    votes = for i <- 1..n//1, into: "", do: "<vote><vote_number>#{i}</vote_number></vote>"
-    "<vote_summary><votes>#{votes}</votes></vote_summary>"
-  end
 
   defp src, do: Records.SourceRef.new("https://example.test/x", "x")
 

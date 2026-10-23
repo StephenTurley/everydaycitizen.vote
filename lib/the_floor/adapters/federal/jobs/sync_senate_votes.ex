@@ -1,19 +1,18 @@
 defmodule TheFloor.Adapters.Federal.Jobs.SyncSenateVotes do
   @moduledoc """
-  Reads the Senate vote menu and enqueues `SyncSenateVote` for every roll not yet
-  stored plus the most recent rolls (the menu has no update dates, so re-fetching
-  the latest catches corrections). With a `session` arg only that session is read;
-  otherwise every stored session of the congress is. Snoozes until the congress has
-  a stored session and people are stored.
+  Syncs Senate roll-call votes from Voteview's bulk files (`Federal.Voteview`):
+  three requests per run, whatever the number of votes. Writes every vote not yet
+  stored plus the most recent of each session (Voteview corrects recent votes as
+  they are reconciled). With a `session` arg only that session is written;
+  otherwise every stored session of the congress is. Snoozes until the congress
+  has a stored session and people are stored.
   """
   use Oban.Worker, queue: :ingest, max_attempts: 3
 
-  alias TheFloor.Adapters.Federal.{HTTP, Job, Prerequisites, Sessions}
-  alias TheFloor.Adapters.Federal.Jobs.SyncSenateVote
-  alias TheFloor.Adapters.Federal.Normalize.SenateVote
-  alias TheFloor.Votes
+  alias TheFloor.Adapters.Federal.{Job, Prerequisites, Sessions, Voteview}
+  alias TheFloor.Adapters.Federal.Normalize.SenateVoteview
+  alias TheFloor.{Ingest, Votes}
 
-  @menu "https://www.senate.gov/legislative/LIS/roll_call_lists"
   @recent 10
 
   @impl Oban.Worker
@@ -26,43 +25,44 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncSenateVotes do
 
   defp sync(congress, args) do
     Job.run("sync_senate_votes", fn run_id, _cursor ->
-      congress
-      |> Sessions.numbers(args["session"])
-      |> Sessions.reduce(congress, &sync_session(congress, &1, run_id))
+      with {:ok, files, source} <- Voteview.files(congress) do
+        sessions = Sessions.numbers(congress, args["session"])
+
+        files
+        |> SenateVoteview.votes(source)
+        |> Enum.group_by(&session_number/1)
+        |> Map.take(sessions)
+        |> Enum.reduce_while({:ok, %{}}, &write_session(&1, &2, congress, run_id))
+      end
     end)
   end
 
-  @doc "URL of the vote menu for a session."
-  @spec menu_url(integer(), integer()) :: String.t()
-  def menu_url(congress, session), do: "#{@menu}/vote_menu_#{congress}_#{session}.xml"
-
-  defp sync_session(congress, session, run_id) do
-    with {:ok, %{raw: raw}} <-
-           HTTP.get(menu_url(congress, session), limiter: :senate_gov, decode: :raw) do
-      rolls = SenateVote.menu(raw)
-      wanted = rolls_to_fetch(rolls, congress, session)
-
-      wanted
-      |> Enum.map(
-        &SyncSenateVote.new(%{congress: congress, session: session, roll: &1, run_id: run_id})
-      )
-      |> Oban.insert_all()
-
-      {:ok, %{menu: length(rolls), enqueued: length(wanted)}}
+  defp write_session({session, votes}, {:ok, stats}, congress, run_id) do
+    case write(votes, run_id) do
+      {:ok, n} -> {:cont, {:ok, Map.put(stats, "#{congress}-#{session}", n)}}
+      error -> {:halt, error}
     end
   end
 
-  defp rolls_to_fetch(rolls, congress, session) do
-    stored =
-      rolls
-      |> Enum.map(&SenateVote.external_id(congress, session, &1))
-      |> Votes.existing_external_ids()
+  defp session_number(vote),
+    do: vote.session_identifier |> String.split("-") |> List.last() |> String.to_integer()
 
-    recent = rolls |> Enum.sort(:desc) |> Enum.take(@recent)
+  defp write(votes, run_id) do
+    wanted = to_write(votes)
 
-    missing =
-      Enum.reject(rolls, &MapSet.member?(stored, SenateVote.external_id(congress, session, &1)))
+    Enum.reduce_while(wanted, {:ok, %{written: 0, listed: length(votes)}}, fn vote, {:ok, s} ->
+      case Ingest.write(vote, run_id) do
+        {:ok, _} -> {:cont, {:ok, %{s | written: s.written + 1}}}
+        {:error, reason} -> {:halt, {:error, {vote.external_id, reason}}}
+      end
+    end)
+  end
 
-    (missing ++ recent) |> Enum.uniq() |> Enum.sort()
+  # Votes not stored yet, plus the most recent few (votes are in roll order).
+  defp to_write(votes) do
+    stored = votes |> Enum.map(& &1.external_id) |> Votes.existing_external_ids()
+    recent = votes |> Enum.take(-@recent) |> MapSet.new(& &1.external_id)
+
+    Enum.filter(votes, &(not MapSet.member?(stored, &1.external_id) or &1.external_id in recent))
   end
 end

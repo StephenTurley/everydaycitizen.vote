@@ -43,7 +43,6 @@ defmodule TheFloor.Adapters.Federal.PrerequisitesTest do
           TheFloor.Adapters.Federal.Jobs.SyncBill,
           TheFloor.Adapters.Federal.Jobs.SyncBillText,
           TheFloor.Adapters.Federal.Jobs.SyncHouseVote,
-          TheFloor.Adapters.Federal.Jobs.SyncSenateVote,
           TheFloor.Adapters.Federal.Jobs.SyncCommitteeMeeting
         ] do
       assert %{changes: %{priority: 5}} = worker.new(%{})

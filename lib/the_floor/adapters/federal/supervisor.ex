@@ -4,7 +4,7 @@ defmodule TheFloor.Adapters.Federal.Supervisor do
 
   alias TheFloor.Ingest.RateLimiter
 
-  @defaults [congress_gov: 750, govinfo: 1000, house_docs: 1000, senate_gov: 2000]
+  @defaults [congress_gov: 750, govinfo: 1000, house_docs: 1000, senate_gov: 2000, voteview: 2000]
 
   def start_link(arg), do: Supervisor.start_link(__MODULE__, arg, name: __MODULE__)
 
