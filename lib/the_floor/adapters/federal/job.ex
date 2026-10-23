@@ -35,4 +35,15 @@ defmodule TheFloor.Adapters.Federal.Job do
         reraise exception, __STACKTRACE__
     end
   end
+
+  @doc "Writes events in order inside a run; stops at the first failure."
+  @spec write_events([TheFloor.Ingest.Records.Event.t()], integer()) :: :ok | {:error, term()}
+  def write_events(events, run_id) do
+    Enum.reduce_while(events, :ok, fn event, :ok ->
+      case TheFloor.Ingest.write(event, run_id) do
+        {:ok, _} -> {:cont, :ok}
+        {:error, _} = error -> {:halt, error}
+      end
+    end)
+  end
 end

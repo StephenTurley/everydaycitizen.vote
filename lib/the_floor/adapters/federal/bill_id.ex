@@ -48,4 +48,23 @@ defmodule TheFloor.Adapters.Federal.BillId do
   end
 
   def from_label(_label, _congress), do: nil
+
+  @scan ~r/(?<![\w.])(H\.\s?Con\.\s?Res|S\.\s?Con\.\s?Res|H\.\s?J\.\s?Res|S\.\s?J\.\s?Res|H\.\s?Res|S\.\s?Res|H\.\s?R|S)\.?\s?(\d+)/
+
+  @doc """
+  Finds bill labels (`"H.R. 1234"`, `"S.J.Res. 12"`, ...) anywhere in free text and
+  returns their external ids in order of first appearance, without duplicates.
+  """
+  @spec scan(String.t() | nil, integer()) :: [String.t()]
+  def scan(text, congress) when is_binary(text) do
+    @scan
+    |> Regex.scan(text, capture: :all_but_first)
+    |> Enum.map(fn [type, number] ->
+      code = type |> String.replace(~r/[.\s]/, "") |> String.upcase()
+      external_id(congress, code, number)
+    end)
+    |> Enum.uniq()
+  end
+
+  def scan(_text, _congress), do: []
 end

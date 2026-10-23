@@ -33,10 +33,11 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillText do
     :ok
   end
 
+  # GovInfo signals a missing file with HTTP 200 and an HTML page.
   defp fetch_first([url | rest], bill_id, code) do
     case HTTP.get(url, limiter: :govinfo, decode: :raw) do
       {:ok, %{raw: raw, source: source}} ->
-        with false <- html?(raw),
+        with false <- HTTP.html?(raw),
              {:ok, text} <- XmlText.plain_text(raw) do
           store(raw, text, source, bill_id, code)
         else
@@ -49,17 +50,6 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillText do
       {:error, reason} ->
         {:error, reason}
     end
-  end
-
-  # GovInfo signals a missing file with HTTP 200 and an HTML page.
-  defp html?(raw) do
-    head =
-      raw
-      |> binary_part(0, min(byte_size(raw), 512))
-      |> String.trim_leading()
-      |> String.downcase()
-
-    String.starts_with?(head, ["<!doctype html", "<html"])
   end
 
   defp store(xml, text, source, bill_id, code) do

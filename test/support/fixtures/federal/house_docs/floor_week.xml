@@ -1,0 +1,136 @@
+<floorschedule congress-num="119" week-date="2026-09-14" create-date="2026-09-08T13:05:07.540" orig-publish-date="2026-09-08T19:08:32.013" update-date="2026-09-15T11:20:08.180">
+  <current-status>R</current-status>
+  <language>en-us</language>
+  <copyright>Pursuant to Title 17 Section 105 of the United States Code, this file is not subject to copyright protection and is in the public domain.</copyright>
+  <category type="Items that may be considered under suspension of the rules" sort-order="1">
+    <floor-items>
+      <floor-item id="409734" add-date="2026-09-08T13:06:15.623" remove-date="" sort-order="1" publish-date="2026-09-08T19:08:32.013">
+        <legis-num>S. 283 </legis-num>
+        <floor-text>Illegal Red Snapper 
+and Tuna Enforcement Act, as amended</floor-text>
+        <updates>
+          <update-date date="2026-09-08T17:25:29.857" publish-date="2026-09-08T19:08:32.013">
+            <explanatory-notes doc-modified="False" />
+          </update-date>
+        </updates>
+        <files>
+          <file doc-url="http://docs.house.gov/billsthisweek/20260914/S283_SUS_xml.pdf" doc-type="PDF" add-date="2026-09-08T13:06:15.630" sort-order="1" publish-date="2026-09-08T19:08:32.013" />
+        </files>
+      </floor-item>
+      <floor-item id="409749" add-date="2026-09-08T13:10:57.950" remove-date="" sort-order="16" publish-date="2026-09-08T19:08:32.013">
+        <legis-num>S.790 </legis-num>
+        <floor-text>A bill to redesignate the National Historic Trails Interpretive Center in Casper, Wyoming, as the "Barbara L. Cubin National Historic Trails Interpretive Center". </floor-text>
+        <files>
+          <file doc-url="http://docs.house.gov/billsthisweek/20260914/BILLS-119s790es.pdf" doc-type="PDF" add-date="2026-09-08T13:10:57.947" sort-order="1" publish-date="2026-09-08T19:08:32.013" />
+        </files>
+      </floor-item>
+    </floor-items>
+  </category>
+  <category type="Items that may be considered pursuant to a rule" sort-order="4">
+    <floor-items>
+      <floor-item id="409798" add-date="2026-09-10T12:57:55.870" remove-date="" sort-order="65" publish-date="2026-09-10T15:57:37.167">
+        <legis-num>H.R. 9576</legis-num>
+        <floor-text>National Fraud Enforcement Division Act of 2026</floor-text>
+        <updates>
+          <update-date date="2026-09-10T13:01:28.927" publish-date="2026-09-10T15:57:37.167">
+            <explanatory-notes doc-modified="False" />
+          </update-date>
+        </updates>
+        <files>
+          <file doc-url="https://www.govinfo.gov/content/pkg/BILLS-119hr9576ih/pdf/BILLS-119hr9576ih.pdf" doc-type="PDF" add-date="2026-09-10T12:57:55.873" sort-order="1" publish-date="2026-09-10T15:57:37.167" />
+          <file doc-url="https://www.govinfo.gov/content/pkg/BILLS-119hr9576ih/xml/BILLS-119hr9576ih.xml" doc-type="XML" add-date="2026-09-10T13:01:28.923" sort-order="3" publish-date="2026-09-10T15:57:37.167" />
+        </files>
+        <floor-subitems>
+          <floor-subitem id="503901" add-date="2026-09-10T15:34:30.263" remove-date="" sort-order="1" publish-date="2026-09-10T15:57:37.167">
+            <legis-num />
+            <floor-text>Rules Committee Print 119-41 – Showing the text of the H.R. 9576, as introduced, with modifications</floor-text>
+            <updates>
+              <update-date date="2026-09-10T15:45:00.133" publish-date="2026-09-10T15:57:37.167">
+                <explanatory-notes doc-modified="False" />
+              </update-date>
+            </updates>
+            <files>
+              <file doc-url="http://docs.house.gov/billsthisweek/20260914/RCP_H9576_xml.pdf" doc-type="PDF" add-date="2026-09-10T15:45:00.130" sort-order="1" publish-date="" />
+            </files>
+          </floor-subitem>
+          <floor-subitem id="503902" add-date="2026-09-10T15:45:31.387" remove-date="" sort-order="2" publish-date="2026-09-10T15:57:37.167">
+            <legis-num />
+            <floor-text>Comparative Print – Showing the differences between H.R. 9576 and Rules Committee Print 119-41</floor-text>
+            <files>
+              <file doc-url="http://docs.house.gov/billsthisweek/20260914/BILL-TO-BILL_BILLS-119hr9576ih (1)_to_RCP_H9576_xml.pdf" doc-type="PDF" add-date="2026-09-10T15:45:31.383" sort-order="1" publish-date="" />
+            </files>
+          </floor-subitem>
+        </floor-subitems>
+      </floor-item>
+      <floor-item id="409810" add-date="2026-09-11T10:50:22.943" remove-date="" sort-order="68" publish-date="2026-09-11T11:14:46.943">
+        <legis-num>Senate amendments to H.R. 5334</legis-num>
+        <floor-text>Lindsey O. Graham Sanctioning Russia and Iran Act of 2026</floor-text>
+        <updates>
+          <update-date date="2026-09-11T12:10:24.687" publish-date="2026-09-11T12:10:32.780">
+            <explanatory-notes doc-modified="False" />
+          </update-date>
+          <update-date date="2026-09-11T12:11:15.683" publish-date="2026-09-11T12:14:43.603">
+            <explanatory-notes doc-modified="False" />
+          </update-date>
+          <update-date date="2026-09-11T12:14:33.057" publish-date="2026-09-11T12:14:43.603">
+            <explanatory-notes doc-modified="False" />
+          </update-date>
+        </updates>
+        <files>
+          <file doc-url="https://www.congress.gov/119/bills/hr5334/BILLS-119hr5334eas.pdf" doc-type="PDF" add-date="2026-09-11T10:50:22.963" sort-order="1" publish-date="2026-09-11T11:14:46.943" />
+          <file doc-url="https://www.congress.gov/119/bills/hr5334/BILLS-119hr5334eas.xml" doc-type="XML" add-date="2026-09-11T10:50:22.963" sort-order="2" publish-date="2026-09-11T11:14:46.943" />
+        </files>
+      </floor-item>
+    </floor-items>
+  </category>
+  <category type="Items that may be considered" sort-order="5">
+    <floor-items>
+      <floor-item id="409811" add-date="2026-09-11T14:00:40.067" remove-date="" sort-order="1" publish-date="2026-09-11T14:01:16.207">
+        <legis-num>H. Con. Res. 93</legis-num>
+        <floor-text>Directing the President, pursuant to section 5(c) of the War Powers Resolution, to remove United States Armed Forces from hostilities with Iran</floor-text>
+        <files>
+          <file doc-url="https://www.congress.gov/119/bills/hconres93/BILLS-119hconres93ih.pdf" doc-type="PDF" add-date="2026-09-11T14:00:40.080" sort-order="1" publish-date="2026-09-11T14:01:16.207" />
+        </files>
+      </floor-item>
+      <floor-item id="409812" add-date="2026-09-14T10:05:48.980" remove-date="" sort-order="2" publish-date="2026-09-14T20:34:26.243">
+        <legis-num>H. Res. 1530</legis-num>
+        <floor-text>Providing for consideration of the bill (H.R. 9576) to establish the National Fraud Enforcement Division of the Department of Justice; providing for consideration of the bill (H.R. 10326) to enhance information-sharing capabilities between Federal law enforcement and State agencies to detect, investigate, and prosecute fraud in certain Federal programs, and to protect individual privacy; providing for consideration of the joint resolution (H.J. Res. 210) providing for congressional disapproval under chapter 8 of title 5, United States Code, of the rule submitted by the Environmental Protection Agency relating to ‘‘California State Nonroad Engine Pollution Control Standards; Ocean-Going Vessels At-Berth; Notice of Decision’’; providing for consideration of the joint resolution (H.J. Res. 213) providing for congressional disapproval under chapter 8 of title 5, United States Code, of the rule issued by the Environmental Protection Agency relating to the ‘‘California State Nonroad Engine Pollution Control Standards; Commercial Harbor Craft Regulations; Notice of Decision’’; and providing for consideration of the Senate amendments to the bill (H.R. 5334) to amend the Internal Revenue Code of 1986 to allow early childhood educators to take the educator expense deduction, and for other purposes.</floor-text>
+        <updates>
+          <update-date date="2026-09-14T20:32:54.413" publish-date="2026-09-14T20:34:26.243">
+            <explanatory-notes doc-modified="False" />
+          </update-date>
+          <update-date date="2026-09-14T20:49:31.107" publish-date="2026-09-14T20:50:09.023">
+            <explanatory-notes doc-modified="True">Res. number added</explanatory-notes>
+          </update-date>
+          <update-date date="2026-09-15T09:26:33.587" publish-date="2026-09-15T09:28:14.610">
+            <explanatory-notes doc-modified="True">GPO Version</explanatory-notes>
+          </update-date>
+        </updates>
+        <files>
+          <file doc-url="https://www.govinfo.gov/content/pkg/BILLS-119hres1530rh/pdf/BILLS-119hres1530rh.pdf" doc-type="PDF" add-date="2026-09-15T09:26:33.540" sort-order="2" publish-date="2026-09-14T20:34:26.243" />
+          <file doc-url="https://www.govinfo.gov/content/pkg/BILLS-119hres1530rh/xml/BILLS-119hres1530rh.xml" doc-type="XML" add-date="2026-09-15T09:26:33.543" sort-order="3" publish-date="2026-09-14T20:34:26.243" />
+        </files>
+        <floor-subitems>
+          <floor-subitem id="503903" add-date="2026-09-14T10:06:20.090" remove-date="" sort-order="1" publish-date="2026-09-14T20:34:26.243">
+            <legis-num />
+            <floor-text>H. Rept. 119-825 – Report from the Committee on Rules to accompany H. Res. 1530</floor-text>
+            <updates>
+              <update-date date="2026-09-14T20:33:11.663" publish-date="2026-09-14T20:34:26.243">
+                <explanatory-notes doc-modified="False" />
+              </update-date>
+              <update-date date="2026-09-14T20:49:47.837" publish-date="2026-09-14T20:50:09.023">
+                <explanatory-notes doc-modified="True">Rept. number added</explanatory-notes>
+              </update-date>
+              <update-date date="2026-09-15T09:26:59.540" publish-date="2026-09-15T09:28:14.610">
+                <explanatory-notes doc-modified="True">GPO Version</explanatory-notes>
+              </update-date>
+            </updates>
+            <files>
+              <file doc-url="https://www.govinfo.gov/content/pkg/CRPT-119hrpt825/pdf/CRPT-119hrpt825.pdf" doc-type="PDF" add-date="2026-09-15T09:26:59.490" sort-order="2" publish-date="" />
+            </files>
+          </floor-subitem>
+        </floor-subitems>
+      </floor-item>
+    </floor-items>
+  </category>
+</floorschedule>

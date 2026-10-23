@@ -40,6 +40,21 @@ defmodule TheFloor.Adapters.Federal.HTTP do
     end
   end
 
+  @doc """
+  True when a 200 response body is an HTML page. Several sources (GovInfo,
+  docs.house.gov) answer 200 with an HTML page instead of 404 for a missing file.
+  """
+  @spec html?(binary()) :: boolean()
+  def html?(raw) do
+    head =
+      raw
+      |> binary_part(0, min(byte_size(raw), 512))
+      |> String.trim_leading()
+      |> String.downcase()
+
+    String.starts_with?(head, ["<!doctype html", "<html"])
+  end
+
   defp decode(raw, :raw), do: {:ok, raw}
 
   defp decode(raw, :json) do

@@ -42,4 +42,11 @@ defmodule TheFloor.Adapters.Federal.BillIdTest do
     assert BillId.from_label(nil, 119) == nil
     assert BillId.from_label("H.R. abc", 119) == nil
   end
+
+  test "scan/2 finds labels in free text, in order, deduplicated" do
+    text = "Taking up S. 5, H.R. 1234 and H.Con.Res. 3; S.5 again. Not U.S. 5 or PN 9."
+    assert BillId.scan(text, 119) == ["119-s-5", "119-hr-1234", "119-hconres-3"]
+    assert BillId.scan("nothing here", 119) == []
+    assert BillId.scan(nil, 119) == []
+  end
 end
