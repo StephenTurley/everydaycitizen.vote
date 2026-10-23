@@ -2,7 +2,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncSenateVote do
   @moduledoc """
   Fetches and stores one Senate roll-call vote (`congress`, `session`, `roll`).
   """
-  use Oban.Worker, queue: :ingest, max_attempts: 5
+  use Oban.Worker, queue: :ingest, priority: 5, max_attempts: 5
 
   alias TheFloor.Adapters.Federal.HTTP
   alias TheFloor.Adapters.Federal.Normalize.SenateVote

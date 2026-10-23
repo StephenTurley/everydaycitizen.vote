@@ -3,7 +3,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncHouseVote do
   Fetches and stores one House roll-call vote (`congress`, `session`, `roll`):
   the vote detail plus its member positions.
   """
-  use Oban.Worker, queue: :ingest, max_attempts: 5
+  use Oban.Worker, queue: :ingest, priority: 5, max_attempts: 5
 
   alias TheFloor.Adapters.Federal.CongressGov
   alias TheFloor.Adapters.Federal.Normalize.HouseVote

@@ -1,7 +1,8 @@
 defmodule TheFloor.Votes.VotePosition do
   @moduledoc """
   One member's position on a vote. `person_id` is nil when the person is not known;
-  `raw_label` then keeps the source's name for them.
+  `raw_label` then keeps the source's name for them, and `person_scheme`/`person_value`
+  the source's identifier, so the position can be linked once the person is stored.
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -12,6 +13,8 @@ defmodule TheFloor.Votes.VotePosition do
 
   schema "vote_positions" do
     field :raw_label, :string
+    field :person_scheme, :string
+    field :person_value, :string
     field :option, :string
     field :raw_option, :string
     belongs_to :vote, TheFloor.Votes.Vote
@@ -22,7 +25,16 @@ defmodule TheFloor.Votes.VotePosition do
 
   def changeset(struct, attrs) do
     struct
-    |> cast(attrs, [:vote_id, :person_id, :raw_label, :option, :raw_option, :source_id])
+    |> cast(attrs, [
+      :vote_id,
+      :person_id,
+      :person_scheme,
+      :person_value,
+      :raw_label,
+      :option,
+      :raw_option,
+      :source_id
+    ])
     |> validate_required([:vote_id, :option, :source_id])
     |> validate_inclusion(:option, @options)
   end

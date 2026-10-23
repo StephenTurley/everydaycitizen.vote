@@ -3,13 +3,14 @@ defmodule Mix.Tasks.TheFloor.Ingest do
   @moduledoc """
   Enqueues the list-level ingest jobs of every configured adapter.
 
-      mix the_floor.ingest          # every job, in dependency order
+      mix the_floor.ingest          # every job
       mix the_floor.ingest bills    # one job by name
 
   Adapters are listed in `config :the_floor, :ingest_adapters`; each exposes
   `all/0` returning `{name, worker, args}`. This task only enqueues: the jobs
   run in the application (`mix phx.server` or a release), which also runs the
-  nightly schedule.
+  nightly schedule. Jobs run concurrently and may finish in any order; each one
+  waits (snoozes) until the data it depends on is stored.
   """
   use Mix.Task
 
@@ -31,12 +32,8 @@ defmodule Mix.Tasks.TheFloor.Ingest do
       Mix.raise("unknown job #{inspect(hd(args))}; available: #{names}")
     end
 
-    # Priority keeps the dependency order among jobs that start together.
-    selected
-    |> Enum.with_index()
-    |> Enum.each(fn {{name, worker, job_args}, index} ->
-      {:ok, job} = Oban.insert(worker.new(job_args, priority: min(index, 9)))
+    for {name, job} <- TheFloor.Ingest.Mix.enqueue(selected) do
       Mix.shell().info("enqueued #{name} (job #{job.id})")
-    end)
+    end
   end
 end

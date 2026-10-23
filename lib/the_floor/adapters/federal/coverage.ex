@@ -26,11 +26,21 @@ defmodule TheFloor.Adapters.Federal.Coverage do
      fn -> count_bills(congress) end, @bill_tolerance}
   end
 
+  # With no stored child sessions there is nothing to compare per session; one
+  # failed check per chamber keeps that from passing silently.
   defp votes(chamber, congress) do
-    for session <- Sessions.numbers(congress, nil) do
-      {"votes:#{chamber}:#{congress}-#{session}", expected_votes(chamber, congress, session),
-       fn -> count_votes(chamber, congress, session) end, 0}
+    case Sessions.numbers(congress, nil) do
+      [] ->
+        [{"votes:#{chamber}", fn -> {:error, "no child sessions stored"} end, fn -> 0 end, 0}]
+
+      sessions ->
+        Enum.map(sessions, &session_votes(chamber, congress, &1))
     end
+  end
+
+  defp session_votes(chamber, congress, session) do
+    {"votes:#{chamber}:#{congress}-#{session}", expected_votes(chamber, congress, session),
+     fn -> count_votes(chamber, congress, session) end, 0}
   end
 
   defp expected_votes("house", congress, session) do

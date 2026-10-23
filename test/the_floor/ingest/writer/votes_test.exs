@@ -127,6 +127,22 @@ defmodule TheFloor.Ingest.Writer.VotesTest do
     assert Votes.count_votes(body.body_id, body.session_id) == 1
   end
 
+  test "stores the source's bill and person references, linked or not" do
+    v = write!(vote(bill_external_id: "119-hr-9", positions: [pos({"x", "nope"}, "nay", "N")]))
+    assert %{bill_id: nil, bill_ref: "119-hr-9"} = v
+
+    assert [%{person_id: nil, person_scheme: "x", person_value: "nope"}] =
+             Repo.all(VotePosition)
+
+    write!(vote(external_id: "linked"))
+    linked = Repo.get_by!(Vote, external_id: "linked")
+    assert linked.bill_id && linked.bill_ref == "119-hr-1"
+  end
+
+  test "a vote without a body is an error" do
+    assert {:error, {:unknown_body, nil}} = Ingest.write(vote(body_external_id: nil), nil)
+  end
+
   test "unknown body or session is an error" do
     assert {:error, {:unknown_body, "nope"}} = Ingest.write(vote(body_external_id: "nope"), nil)
     assert {:error, {:unknown_session, "1"}} = Ingest.write(vote(session_identifier: "1"), nil)

@@ -2,8 +2,11 @@ defmodule TheFloor.Adapters.Federal.CoverageTest do
   use TheFloor.DataCase, async: true
   use Oban.Testing, repo: TheFloor.Repo
 
+  import Ecto.Query
+
   alias TheFloor.Adapters.Federal.Coverage, as: FederalCoverage
   alias TheFloor.Adapters.Federal.Jobs.Coverage, as: CoverageJob
+  alias TheFloor.Adapters.Federal.Jobs.SyncBills
   alias TheFloor.Ingest
   alias TheFloor.Ingest.Coverage
   alias TheFloor.Ingest.Records
@@ -70,6 +73,28 @@ defmodule TheFloor.Adapters.Federal.CoverageTest do
              "members:house",
              "members:senate"
            ]
+  end
+
+  test "with no stored child sessions each chamber gets one failed vote check" do
+    TheFloor.Repo.delete_all(
+      from s in TheFloor.Legislature.Session, where: not is_nil(s.parent_id)
+    )
+
+    stub_sources()
+    assert :ok = perform_job(CoverageJob, %{})
+
+    rows = Coverage.latest() |> Map.new(&{&1.name, &1})
+
+    for name <- ["votes:house", "votes:senate"] do
+      assert %{passed: false, error: error} = rows[name]
+      assert error =~ "no child sessions stored"
+    end
+  end
+
+  test "the job snoozes while other ingest jobs are still to run" do
+    {:ok, _} = Oban.insert(SyncBills.new(%{}))
+    assert {:snooze, 300} = perform_job(CoverageJob, %{})
+    assert Coverage.latest() == []
   end
 
   test "the job records one row per check; current members exclude one who left" do

@@ -4,18 +4,24 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncHouseVotes do
   stored plus every roll whose source `updateDate` is at or after the cursor (the
   previous succeeded run's start), so corrections are re-fetched. With a `session`
   arg only that session is read; otherwise every stored session of the congress is.
+  Snoozes until the congress has a stored session and people are stored.
   """
   use Oban.Worker, queue: :ingest, max_attempts: 3
 
-  alias TheFloor.Adapters.Federal.{CongressGov, Job, Sessions}
+  alias TheFloor.Adapters.Federal.{CongressGov, Job, Prerequisites, Sessions}
   alias TheFloor.Adapters.Federal.Jobs.SyncHouseVote
   alias TheFloor.Adapters.Federal.Normalize.HouseVote
   alias TheFloor.Votes
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: args}) do
+  def perform(%Oban.Job{args: args} = job) do
     congress = args["congress"] || Application.fetch_env!(:the_floor, :federal)[:congress]
+    checks = [Prerequisites.child_sessions(congress), Prerequisites.people()]
 
+    with :ok <- Prerequisites.check(job, checks), do: sync(congress, args)
+  end
+
+  defp sync(congress, args) do
     Job.run("sync_house_votes", fn run_id, cursor ->
       congress
       |> Sessions.numbers(args["session"])

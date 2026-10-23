@@ -5,7 +5,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillText do
   unparseable XML keeps nil text and the job succeeds; other failures are returned
   so Oban retries.
   """
-  use Oban.Worker, queue: :text, max_attempts: 5
+  use Oban.Worker, queue: :text, priority: 5, max_attempts: 5
 
   require Logger
 

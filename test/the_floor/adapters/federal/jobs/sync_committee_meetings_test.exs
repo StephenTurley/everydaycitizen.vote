@@ -111,7 +111,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncCommitteeMeetingsTest do
              ]
     end
 
-    test "passes the cursor as fromDateTime" do
+    test "passes 2 days before the cursor as fromDateTime" do
       {:ok, run} = TheFloor.Provenance.start_run("federal", "sync_committee_meetings")
       {:ok, _} = TheFloor.Provenance.finish_run(run, :succeeded, %{}, nil)
       run |> Ecto.Changeset.change(started_at: ~U[2026-10-01 12:30:00.000000Z]) |> Repo.update!()
@@ -123,7 +123,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncCommitteeMeetingsTest do
       end)
 
       assert :ok = perform_job(SyncCommitteeMeetings, %{"congress" => 119})
-      assert_received {:query, %{"fromDateTime" => "2026-10-01T12:30:00Z"}}
+      assert_received {:query, %{"fromDateTime" => "2026-09-29T12:30:00Z"}}
     end
 
     test "re-fetches stored meetings dated in the next 14 days, not later or past ones" do

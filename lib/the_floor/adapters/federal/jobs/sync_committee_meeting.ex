@@ -5,7 +5,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncCommitteeMeeting do
   A meeting whose committee is not stored is written without a body: an unknown
   committee must not fail the event.
   """
-  use Oban.Worker, queue: :ingest, max_attempts: 5
+  use Oban.Worker, queue: :ingest, priority: 5, max_attempts: 5
 
   require Logger
 

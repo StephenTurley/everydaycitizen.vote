@@ -1,11 +1,15 @@
 defmodule TheFloor.Adapters.Federal.Jobs do
   @moduledoc """
-  Registry of the federal list-level jobs, in the order a full ingest should run
-  them (jurisdiction first, then members, then what refers to members).
-  Generic tooling reads it through the `:ingest_adapters` config.
+  Registry of the federal list-level jobs, listed in dependency order
+  (jurisdiction first, then members, then what refers to members, then relink and
+  coverage). The order is documentation and a priority hint only: list jobs that
+  start together finish in any order, so each job enforces its own prerequisites by
+  snoozing (`Federal.Prerequisites`), and relink and coverage wait for the other
+  ingest jobs. Generic tooling reads it through the `:ingest_adapters` config.
   """
   alias TheFloor.Adapters.Federal.Jobs.{
     Coverage,
+    Relink,
     SyncBills,
     SyncCommitteeMeetings,
     SyncCongress,
@@ -27,6 +31,7 @@ defmodule TheFloor.Adapters.Federal.Jobs do
       {"committee_meetings", SyncCommitteeMeetings, %{}},
       {"house_floor", SyncHouseFloor, %{}},
       {"senate_floor", SyncSenateFloor, %{}},
+      {"relink", Relink, %{}},
       {"coverage", Coverage, %{}}
     ]
   end

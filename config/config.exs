@@ -43,6 +43,9 @@ config :the_floor, Oban,
   repo: TheFloor.Repo,
   queues: [ingest: 4, text: 2],
   plugins: [
+    # Rescue jobs left executing by a crashed node; prune finished jobs after a week.
+    {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(30)},
+    {Oban.Plugins.Pruner, max_age: 7 * 24 * 60 * 60},
     {Oban.Plugins.Cron,
      timezone: "America/New_York",
      crontab: [
@@ -54,6 +57,7 @@ config :the_floor, Oban,
        {"50 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncCommitteeMeetings},
        {"0 3 * * *", TheFloor.Adapters.Federal.Jobs.SyncHouseFloor},
        {"0 3 * * *", TheFloor.Adapters.Federal.Jobs.SyncSenateFloor},
+       {"30 5 * * *", TheFloor.Adapters.Federal.Jobs.Relink},
        {"0 6 * * *", TheFloor.Adapters.Federal.Jobs.Coverage}
      ]}
   ]

@@ -5,7 +5,10 @@ defmodule TheFloor.Ingest.Writer.Votes do
   Positions replace the vote's set: because `person_id` is nullable (unknown
   people are kept with `raw_label`), the vote's positions are deleted and
   re-inserted inside the same transaction. A vote whose bill is unknown (or nil)
-  is saved with `bill_id: nil`; an unknown body or session is
+  is saved with `bill_id: nil`, and a position whose person is unknown with
+  `person_id: nil`; the source references (`bill_ref`, `person_scheme`/`person_value`)
+  are always stored so `TheFloor.Ingest.Relink` can link them later. An unknown or
+  missing body, or an unknown session, is
   `{:error, {:unknown_body | :unknown_session, id}}`. Returns `{:ok, vote}`.
   """
   import Ecto.Query
@@ -25,6 +28,9 @@ defmodule TheFloor.Ingest.Writer.Votes do
     Support.transact(r, run_id, &do_write(r, &1))
   end
 
+  # A vote always belongs to a body.
+  defp do_write(%{body_external_id: nil}, _source_id), do: {:error, {:unknown_body, nil}}
+
   defp do_write(r, source_id) do
     with {:ok, j} <- jurisdiction(r.jurisdiction),
          {:ok, body} <- Support.body(j.id, r.body_external_id),
@@ -42,6 +48,7 @@ defmodule TheFloor.Ingest.Writer.Votes do
                body_id: body.id,
                session_id: session.id,
                bill_id: bill_id(r),
+               bill_ref: r.bill_external_id,
                external_id: r.external_id,
                identifier: r.identifier,
                question: r.question,
@@ -74,9 +81,13 @@ defmodule TheFloor.Ingest.Writer.Votes do
     Repo.delete_all(from p in VotePosition, where: p.vote_id == ^vote.id)
 
     Enum.reduce_while(positions, :ok, fn p, :ok ->
+      {scheme, value} = p.person || {nil, nil}
+
       attrs = %{
         vote_id: vote.id,
         person_id: person_id(p.person),
+        person_scheme: scheme,
+        person_value: value,
         raw_label: p.raw_label,
         option: p.option,
         raw_option: p.raw_option,

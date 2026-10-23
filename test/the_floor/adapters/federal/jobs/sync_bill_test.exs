@@ -147,13 +147,29 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillTest do
     assert [_, _] = all_enqueued(worker: SyncBill)
   end
 
-  test "SyncBills passes the previous run's start as fromDateTime; none on first run" do
+  test "SyncBills lists from 2 days before the previous run's start; none on first run" do
     assert :ok = perform_job(SyncBills, %{"congress" => 119})
     assert_received {:list_query, first}
     refute first =~ "fromDateTime"
+    # page 2 of the first run (its `next` link carries the capture's own fromDateTime)
+    assert_received {:list_query, _page2}
+
+    TheFloor.Provenance.IngestRun
+    |> Repo.get_by!(job: "sync_bills", status: :succeeded)
+    |> Ecto.Changeset.change(started_at: ~U[2026-10-01 12:30:00.000000Z])
+    |> Repo.update!()
 
     assert :ok = perform_job(SyncBills, %{"congress" => 119})
     assert_received {:list_query, second}
-    assert second =~ ~r/fromDateTime=\d{4}-\d\d-\d\dT\d\d%3A\d\d%3A\d\dZ/
+    assert URI.decode_query(second)["fromDateTime"] == "2026-09-29T12:30:00Z"
+  end
+
+  test "SyncBills snoozes, recording no run, until people are stored" do
+    Repo.delete_all(TheFloor.Legislature.Person)
+    runs = Repo.aggregate(TheFloor.Provenance.IngestRun, :count)
+
+    assert {:snooze, 300} = perform_job(SyncBills, %{"congress" => 119})
+    refute_received {:list_query, _}
+    assert Repo.aggregate(TheFloor.Provenance.IngestRun, :count) == runs
   end
 end

@@ -18,4 +18,19 @@ defmodule TheFloor.Ingest.Mix do
   def jobs do
     :the_floor |> Application.get_env(:ingest_adapters, []) |> Enum.flat_map(& &1.all())
   end
+
+  @doc """
+  Inserts one Oban job per `{name, worker, args}`. Earlier entries get a higher
+  priority (0..3; detail jobs use 5, so list jobs are picked first), but that only
+  orders when jobs start, not when they finish: jobs enforce their own
+  prerequisites. Returns `{name, job}` per inserted job.
+  """
+  def enqueue(jobs) do
+    jobs
+    |> Enum.with_index()
+    |> Enum.map(fn {{name, worker, job_args}, index} ->
+      {:ok, job} = Oban.insert(worker.new(job_args, priority: min(index, 3)))
+      {name, job}
+    end)
+  end
 end

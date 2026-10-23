@@ -2,13 +2,14 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncMembers do
   @moduledoc """
   Loads legislators and committees from unitedstates/congress-legislators (the
   source of the Senate LIS ids that Senate votes need): people, chamber
-  memberships, committee bodies, then committee memberships.
+  memberships, committee bodies, then committee memberships. Snoozes until the
+  congress session is stored (`Federal.Prerequisites`).
   """
   use Oban.Worker, queue: :ingest, max_attempts: 3
 
   require Logger
 
-  alias TheFloor.Adapters.Federal.{HTTP, Job}
+  alias TheFloor.Adapters.Federal.{HTTP, Job, Prerequisites}
   alias TheFloor.Adapters.Federal.Normalize.{Committees, Members}
   alias TheFloor.Ingest
   alias TheFloor.Ingest.Records.{Body, Person}
@@ -17,10 +18,16 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncMembers do
   @base "https://unitedstates.github.io/congress-legislators/"
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: args}) do
+  def perform(%Oban.Job{args: args} = job) do
     number =
       to_string(args["congress"] || Application.fetch_env!(:the_floor, :federal)[:congress])
 
+    with :ok <- Prerequisites.check(job, [Prerequisites.session(number)]) do
+      sync(number)
+    end
+  end
+
+  defp sync(number) do
     Job.run("sync_members", fn run_id, _cursor ->
       with {:ok, session_start} <- session_start(number),
            {:ok, current, src_current} <- fetch("legislators-current"),

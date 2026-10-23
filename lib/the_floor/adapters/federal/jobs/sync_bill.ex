@@ -9,6 +9,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBill do
   """
   use Oban.Worker,
     queue: :ingest,
+    priority: 5,
     max_attempts: 5,
     unique: [period: 3600, keys: [:congress, :type, :number]]
 

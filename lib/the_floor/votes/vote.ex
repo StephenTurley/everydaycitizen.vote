@@ -7,6 +7,8 @@ defmodule TheFloor.Votes.Vote do
 
   schema "votes" do
     field :external_id, :string
+    # The source's bill reference (bill external id), kept when the bill is unknown.
+    field :bill_ref, :string
     field :identifier, :string
     field :question, :string
     field :result, :string
@@ -30,6 +32,7 @@ defmodule TheFloor.Votes.Vote do
       :body_id,
       :session_id,
       :bill_id,
+      :bill_ref,
       :external_id,
       :identifier,
       :question,

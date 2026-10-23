@@ -3,11 +3,12 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncSenateVotes do
   Reads the Senate vote menu and enqueues `SyncSenateVote` for every roll not yet
   stored plus the most recent rolls (the menu has no update dates, so re-fetching
   the latest catches corrections). With a `session` arg only that session is read;
-  otherwise every stored session of the congress is.
+  otherwise every stored session of the congress is. Snoozes until the congress has
+  a stored session and people are stored.
   """
   use Oban.Worker, queue: :ingest, max_attempts: 3
 
-  alias TheFloor.Adapters.Federal.{HTTP, Job, Sessions}
+  alias TheFloor.Adapters.Federal.{HTTP, Job, Prerequisites, Sessions}
   alias TheFloor.Adapters.Federal.Jobs.SyncSenateVote
   alias TheFloor.Adapters.Federal.Normalize.SenateVote
   alias TheFloor.Votes
@@ -16,9 +17,14 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncSenateVotes do
   @recent 10
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: args}) do
+  def perform(%Oban.Job{args: args} = job) do
     congress = args["congress"] || Application.fetch_env!(:the_floor, :federal)[:congress]
+    checks = [Prerequisites.child_sessions(congress), Prerequisites.people()]
 
+    with :ok <- Prerequisites.check(job, checks), do: sync(congress, args)
+  end
+
+  defp sync(congress, args) do
     Job.run("sync_senate_votes", fn run_id, _cursor ->
       congress
       |> Sessions.numbers(args["session"])

@@ -43,6 +43,18 @@ defmodule TheFloor.Legislature do
     |> Repo.one()
   end
 
+  @spec any_person?() :: boolean()
+  def any_person?, do: Repo.exists?(Person)
+
+  @doc "True when the jurisdiction has a body of one of the classifications."
+  @spec any_body?(String.t(), [String.t()]) :: boolean()
+  def any_body?(jurisdiction_key, classifications) do
+    Body
+    |> join(:inner, [b], j in Jurisdiction, on: j.id == b.jurisdiction_id)
+    |> where([b, j], j.key == ^jurisdiction_key and b.classification in ^classifications)
+    |> Repo.exists?()
+  end
+
   @doc "Memberships of the body that have started and not ended on the given date."
   @spec current_memberships(integer(), Date.t()) :: [Membership.t()]
   def current_memberships(body_id, %Date{} = on) do
