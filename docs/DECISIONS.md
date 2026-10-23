@@ -59,3 +59,6 @@ Known limitation: members who leave a committee are not end-dated in M1.
 
 ## 2026-10-23 — Bill version text has its own provenance column
 `bill_versions.text_source_id` records where the text came from, separate from `source_id` (version metadata); re-ingesting metadata never clears stored text.
+
+## 2026-10-23 — Votes keep unknown people; events keep unresolved bill labels and raw status
+`vote_positions.person_id` is nullable: positions for people not yet ingested are saved with `raw_label` rather than failing the vote, and a vote's positions are replaced as a set (delete then insert in one transaction). A vote with an unknown bill saves `bill_id: nil`; an unknown body or session is an error. Events link resolved bills through `event_bills` (replaced as a set) and store everything unresolved (adapter raw labels plus ids not found) in `unresolved_bill_labels`. `events.status` keeps the raw source status so cancelled events retain their row.

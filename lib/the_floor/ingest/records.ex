@@ -140,4 +140,58 @@ defmodule TheFloor.Ingest.Records do
     @enforce_keys [:jurisdiction, :bill_external_id, :code, :source]
     defstruct [:jurisdiction, :bill_external_id, :code, :xml, :xml_schema, :plain_text, :source]
   end
+
+  defmodule Vote do
+    @moduledoc """
+    A recorded vote with its tallies and per-person positions; positions replace the stored set.
+    Each position is `%{person: {scheme, value} | nil, raw_label, option, raw_option}` where
+    `option` is one of `yea nay present absent`.
+    """
+    @enforce_keys [
+      :jurisdiction,
+      :body_external_id,
+      :session_identifier,
+      :external_id,
+      :voted_at,
+      :source
+    ]
+    defstruct [
+      :jurisdiction,
+      :body_external_id,
+      :session_identifier,
+      :external_id,
+      :identifier,
+      :question,
+      :result,
+      :passed,
+      :voted_at,
+      :bill_external_id,
+      :source,
+      counts: %{yea: 0, nay: 0, present: 0, absent: 0},
+      positions: []
+    ]
+  end
+
+  defmodule Event do
+    @moduledoc """
+    A calendar item (floor, hearing, markup). `bill_external_ids` are links to attempt;
+    `raw_bill_labels` are labels the adapter could not normalize. `status` is the raw source status.
+    """
+    @enforce_keys [:jurisdiction, :external_id, :classification, :start_at, :source]
+    defstruct [
+      :jurisdiction,
+      :body_external_id,
+      :external_id,
+      :classification,
+      :raw_classification,
+      :title,
+      :start_at,
+      :location,
+      :source,
+      status: "scheduled",
+      all_day: false,
+      bill_external_ids: [],
+      raw_bill_labels: []
+    ]
+  end
 end
