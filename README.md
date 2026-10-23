@@ -32,8 +32,13 @@ committee meetings 02:50, floor schedules 03:00, coverage checks 06:00.
   source's count, `PASS`/`FAIL`) and exits non-zero if any fail. The checks are produced by
   the `coverage` job. A check whose source count could not be fetched shows `-` and `FAIL`.
 
-The first backfill is slow: about 19,775 bills at roughly 6 requests each, limited
-to 4,800 requests/hour, takes roughly 25 hours. Later runs are incremental.
+The first `bills` run (no earlier successful run) loads every bill from GovInfo's
+BILLSTATUS bulk zips instead of the API, then queues a text backfill from the BILLS zips.
+Measured locally on 2026-10-23: 19,740 bills in under 3 minutes and 23,037 text versions in
+under 3 minutes; the few entries the zips lack or cannot be read fall back to per-bill and
+per-version API jobs. Bills wait for a successful `members` run. Bulk files lag the API by a
+few hours; the next nightly run lists from the API with a 2-day overlap and catches up.
+Later runs are incremental.
 
 ## Deploy
 

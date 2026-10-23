@@ -38,7 +38,7 @@ defmodule TheFloor.Legislation.BillAction do
       :classification,
       :source_id
     ])
-    |> validate_required([:bill_id, :position, :description, :source_id])
+    |> validate_required([:bill_id, :position, :source_id])
     |> validate_inclusion(:classification, @classifications)
     |> flag_unclassified()
   end

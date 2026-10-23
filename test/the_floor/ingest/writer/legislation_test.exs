@@ -126,6 +126,16 @@ defmodule TheFloor.Ingest.Writer.LegislationTest do
              Legislation.list_unclassified_actions(10)
   end
 
+  # Congress.gov and BILLSTATUS both carry some Library of Congress actions with
+  # only a date and code (e.g. "Intro-S"); they are kept as the source has them.
+  test "an action without a description is stored" do
+    write!(bill())
+    write!(actions([action(1), action(2, description: nil, raw_code: "Intro-S")]))
+
+    assert %BillAction{description: nil, raw_code: "Intro-S"} =
+             Repo.get_by!(BillAction, position: 2)
+  end
+
   test "action with an unknown actor body returns an error and writes nothing" do
     write!(bill())
 
