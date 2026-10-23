@@ -1,0 +1,45 @@
+{
+    "bills": [
+        {
+            "congress": 119,
+            "introducedDate": "2026-09-15",
+            "latestAction": {
+                "actionDate": "2026-09-15",
+                "text": "Referred to the House Committee on the Judiciary."
+            },
+            "number": "10389",
+            "originChamber": "House",
+            "originChamberCode": "H",
+            "title": "Survivor’s Voice Protection Act",
+            "type": "HR",
+            "updateDate": "2026-10-01",
+            "updateDateIncludingText": "2026-10-01",
+            "url": "https://api.congress.gov/v3/bill/119/hr/10389?format=json"
+        },
+        {
+            "congress": 119,
+            "introducedDate": "2026-09-30",
+            "latestAction": {
+                "actionDate": "2026-09-30",
+                "text": "Read twice and referred to the Committee on Energy and Natural Resources."
+            },
+            "number": "5677",
+            "originChamber": "Senate",
+            "originChamberCode": "S",
+            "title": "A bill to establish the Lone Star Coastal National Recreation Area to conserve, protect, and promote the economic benefits of the natural, cultural, and recreational resources of the Upper and Middle Texas Gulf Coast as a unit of the National Park System.",
+            "type": "S",
+            "updateDate": "2026-10-01",
+            "updateDateIncludingText": "2026-10-01",
+            "url": "https://api.congress.gov/v3/bill/119/s/5677?format=json"
+        }
+    ],
+    "pagination": {
+        "count": 2509,
+        "next": "https://api.congress.gov/v3/bill/119?fromDateTime=2026-10-01T00:00:00Z&sort=updateDate asc&offset=2&limit=2&format=json"
+    },
+    "request": {
+        "congress": "119",
+        "contentType": "application/json",
+        "format": "json"
+    }
+}

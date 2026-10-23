@@ -1,0 +1,269 @@
+{
+    "actions": [
+        {
+            "actionDate": "2025-04-10",
+            "sourceSystem": {
+                "name": "Senate"
+            },
+            "text": "Received in the Senate.",
+            "type": "IntroReferral"
+        },
+        {
+            "actionCode": "H38310",
+            "actionDate": "2025-04-10",
+            "actionTime": "11:23:51",
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "Motion to reconsider laid on the table Agreed to without objection.",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "H37100",
+            "actionDate": "2025-04-10",
+            "actionTime": "11:23:50",
+            "recordedVotes": [
+                {
+                    "chamber": "House",
+                    "congress": 119,
+                    "date": "2025-04-10T15:23:50Z",
+                    "rollNumber": 102,
+                    "sessionNumber": 1,
+                    "url": "https://clerk.house.gov/evs/2025/roll102.xml"
+                }
+            ],
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "On passage Passed by the Yeas and Nays: 220 - 208 (Roll no. 102). (text: CR H1569-1571)",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "8000",
+            "actionDate": "2025-04-10",
+            "actionTime": "11:23:50",
+            "recordedVotes": [
+                {
+                    "chamber": "House",
+                    "congress": 119,
+                    "date": "2025-04-10T15:23:50Z",
+                    "rollNumber": 102,
+                    "sessionNumber": 1,
+                    "url": "https://clerk.house.gov/evs/2025/roll102.xml"
+                }
+            ],
+            "sourceSystem": {
+                "code": 9,
+                "name": "Library of Congress"
+            },
+            "text": "Passed/agreed to in House: On passage Passed by the Yeas and Nays: 220 - 208 (Roll no. 102).",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "H36210",
+            "actionDate": "2025-04-10",
+            "actionTime": "11:17:00",
+            "committees": [
+                {
+                    "name": "Committee on House Administration",
+                    "systemCode": "hsha00",
+                    "url": "https://api.congress.gov/v3/committee/house/hsha00?format=json"
+                }
+            ],
+            "recordedVotes": [
+                {
+                    "chamber": "House",
+                    "congress": 119,
+                    "date": "2025-04-10T15:17:00Z",
+                    "rollNumber": 101,
+                    "sessionNumber": 1,
+                    "url": "https://clerk.house.gov/evs/2025/roll101.xml"
+                }
+            ],
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "On motion to recommit Failed by the Yeas and Nays: 211 - 215 (Roll no. 101).",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "H30000",
+            "actionDate": "2025-04-10",
+            "actionTime": "11:11:24",
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "Considered as unfinished business. (consideration: CR H1580-1581)",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "H8D000",
+            "actionDate": "2025-04-10",
+            "actionTime": "10:31:32",
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "POSTPONED PROCEEDINGS - At the conclusion of debate on H.R. 22, the Chair put the question on motion to recommit and by voice vote, announced the noes had prevailed. Ms. Johnson (TX) demanded the yeas and nays and the Chair postponed further proceedings until a time to be announced.",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "H8A000",
+            "actionDate": "2025-04-10",
+            "actionTime": "10:31:07",
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "The previous question on the motion to recommit was ordered pursuant to clause 2(b) of rule XIX.",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "H36200",
+            "actionDate": "2025-04-10",
+            "actionTime": "10:30:49",
+            "committees": [
+                {
+                    "name": "Committee on House Administration",
+                    "systemCode": "hsha00",
+                    "url": "https://api.congress.gov/v3/committee/house/hsha00?format=json"
+                }
+            ],
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "Ms. Johnson (TX) moved to recommit to the Committee on House Administration. (text: CR H1569)",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "H35000",
+            "actionDate": "2025-04-10",
+            "actionTime": "10:30:11",
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "The previous question was ordered pursuant to the rule.",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "H8D000",
+            "actionDate": "2025-04-10",
+            "actionTime": "09:19:29",
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "DEBATE - The House proceeded with one hour of debate on H.R. 22.",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "H8D000",
+            "actionDate": "2025-04-10",
+            "actionTime": "09:19:07",
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "Rule provides for consideration of S.J. Res. 18, S.J. Res. 28, H.R. 1526 and H.R. 22. The resolution provides for consideration of H.R. 22, H.R. 1526, S.J. Res. 18, and S.J. Res. 28 under a closed rule. The resolution provides for one hour of debate on each measure and one motion to recommit on H.R. 22 and H.R. 1526, and one motion to commit on S.J. Res. 18 and S.J. Res. 28.",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "H30000",
+            "actionDate": "2025-04-10",
+            "actionTime": "09:19:02",
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "Considered under the provisions of rule H. Res. 294. (consideration: CR H1569-1579)",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "H1L220",
+            "actionDate": "2025-04-08",
+            "actionTime": "15:23:13",
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "Rule H. Res. 294 passed House.",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "H1L210",
+            "actionDate": "2025-04-07",
+            "actionTime": "19:20:40",
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "Rules Committee Resolution H. Res. 294 Reported to House. Rule provides for consideration of S.J. Res. 18, S.J. Res. 28, H.R. 1526 and H.R. 22. The resolution provides for consideration of H.R. 22, H.R. 1526, S.J. Res. 18, and S.J. Res. 28 under a closed rule. The resolution provides for one hour of debate on each measure and one motion to recommit on H.R. 22 and H.R. 1526, and one motion to commit on S.J. Res. 18 and S.J. Res. 28.",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "H1L210",
+            "actionDate": "2025-04-01",
+            "actionTime": "10:03:16",
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "Rules Committee Resolution H. Res. 282 Reported to House. Rule provides for consideration of H.R. 22, H.R. 1526, S.J. Res. 18 and S.J. Res. 28. The resolution provides for consideration of H.R. 22, H.R. 1526, S.J. Res. 18, and S.J. Res. 28 under a closed rule. The resolution provides for one hour of debate on each measure and one motion to recommit on H.R. 22 and H.R. 1526, and one motion to commit on S.J. Res. 18 and S.J. Res. 28. The resolution also provides that H. Res. 23 and H. Res. 164 are laid on the table.",
+            "type": "Floor"
+        },
+        {
+            "actionCode": "H11100",
+            "actionDate": "2025-01-03",
+            "committees": [
+                {
+                    "name": "Committee on House Administration",
+                    "systemCode": "hsha00",
+                    "url": "https://api.congress.gov/v3/committee/house/hsha00?format=json"
+                }
+            ],
+            "sourceSystem": {
+                "code": 2,
+                "name": "House floor actions"
+            },
+            "text": "Referred to the House Committee on House Administration.",
+            "type": "IntroReferral"
+        },
+        {
+            "actionCode": "Intro-H",
+            "actionDate": "2025-01-03",
+            "sourceSystem": {
+                "code": 9,
+                "name": "Library of Congress"
+            },
+            "text": "Introduced in House",
+            "type": "IntroReferral"
+        },
+        {
+            "actionCode": "1000",
+            "actionDate": "2025-01-03",
+            "sourceSystem": {
+                "code": 9,
+                "name": "Library of Congress"
+            },
+            "text": "Introduced in House",
+            "type": "IntroReferral"
+        }
+    ],
+    "pagination": {
+        "count": 19
+    },
+    "request": {
+        "billNumber": "22",
+        "billType": "hr",
+        "billUrl": "https://api.congress.gov/v3/bill/119/hr/22?format=json",
+        "congress": "119",
+        "contentType": "application/json",
+        "format": "json"
+    }
+}

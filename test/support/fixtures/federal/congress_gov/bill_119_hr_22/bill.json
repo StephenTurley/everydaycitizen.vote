@@ -1,0 +1,75 @@
+{
+    "bill": {
+        "actions": {
+            "count": 19,
+            "url": "https://api.congress.gov/v3/bill/119/hr/22/actions?format=json"
+        },
+        "committees": {
+            "count": 1,
+            "url": "https://api.congress.gov/v3/bill/119/hr/22/committees?format=json"
+        },
+        "congress": 119,
+        "constitutionalAuthorityStatementText": "<pre>\n[Congressional Record Volume 171, Number 1 (Friday, January 3, 2025)]\n[House]\nFrom the Congressional Record Online through the Government Publishing Office [<a href=\"https://www.gpo.gov\">www.gpo.gov</a>]\nBy Mr. ROY:\nH.R. 22.\nCongress has the power to enact this legislation pursuant\nto the following:\nArticle I, Section 4, Clause 1--``The Times, Places and\nManner of holding Elections for Senators and Representatives,\nshall be prescribed in each State by the Legislature thereof;\nbut the Congress may at any time by Law make or alter such\nRegulations . . .''\nArticle I, Section 8. Clause 4--``To establish an uniform\nRule of Naturalization . . .''\nArticle I, Section 8, Clause 18--``To make all Laws which\nshall be necessary and proper for carrying into Execution the\nforegoing Powers, and all other Powers vested by this\nConstitution in the Government of the United States, or in\nany Department or Officer thereof.''\n15th Amendment--Referring to ``The right of citizens of the\nUnited States to vote . . .''\n19th Amendment--Referring to ``The right of the citizens of\nthe United States to vote . . .''\n24th Amendment--Referring to ``The right of the citizens of\nthe United States to vote . . .''\n26th Amendment--Referring to ``The right of the citizens of\nthe United States, who are eighteen years of age or older, to\nvote . . .''\nThe single subject of this legislation is:\nTo require States to obtain documentary proof of U.S.\ncitizenship to register an applicant to vote in Federal\nelections.\n[Page H36]\n</pre>",
+        "cosponsors": {
+            "count": 110,
+            "countIncludingWithdrawnCosponsors": 110,
+            "url": "https://api.congress.gov/v3/bill/119/hr/22/cosponsors?format=json"
+        },
+        "introducedDate": "2025-01-03",
+        "latestAction": {
+            "actionDate": "2025-04-10",
+            "text": "Received in the Senate."
+        },
+        "legislationUrl": "https://www.congress.gov/bill/119th-congress/house-bill/22",
+        "number": "22",
+        "originChamber": "House",
+        "originChamberCode": "H",
+        "policyArea": {
+            "name": "Government Operations and Politics"
+        },
+        "relatedBills": {
+            "count": 9,
+            "url": "https://api.congress.gov/v3/bill/119/hr/22/relatedbills?format=json"
+        },
+        "sponsors": [
+            {
+                "bioguideId": "R000614",
+                "district": 21,
+                "firstName": "Chip",
+                "fullName": "Rep. Roy, Chip [R-TX-21]",
+                "isByRequest": "N",
+                "lastName": "Roy",
+                "party": "R",
+                "state": "TX",
+                "url": "https://api.congress.gov/v3/member/R000614?format=json"
+            }
+        ],
+        "subjects": {
+            "count": 12,
+            "url": "https://api.congress.gov/v3/bill/119/hr/22/subjects?format=json"
+        },
+        "summaries": {
+            "count": 1,
+            "url": "https://api.congress.gov/v3/bill/119/hr/22/summaries?format=json"
+        },
+        "textVersions": {
+            "count": 2,
+            "url": "https://api.congress.gov/v3/bill/119/hr/22/text?format=json"
+        },
+        "title": "SAVE Act",
+        "titles": {
+            "count": 7,
+            "url": "https://api.congress.gov/v3/bill/119/hr/22/titles?format=json"
+        },
+        "type": "HR",
+        "updateDate": "2026-08-10T14:13:39Z",
+        "updateDateIncludingText": "2026-08-10T14:13:39Z"
+    },
+    "request": {
+        "billNumber": "22",
+        "billType": "hr",
+        "congress": "119",
+        "contentType": "application/json",
+        "format": "json"
+    }
+}

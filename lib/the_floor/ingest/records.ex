@@ -89,7 +89,7 @@ defmodule TheFloor.Ingest.Records do
 
   defmodule BillAction do
     @moduledoc """
-    One action on a bill. `position` is its 1-based order within the bill's action list.
+    One action on a bill. `position` is its 0-based chronological order within the bill's action list (oldest = 0).
     A nil `classification` marks the action as unclassified (raw text kept).
     """
     @enforce_keys [:position, :description]
