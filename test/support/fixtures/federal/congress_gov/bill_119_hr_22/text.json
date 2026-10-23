@@ -1,0 +1,51 @@
+{
+    "pagination": {
+        "count": 2
+    },
+    "request": {
+        "billNumber": "22",
+        "billType": "hr",
+        "billUrl": "https://api.congress.gov/v3/bill/119/hr/22?format=json",
+        "congress": "119",
+        "contentType": "application/json",
+        "format": "json"
+    },
+    "textVersions": [
+        {
+            "date": "2025-04-10T04:00:00Z",
+            "formats": [
+                {
+                    "type": "Formatted Text",
+                    "url": "https://www.congress.gov/119/bills/hr22/BILLS-119hr22eh.htm"
+                },
+                {
+                    "type": "PDF",
+                    "url": "https://www.congress.gov/119/bills/hr22/BILLS-119hr22eh.pdf"
+                },
+                {
+                    "type": "Formatted XML",
+                    "url": "https://www.congress.gov/119/bills/hr22/BILLS-119hr22eh.xml"
+                }
+            ],
+            "type": "Engrossed in House"
+        },
+        {
+            "date": "2025-01-03T05:00:00Z",
+            "formats": [
+                {
+                    "type": "Formatted Text",
+                    "url": "https://www.congress.gov/119/bills/hr22/BILLS-119hr22ih.htm"
+                },
+                {
+                    "type": "PDF",
+                    "url": "https://www.congress.gov/119/bills/hr22/BILLS-119hr22ih.pdf"
+                },
+                {
+                    "type": "Formatted XML",
+                    "url": "https://www.congress.gov/119/bills/hr22/BILLS-119hr22ih.xml"
+                }
+            ],
+            "type": "Introduced in House"
+        }
+    ]
+}

@@ -23,6 +23,11 @@ end
 config :the_floor, TheFloorWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# Congress.gov API key. Test config sets a dummy; nil is allowed in dev.
+if config_env() != :test do
+  config :the_floor, :congress_gov_api_key, System.get_env("CONGRESS_GOV_API_KEY")
+end
+
 if config_env() == :dev do
   # Reload browser tabs when matching files change.
   config :the_floor, TheFloorWeb.Endpoint,
@@ -41,6 +46,9 @@ if config_env() == :dev do
 end
 
 if config_env() == :prod do
+  System.get_env("CONGRESS_GOV_API_KEY") ||
+    raise "environment variable CONGRESS_GOV_API_KEY is missing."
+
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """

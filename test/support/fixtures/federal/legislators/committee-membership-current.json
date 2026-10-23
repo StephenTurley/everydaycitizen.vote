@@ -1,0 +1,45 @@
+{
+ "HSAG": [
+  {
+   "name": "Glenn Thompson",
+   "party": "majority",
+   "rank": 1,
+   "title": "Chair",
+   "bioguide": "T000467"
+  },
+  {
+   "name": "Angie Craig",
+   "party": "minority",
+   "rank": 1,
+   "title": "Ranking Member",
+   "bioguide": "C001119"
+  }
+ ],
+ "HSAG03": [
+  {
+   "name": "Brad Finstad",
+   "party": "majority",
+   "rank": 1,
+   "title": "Chair",
+   "bioguide": "F000475"
+  }
+ ],
+ "JSEC": [
+  {
+   "name": "Eric Schmitt",
+   "party": "majority",
+   "rank": 1,
+   "title": "Vice Chairman",
+   "bioguide": "S001227",
+   "chamber": "senate"
+  },
+  {
+   "name": "Synthetic Orphan",
+   "party": "majority",
+   "rank": 99,
+   "title": "Member",
+   "bioguide": "Z999999",
+   "chamber": "house"
+  }
+ ]
+}

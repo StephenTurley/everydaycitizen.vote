@@ -40,6 +40,14 @@ defmodule TheFloor.DataCase do
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
   end
 
+  @doc "A fresh provenance ref with a unique URL, for building records in tests."
+  def source_ref do
+    TheFloor.Ingest.Records.SourceRef.new(
+      "https://example.test/#{System.unique_integer([:positive])}",
+      "body"
+    )
+  end
+
   @doc """
   A helper that transforms changeset errors into a map of messages.
 

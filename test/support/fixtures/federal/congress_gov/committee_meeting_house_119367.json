@@ -1,0 +1,52 @@
+{
+  "committeeMeeting": {
+    "chamber": "House",
+    "committees": [
+      {
+        "name": "House Energy and Commerce Subcommittee on Energy",
+        "systemCode": "hsif03",
+        "url": "https://api.congress.gov/v3/committee/house/hsif03?format=json"
+      }
+    ],
+    "congress": 119,
+    "date": "2026-06-09T14:15:00Z",
+    "eventId": "119367",
+    "location": {
+      "building": "Rayburn House Office Building",
+      "room": "2123"
+    },
+    "meetingStatus": "Scheduled",
+    "relatedItems": {
+      "bills": [
+        {
+          "congress": 119,
+          "number": "9083",
+          "type": "HR",
+          "url": "https://api.congress.gov/v3/bill/119/hr/9083?format=json"
+        },
+        {
+          "congress": 119,
+          "number": "3978",
+          "type": "HR",
+          "url": "https://api.congress.gov/v3/bill/119/hr/3978?format=json"
+        },
+        {
+          "congress": 119,
+          "number": "5549",
+          "type": "HR",
+          "url": "https://api.congress.gov/v3/bill/119/hr/5549?format=json"
+        }
+      ]
+    },
+    "title": "Nuclear Permitting Reform: Legislation to Advance Efficient Licensing",
+    "type": "Meeting",
+    "updateDate": "2026-10-19T13:48:21Z"
+  },
+  "request": {
+    "chamber": "house",
+    "congress": "119",
+    "contentType": "application/json",
+    "eventId": "119367",
+    "format": "json"
+  }
+}

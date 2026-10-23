@@ -1,0 +1,76 @@
+{
+ "houseRollCallVoteMemberVotes": {
+  "amendmentAuthor": "Biggs of Arizona Part A Amendment No. 29",
+  "amendmentNumber": "97",
+  "amendmentType": "HAMDT",
+  "congress": 119,
+  "identifier": 11912025259,
+  "legislationNumber": "3838",
+  "legislationType": "HR",
+  "legislationUrl": "https://www.congress.gov/amendment/119/house-amendment/97",
+  "result": "Failed",
+  "results": [
+   {
+    "bioguideID": "A000055",
+    "firstName": "Robert",
+    "lastName": "Aderholt",
+    "voteCast": "Aye",
+    "voteParty": "R",
+    "voteState": "AL"
+   },
+   {
+    "bioguideID": "A000148",
+    "firstName": "Jake",
+    "lastName": "Auchincloss",
+    "voteCast": "No",
+    "voteParty": "D",
+    "voteState": "MA"
+   },
+   {
+    "bioguideID": "A000369",
+    "firstName": "Mark",
+    "lastName": "Amodei",
+    "voteCast": "Aye",
+    "voteParty": "R",
+    "voteState": "NV"
+   },
+   {
+    "bioguideID": "A000370",
+    "firstName": "Alma",
+    "lastName": "Adams",
+    "voteCast": "No",
+    "voteParty": "D",
+    "voteState": "NC"
+   },
+   {
+    "bioguideID": "C001120",
+    "firstName": "Dan",
+    "lastName": "Crenshaw",
+    "voteCast": "Not Voting",
+    "voteParty": "R",
+    "voteState": "TX"
+   },
+   {
+    "bioguideID": "E000296",
+    "firstName": "Dwight",
+    "lastName": "Evans",
+    "voteCast": "Not Voting",
+    "voteParty": "D",
+    "voteState": "PA"
+   }
+  ],
+  "rollCallNumber": 259,
+  "sessionNumber": 1,
+  "sourceDataURL": "https://clerk.house.gov/evs/2025/roll259.xml",
+  "startDate": "2025-09-10T17:36:00-04:00",
+  "updateDate": "2025-09-11T17:23:44-04:00",
+  "voteQuestion": "On Agreeing to the Amendment",
+  "voteType": "Recorded Vote"
+ },
+ "request": {
+  "congress": "119",
+  "contentType": "application/json",
+  "format": "json",
+  "session": "1"
+ }
+}

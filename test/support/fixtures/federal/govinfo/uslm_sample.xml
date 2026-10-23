@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic minimal USLM document (GovInfo currently serves 119th bills in the legacy bill DTD). -->
+<bill xmlns="http://schemas.gpo.gov/xml/uslm"><meta><dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">Sample</dc:title></meta><main><section identifier="/us/bill/119/hr/1/s1"><num value="1">1.</num><heading>Short title</heading><content>This Act may be cited as the Sample Act.</content></section></main></bill>

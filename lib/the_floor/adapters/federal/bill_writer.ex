@@ -1,0 +1,80 @@
+defmodule TheFloor.Adapters.Federal.BillWriter do
+  @moduledoc """
+  Writes one bill's parts (detail, subjects, actions, cosponsors, text versions)
+  in API shape, whichever source they came from: Congress.gov responses
+  (`SyncBill`) or a BILLSTATUS bulk file (`SyncBills` first run). Each part
+  carries the `SourceRef` of the document it came from.
+
+  The action and sponsorship sets replace whatever is stored, so an empty action
+  list writes nothing rather than deleting stored rows.
+  """
+  require Logger
+
+  alias TheFloor.Adapters.Federal.Normalize.Bill, as: Normalize
+  alias TheFloor.Ingest
+
+  @type part(t) :: {t, TheFloor.Ingest.Records.SourceRef.t() | nil}
+  @type parts :: %{
+          detail: part(map()),
+          subjects: map(),
+          actions: part([map()]),
+          cosponsors: part([map()]),
+          text: part(map())
+        }
+
+  @doc "Writes the bill and its parts; returns its external id."
+  @spec write(parts(), integer() | nil) :: {:ok, String.t()} | {:error, term()}
+  def write(%{detail: {detail, detail_src}, subjects: subjects} = parts, run_id) do
+    id = Normalize.external_id(detail)
+
+    with {:ok, _} <- Ingest.write(Normalize.bill(detail, subjects, detail_src), run_id),
+         :ok <- write_actions(parts.actions, id, run_id),
+         :ok <- write_sponsorships(detail, detail_src, parts.cosponsors, id, run_id),
+         :ok <- write_versions(parts.text, id, run_id) do
+      {:ok, id}
+    end
+  end
+
+  defp write_actions({[], _}, _id, _run_id), do: :ok
+
+  defp write_actions({items, source}, id, run_id),
+    do: write_record(Normalize.actions(items, id, source), run_id)
+
+  defp write_sponsorships(detail, detail_src, {items, source}, id, run_id) do
+    # An empty cosponsor list has no response source of its own; the sponsor alone
+    # then comes from the detail response.
+    source = source || detail_src
+    record = Normalize.sponsorships(detail, items, id, source)
+
+    case Ingest.write(record, run_id) do
+      {:ok, %{skipped_people: []}} ->
+        :ok
+
+      {:ok, %{skipped_people: skipped}} ->
+        Logger.warning("bill #{id}: skipped unknown people #{inspect(skipped)}")
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp write_versions({text, source}, id, run_id) do
+    text["textVersions"]
+    |> Kernel.||([])
+    |> Normalize.versions(id, source)
+    |> Enum.reduce_while(:ok, fn version, :ok ->
+      case Ingest.write(version, run_id) do
+        {:ok, _} -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp write_record(record, run_id) do
+    case Ingest.write(record, run_id) do
+      {:ok, _} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+end

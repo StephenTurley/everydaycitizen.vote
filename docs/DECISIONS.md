@@ -32,3 +32,88 @@ transferring after the 60-day registration lock. DNS not yet configured.
 Pinned in `.tool-versions`. OTP 29 instead of the originally noted OTP 28
 because it is what is installed locally and Elixir 1.20 supports it; no Node
 pin since Phoenix 1.8 uses standalone esbuild/tailwind binaries.
+
+## 2026-10-23 — Provenance as a `sources` table referenced by every row
+Every domain row points at a `sources` row (url, fetched_at, last_seen_at,
+content_hash) deduplicated on (url, content_hash); re-fetching identical bytes
+only advances `last_seen_at`. Keeps provenance non-null without duplicating it.
+
+## 2026-10-23 — Oban for ingest
+Scheduled, incremental, idempotent ingest jobs run as Oban workers (queues
+`ingest` and `text`), with each execution recorded in `ingest_runs`.
+
+## 2026-10-23 — CodeSection deferred to M4 (redline)
+The current-law CodeSection entity is only the redline target, so it is not
+needed for M1 coverage checks; it lands with the redline engine in M4.
+
+## 2026-10-23 — Memberships unique with NULLS NOT DISTINCT (committee memberships have no dates)
+Unique index on (person_id, body_id, role, start_date) uses `NULLS NOT DISTINCT`
+(PG >= 15) so undated committee memberships upsert instead of duplicating.
+Known limitation: members who leave a committee are not end-dated in M1.
+
+## 2026-10-23 — Federal rate limiters live in an adapter supervisor
+`TheFloor.Adapters.Federal.Supervisor` starts the named limiters (intervals from `:federal_rate_limits`); `application.ex` only lists it, and `Ingest.RateLimiter` stays generic. Keeps the jurisdiction boundary intact.
+
+## 2026-10-23 — Bill child sets are replaced wholesale; actions keyed by (bill, position)
+`BillActions` and `Sponsorships` upsert the incoming rows and delete the bill's others in one transaction, so source corrections and withdrawn entries disappear. Actions use `(bill_id, position)` as natural key; sponsorships `(bill, person, classification)`. Bill-scoped records carry `jurisdiction` because external bill ids are only unique per jurisdiction.
+
+## 2026-10-23 — Bill version text has its own provenance column
+`bill_versions.text_source_id` records where the text came from, separate from `source_id` (version metadata); re-ingesting metadata never clears stored text.
+
+## 2026-10-23 — Votes keep unknown people; events keep unresolved bill labels and raw status
+`vote_positions.person_id` is nullable: positions for people not yet ingested are saved with `raw_label` rather than failing the vote, and a vote's positions are replaced as a set (delete then insert in one transaction). A vote with an unknown bill saves `bill_id: nil`; an unknown body or session is an error. Events link resolved bills through `event_bills` (replaced as a set) and store everything unresolved (adapter raw labels plus ids not found) in `unresolved_bill_labels`. `events.status` keeps the raw source status so cancelled events retain their row.
+
+## 2026-10-23 — Federal session = congress; sub-sessions for vote numbering
+A federal legislative session is the congress (`119`); each congressional session is a child session (`119-1`, `119-2`) because roll-call numbering restarts per session. Sub-session dates are the earliest start / latest end across chambers; the congress is open-ended while any session is. Every list-level job runs inside `Federal.Job.run/2`, which records the ingest run and never advances the cursor on failure.
+
+## 2026-10-23 — Members and committees from unitedstates/congress-legislators
+Members and committees come from the `congress-legislators` JSON files (the only source carrying the LIS ids needed to match Senate votes). The historical file is filtered to legislators with a term ending on/after the session start. Committee memberships have nil dates (source lists current members only) and use the committees file as their source ref; unknown people are skipped and counted rather than failing the run.
+
+## 2026-10-23 — Correction: committee memberships use their own source ref
+Supersedes the provenance line in the members/committees entry above: `Normalize.Committees.records/4` takes separate committee and membership sources, so committee membership rows point at `committee-membership-current.json` and bodies at `committees-current.json`.
+
+## 2026-10-23 — Bill text from GovInfo package `/xml/`, schema detected from the document
+Verified live: `govinfo.gov/content/pkg/BILLS-119hr22ih/uslm/...xml` does not exist (GovInfo answers 200 with an HTML error page, so a 404 fallback never fires). The real file is `.../content/pkg/BILLS-<congress><type><number><code>/xml/BILLS-....xml` (`application/xml`), and for the 119th Congress it is the legacy bill DTD, not USLM. `SyncBillText` therefore fetches that URL, falls back to the version's Congress.gov `xml_url` on 404, and sets `xml_schema` from the root namespace (`uslm` only if a USLM namespace is declared, else `other`). Missing or malformed XML leaves text nil and the job succeeds; 5xx/timeouts are returned for Oban retry. `versions_missing_text/1` now keys on `text_source_id`.
+
+## 2026-10-23 — Senate votes: LIS-keyed positions, shared BillId helper, Eastern-time dates via Tz
+Senate roll calls are parsed from senate.gov XML with `Saxy.SimpleForm`; positions are keyed by LIS id (`{"lis", id}`), `Guilty`/`Not Guilty` map to yea/nay and `Not Voting` to absent, and the vote bill is set only when `document_type`/`document_number` form a bill label (nominations `PN` give nil). Vote times are Eastern wall-clock text, converted to UTC with the `tz` time zone database (added as a dependency). `Federal.BillId` is the single builder/parser of bill external ids, identifiers, classifications and display labels. The list job enqueues rolls not stored plus the 10 highest roll numbers because the menu has no update dates. Fixtures are synthetic: senate.gov's WAF returned 403 to every client during capture.
+
+## 2026-10-23 — Bill ingest: per-endpoint sets, 0-based action positions, chamber-only actors
+`SyncBills` lists bills updated since the last succeeded run and enqueues one `SyncBill` per bill (unique on congress/type/number for an hour). `SyncBill` makes five requests and writes each record with the source of the response it came from. Actions and sponsorships replace the stored set, so they are written only after a successful fetch of that endpoint; a failed request fails the job for retry, and an empty actions list is not written. Action `position` is 0-based, oldest first (Congress.gov lists newest first). `actor_body_external_id` is only `house`, `senate` or nil, taken from the action's `sourceSystem` (Library of Congress system actions have no chamber). Version `code` is the GovInfo package suffix parsed from the version's format URL; bill `subjects` are the legislative subjects only (the policy area is not included).
+
+## 2026-10-23 — House votes: members-sourced provenance, candidate votes as present, shared vote helpers
+House roll calls come from the Congress.gov `house-vote` detail and `/members` endpoints; the vote's `SourceRef` is the members response (positions dominate). Counts are the `votePartyTotal` entries summed (Speaker-election votes carry per-candidate totals, counted as `present`, and each candidate vote maps to `present` with the raw name kept). `startDate` has an explicit offset so it is converted to UTC directly. The list job enqueues unstored rolls plus rolls whose `updateDate` is at or after the cursor. Result-to-`passed` heuristics and Eastern-time conversion moved to `Federal.VoteSupport`, and session fan-out to `Federal.Sessions`, shared with the Senate jobs.
+
+## 2026-10-23 — Committee calendars from Congress.gov committee-meeting
+
+Committee calendars come from Congress.gov `committee-meeting` (both chambers, typed) instead of docs.house.gov + senate.gov: one primary source, one normalizer. Hearing/Open Hearing/Closed Hearing map to `hearing`, Markup to `markup`, other types (Meeting, Open Business Meeting) to `other` with the raw type kept; source status is stored lowercased and canceled meetings keep their row. Meetings in the next 14 days are re-fetched each run (their chamber is read from the stored source URL).
+
+## 2026-10-23 — Floor schedules: House from docs.house.gov weekly XML, Senate from an unverified page parser
+House floor comes from the docs.house.gov weekly XML (`Download.aspx?file=/billsthisweek/YYYYMMDD/YYYYMMDD.xml`, Monday of the current and next week) instead of the Majority Leader HTML page: official, machine-readable, same content. The URL format was confirmed against a real week (20260914, content-type application/x-octet-stream); a week with no published schedule answers HTTP 200 with an HTML page, so HTML-200 and 404 both mean "no events" (`HTTP.html?/1`, shared with bill text). One all-day floor event per top-level floor item; sub-items (reports, prints) are not events; items with a `remove-date` get status `removed`. The Senate page is parsed with LazyHTML by walking dated headings; senate.gov returns 403 to our capture machine, so that parser and its fixture are synthetic and unverified against the live page. Both jobs warn and record `items: 0` when a fetched document yields no events (an absent House week is normal and does not warn). `BillId.scan/2` finds bill labels in free text and is shared by both normalizers.
+
+## 2026-10-23 — Coverage checks: one-sided tolerance, failed fetch is a failed check
+A check passes iff `actual <= expected` and `actual >= floor(expected * (1 - tolerance))`: we may lag the source by the tolerance but must never hold more than it reports. Tolerance is 0.005 for bills (introduced during a run) and 0 for votes and members. Votes get one check per stored child session (`votes:house:119-1`, `votes:senate:119-2`); member checks count current members by the chamber of their latest term. If the expected count cannot be fetched (e.g. senate.gov answers 403), the check is stored with `expected` NULL, `passed` false and an `error` note, and `mix the_floor.coverage` shows it as FAIL; the coverage job never crashes on a source failure. Live smoke on 2026-10-23: Congress.gov reported 19,775 bills, 439 current House members, 100 senators, 362 and 314 House votes for sessions 1 and 2; senate.gov returned 403 from the capture machine. The full backfill-then-coverage run (M1 done-when) is left to be run by the user.
+
+## 2026-10-23 — Ingest adapter registry for the mix tasks
+Mix tasks are jurisdiction-agnostic: `config :the_floor, :ingest_adapters` lists modules whose `all/0` returns ordered `{name, worker, args}`, so `mix the_floor.ingest` never names the federal adapter and the boundary test holds. Tasks start the app with Oban queues and plugins off, so they enqueue (or read) without running jobs or the cron in a VM that exits. The nightly cron runs the vote jobs without a `session` arg (every stored session of the congress, one cheap list request each) rather than only the current session, since cron arguments are static.
+
+## 2026-10-23 — First full ingest: prerequisite snoozes and job priorities
+List jobs start together (`ingest` concurrency 4) and finish in any order, so registry order is only a priority hint. Each list job checks the data it needs before `Federal.Job.run/2` and returns `{:snooze, 300}` when it is missing, so no run is recorded and no cursor moves: members need the congress session; bills need the session and ≥1 person; vote lists need ≥1 stored child session and ≥1 person; committee meetings need the session and ≥1 committee body. After 24 snoozes (~2 h) a missing prerequisite becomes `{:error, {:missing_prerequisite, name}}` so Oban retries and then discards it instead of snoozing forever. Detail jobs (SyncBill, SyncBillText, SyncHouseVote, SyncSenateVote, SyncCommitteeMeeting) run at Oban priority 5 and list jobs at 0–3, so list jobs are picked first. `relink` and `coverage` snooze while other ingest-queue jobs are still to run (relink ignores coverage), capped at the same 24 snoozes. Oban Lifeline (rescue after 30 min) and Pruner (7 days) are enabled outside test.
+
+## 2026-10-23 — Vote references kept for relinking
+`votes.bill_ref` and `vote_positions.person_scheme`/`person_value` store the source's references on every write, whether or not the bill or person is stored yet. `TheFloor.Ingest.Relink.run/0` (jurisdiction-agnostic) fills a nil `bill_id` from `bill_ref` within the vote body's jurisdiction and a nil `person_id` from `person_identifiers`; the federal `relink` job runs it after the list jobs, before coverage, and nightly at 05:30 America/New_York. A vote with no body is now `{:error, {:unknown_body, nil}}`.
+
+## 2026-10-23 — Incremental listings overlap the cursor by 2 days
+`SyncBills` and `SyncCommitteeMeetings` list from `fromDateTime = cursor − 2 days`, so an item whose detail job was discarded after its attempts, or that offset paging over a shifting `updateDate` skipped, is listed again on the next run. Writers are idempotent and `SyncBill` is unique per bill for an hour, so the overlap costs only repeat detail fetches. Coverage records one failed `votes:<chamber>` check ("no child sessions stored") when the congress has no stored child sessions.
+
+## 2026-10-23 — Hosting on Fly.io with CI-gated deploys
+Fly.io app `thefloor-vote` in `iad` (the name `the-floor` was taken) with an unmanaged single-node Fly Postgres (`thefloor-vote-db`, shared-cpu-1x, 1 GB volume), the cheapest Postgres Fly offers. One 512 MB shared machine with auto-stop off and `min_machines_running = 1`, because Oban Cron runs the nightly ingest inside the app; deploys use `--ha=false` to keep it at one machine. GitHub Actions runs format, credo `--strict`, warnings-as-errors and tests against Postgres 17 on every push and PR, and deploys `main` only after they pass. The release image adds `cmake` (lazy_html has no precompiled NIF for OTP 29) and downloads Tailwind with curl, since its `:httpc` installer rejects GitHub's long redirect headers. Ingest helpers moved out of the Mix-only module (`TheFloor.Ingest.Jobs`, `Coverage.format_rows/1`) so `TheFloor.Release.ingest/1` and `coverage/0` work in a release via `bin/the_floor rpc`.
+
+## 2026-10-23 — First bill and text ingest from GovInfo bulk data
+The first `sync_bills` run (no cursor) reads GovInfo's BILLSTATUS bulk zips (one per bill type) instead of ~6 Congress.gov requests per bill, which took ~25 h at the API's 5,000 requests/hour. BILLSTATUS is the official source the API is built from and uses its field names, so `Normalize.BillStatus` converts each file to the API's response shape and the same `Normalize.Bill` + `BillWriter` path writes both; a parity test pins identical records for 119 H.R. 22 (text-version links point at GovInfo instead of congress.gov). Each record's provenance is its own per-file bulkdata URL, the zip's download time and the hash of the entry's bytes, which equals the hash of that URL's body (checked live). The run is recorded as `sync_bills`, so later runs list from the API with the usual 2-day overlap, which covers the hours bulk files lag the API. A missing zip is skipped, a zip that fails otherwise fails the run, and a run that writes no bills fails so no cursor is set over an empty database; an unreadable entry falls back to a `SyncBill` job. The run then enqueues `BackfillBillText`, which fills version text from the BILLS zips (one per session and type) and falls back to `SyncBillText` for every version still missing text. Bills now wait for a succeeded `sync_members` run, so sponsorships are not dropped while members are still being written.
+
+## 2026-10-23 — Actions may have no description
+`bill_actions.description` is nullable. Congress.gov and BILLSTATUS both carry some Library of Congress actions with only a date and a code (e.g. `Intro-S`); requiring a description made 29 of 19,769 live 119th-Congress bills unwritable by either path. They are stored as the source gives them and flagged unclassified, never given invented text.
+
+## 2026-10-23 — Bulk jobs time out before Lifeline rescues them
+Oban Lifeline makes a job still `executing` after `rescue_after` runnable again even if it is still running, so `rescue_after` is 2 h and the bulk `SyncBills` and `BackfillBillText` workers time out at 90 min (a test pins timeout < rescue_after). One unreadable, unparseable or failing bulk entry, raised or returned, falls back to its per-item API job instead of failing the run, so a single bad file cannot block the first ingest.

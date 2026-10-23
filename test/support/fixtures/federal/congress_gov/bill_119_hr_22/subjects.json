@@ -1,0 +1,65 @@
+{
+    "pagination": {
+        "count": 12
+    },
+    "request": {
+        "billNumber": "22",
+        "billType": "hr",
+        "billUrl": "https://api.congress.gov/v3/bill/119/hr/22?format=json",
+        "congress": "119",
+        "contentType": "application/json",
+        "format": "json"
+    },
+    "subjects": {
+        "legislativeSubjects": [
+            {
+                "name": "Citizenship and naturalization",
+                "updateDate": "2025-02-19T20:52:52Z"
+            },
+            {
+                "name": "Civil actions and liability",
+                "updateDate": "2025-02-19T20:52:52Z"
+            },
+            {
+                "name": "Criminal procedure and sentencing",
+                "updateDate": "2025-02-19T20:52:52Z"
+            },
+            {
+                "name": "Election Assistance Commission",
+                "updateDate": "2025-02-19T20:52:52Z"
+            },
+            {
+                "name": "Elections, voting, political campaign regulation",
+                "updateDate": "2025-02-19T20:52:52Z"
+            },
+            {
+                "name": "Government information and archives",
+                "updateDate": "2025-02-19T20:52:52Z"
+            },
+            {
+                "name": "Immigration status and procedures",
+                "updateDate": "2025-02-19T20:52:52Z"
+            },
+            {
+                "name": "Licensing and registrations",
+                "updateDate": "2025-02-19T20:52:52Z"
+            },
+            {
+                "name": "Postal service",
+                "updateDate": "2025-02-19T20:52:52Z"
+            },
+            {
+                "name": "State and local government operations",
+                "updateDate": "2025-02-19T20:52:52Z"
+            },
+            {
+                "name": "Voting rights",
+                "updateDate": "2025-02-19T20:52:52Z"
+            }
+        ],
+        "policyArea": {
+            "name": "Government Operations and Politics",
+            "updateDate": "2025-02-18T11:38:52Z"
+        }
+    }
+}

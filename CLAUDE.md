@@ -65,6 +65,8 @@ M1: schema + federal adapter. See `docs/SPEC.md` → Milestones.
 
 - `mix setup` — deps, database, assets
 - `mix phx.server` — run locally at http://localhost:4000
+- `mix the_floor.ingest [job]` — enqueue the ingest jobs (all, or one by name)
+- `mix the_floor.coverage` — print latest coverage checks; non-zero exit on any failure
 - `mix test` — run before every commit
 - `mix format` and `mix credo` before opening a PR
 

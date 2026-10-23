@@ -1,0 +1,78 @@
+{
+  "cosponsors": [
+    {
+      "bioguideId": "G000597",
+      "district": 2,
+      "firstName": "Andrew",
+      "fullName": "Rep. Garbarino, Andrew R. [R-NY-2]",
+      "isOriginalCosponsor": true,
+      "lastName": "Garbarino",
+      "middleName": "R.",
+      "party": "R",
+      "sponsorshipDate": "2025-01-03",
+      "state": "NY",
+      "url": "https://api.congress.gov/v3/member/G000597?format=json"
+    },
+    {
+      "bioguideId": "M000317",
+      "district": 11,
+      "firstName": "Nicole",
+      "fullName": "Rep. Malliotakis, Nicole [R-NY-11]",
+      "isOriginalCosponsor": true,
+      "lastName": "Malliotakis",
+      "party": "R",
+      "sponsorshipDate": "2025-01-03",
+      "state": "NY",
+      "url": "https://api.congress.gov/v3/member/M000317?format=json"
+    },
+    {
+      "bioguideId": "F000475",
+      "district": 1,
+      "firstName": "Brad",
+      "fullName": "Rep. Finstad, Brad [R-MN-1]",
+      "isOriginalCosponsor": true,
+      "lastName": "Finstad",
+      "party": "R",
+      "sponsorshipDate": "2025-01-03",
+      "state": "MN",
+      "url": "https://api.congress.gov/v3/member/F000475?format=json"
+    },
+    {
+      "bioguideId": "C001116",
+      "district": 9,
+      "firstName": "Andrew",
+      "fullName": "Rep. Clyde, Andrew S. [R-GA-9]",
+      "isOriginalCosponsor": true,
+      "lastName": "Clyde",
+      "middleName": "S.",
+      "party": "R",
+      "sponsorshipDate": "2025-01-03",
+      "state": "GA",
+      "url": "https://api.congress.gov/v3/member/C001116?format=json"
+    },
+    {
+      "bioguideId": "H001077",
+      "district": 3,
+      "firstName": "Clay",
+      "fullName": "Rep. Higgins, Clay [R-LA-3]",
+      "isOriginalCosponsor": true,
+      "lastName": "Higgins",
+      "party": "R",
+      "sponsorshipDate": "2025-01-03",
+      "state": "LA",
+      "url": "https://api.congress.gov/v3/member/H001077?format=json"
+    }
+  ],
+  "pagination": {
+    "count": 110,
+    "countIncludingWithdrawnCosponsors": 110
+  },
+  "request": {
+    "billNumber": "22",
+    "billType": "hr",
+    "billUrl": "https://api.congress.gov/v3/bill/119/hr/22?format=json",
+    "congress": "119",
+    "contentType": "application/json",
+    "format": "json"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "committeeMeeting": {
+    "chamber": "House",
+    "committees": [
+      {
+        "name": "House Oversight and Government Reform",
+        "systemCode": "hsgo00",
+        "url": "https://api.congress.gov/v3/committee/house/hsgo00?format=json"
+      }
+    ],
+    "congress": 119,
+    "date": "2026-04-29T14:00:00Z",
+    "eventId": "119248",
+    "location": {
+      "building": "Rayburn House Office Building",
+      "room": "2154"
+    },
+    "meetingStatus": "Scheduled",
+    "relatedItems": {
+      "bills": [
+        {
+          "congress": 119,
+          "number": "8312",
+          "type": "HR",
+          "url": "https://api.congress.gov/v3/bill/119/hr/8312?format=json"
+        },
+        {
+          "congress": 119,
+          "number": "8340",
+          "type": "HR",
+          "url": "https://api.congress.gov/v3/bill/119/hr/8340?format=json"
+        },
+        {
+          "congress": 119,
+          "number": "8467",
+          "type": "HR",
+          "url": "https://api.congress.gov/v3/bill/119/hr/8467?format=json"
+        }
+      ]
+    },
+    "title": "the full Committee to consider the following: \r\n1) H.R. 8463, Pre-Payment Fraud Prevention and Treasury Data Access Act;\r\n\r\n2) H.R. 8464, Stopping Fraudulent Payments Act;\r\n\t\r\n3) H.R. 8312, Fraud Prevention and Accountability Act;\r\n\t\r\n4) H.R. 8467, Zeroing Out Monetary Benefits Improperly Expended Act;\r\n\t\r\n5) H.R. 8428, Federal Fraud Prevention Workforce Training Act;\r\n\t\r\n6) H.R. 8466, Taxpayer Resources Used in Emergencies Accountability Act;\r\n\t\r\n7) H.R. 8340, Taxpayer Funds Oversight and Accountability Act;\r\n\t\r\n8) H.R. 1755, Timely and Accurate Benefits Act;\r\n\t\r\n9) H.R. 8107, Government Audit and Accountability of Federally Funded State-Administered Programs Act;\r\n\t\r\n10) Several postal naming measures.",
+    "type": "Markup",
+    "updateDate": "2026-10-07T20:03:32Z"
+  },
+  "request": {
+    "chamber": "house",
+    "congress": "119",
+    "contentType": "application/json",
+    "eventId": "119248",
+    "format": "json"
+  }
+}

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SYNTHETIC fixture: senate.gov returned 403 (Akamai WAF) to every client; shape follows the published roll_call_lists format. -->
+<vote_summary>
+  <congress>119</congress>
+  <session>1</session>
+  <congress_year>2025</congress_year>
+  <votes>
+    <vote>
+      <vote_number>00005</vote_number>
+      <vote_date>09-Jan</vote_date>
+      <issue>PN 12</issue>
+      <question>On the Nomination</question>
+      <result>Confirmed</result>
+      <vote_tally><yeas>51</yeas><nays>47</nays></vote_tally>
+      <title>Example Nominee, of Ohio, to be an Example Official</title>
+    </vote>
+    <vote>
+      <vote_number>00004</vote_number>
+      <vote_date>09-Jan</vote_date>
+      <issue>H.R. 1234</issue>
+      <question>On Passage of the Bill</question>
+      <result>Passed</result>
+      <vote_tally><yeas>60</yeas><nays>38</nays></vote_tally>
+      <title>A bill to provide an example.</title>
+    </vote>
+    <vote>
+      <vote_number>00003</vote_number>
+      <vote_date>08-Jan</vote_date>
+      <issue>S. 5</issue>
+      <question>On the Cloture Motion</question>
+      <result>Cloture Motion Rejected</result>
+      <vote_tally><yeas>44</yeas><nays>54</nays></vote_tally>
+      <title>A bill to provide another example.</title>
+    </vote>
+    <vote>
+      <vote_number>00002</vote_number>
+      <vote_date>07-Jan</vote_date>
+      <issue>S.J.Res. 12</issue>
+      <question>On the Joint Resolution</question>
+      <result>Joint Resolution Passed</result>
+      <vote_tally><yeas>55</yeas><nays>45</nays></vote_tally>
+      <title>A joint resolution.</title>
+    </vote>
+    <vote>
+      <vote_number>00001</vote_number>
+      <vote_date>03-Jan</vote_date>
+      <issue>S. 5</issue>
+      <question>On the Motion to Proceed</question>
+      <result>Motion Agreed to</result>
+      <vote_tally><yeas>84</yeas><nays>9</nays></vote_tally>
+      <title>A bill to provide another example.</title>
+    </vote>
+  </votes>
+</vote_summary>

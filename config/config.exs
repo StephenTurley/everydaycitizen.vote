@@ -11,6 +11,9 @@ config :the_floor,
   ecto_repos: [TheFloor.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# Time zone database (Senate vote times are America/New_York)
+config :elixir, :time_zone_database, Tz.TimeZoneDatabase
+
 # Configure the endpoint
 config :the_floor, TheFloorWeb.Endpoint,
   url: [host: "localhost"],
@@ -35,6 +38,36 @@ config :phoenix_live_view,
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
 config :the_floor, TheFloor.Mailer, adapter: Swoosh.Adapters.Local
+
+config :the_floor, Oban,
+  repo: TheFloor.Repo,
+  queues: [ingest: 4, text: 2],
+  plugins: [
+    # Rescue jobs left executing by a crashed node; prune finished jobs after a week.
+    # rescue_after must exceed every worker's timeout (the bulk bill and text
+    # backfills allow 90 minutes), or a still-running job would be started twice.
+    {Oban.Plugins.Lifeline, rescue_after: :timer.hours(2)},
+    {Oban.Plugins.Pruner, max_age: 7 * 24 * 60 * 60},
+    {Oban.Plugins.Cron,
+     timezone: "America/New_York",
+     crontab: [
+       {"0 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncCongress},
+       {"10 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncMembers},
+       {"30 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncBills},
+       {"40 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncHouseVotes},
+       {"40 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncSenateVotes},
+       {"50 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncCommitteeMeetings},
+       {"0 3 * * *", TheFloor.Adapters.Federal.Jobs.SyncHouseFloor},
+       {"0 3 * * *", TheFloor.Adapters.Federal.Jobs.SyncSenateFloor},
+       {"30 5 * * *", TheFloor.Adapters.Federal.Jobs.Relink},
+       {"0 6 * * *", TheFloor.Adapters.Federal.Jobs.Coverage}
+     ]}
+  ]
+
+# Adapters whose `all/0` lists their list-level ingest jobs as {name, worker, args}.
+config :the_floor, :ingest_adapters, [TheFloor.Adapters.Federal.Jobs]
+
+config :the_floor, :federal, congress: 119
 
 # Configure esbuild (the version is required)
 config :esbuild,

@@ -1,0 +1,28 @@
+{
+  "committeeMeetings": [
+    {
+      "chamber": "Senate",
+      "congress": 119,
+      "eventId": "338781",
+      "updateDate": "2026-09-30T16:08:20Z",
+      "url": "https://api.congress.gov/v3/committee-meeting/119/senate/338781?format=json"
+    },
+    {
+      "chamber": "Senate",
+      "congress": 119,
+      "eventId": "338787",
+      "updateDate": "2026-09-30T00:23:27Z",
+      "url": "https://api.congress.gov/v3/committee-meeting/119/senate/338787?format=json"
+    },
+    {
+      "chamber": "Senate",
+      "congress": 119,
+      "eventId": "338788",
+      "updateDate": "2026-09-30T00:08:26Z",
+      "url": "https://api.congress.gov/v3/committee-meeting/119/senate/338788?format=json"
+    }
+  ],
+  "pagination": {
+    "count": 1125
+  }
+}

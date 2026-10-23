@@ -1,0 +1,30 @@
+{
+  "committeeMeeting": {
+    "chamber": "House",
+    "committees": [
+      {
+        "systemCode": "hspw07",
+        "url": "https://api.congress.gov/v3/committee/house/hspw07?format=json"
+      }
+    ],
+    "congress": 119,
+    "date": "2026-01-13T15:00:00Z",
+    "eventId": "118809",
+    "isManuallyCurated": true,
+    "location": {
+      "building": "Rayburn House Office Building",
+      "room": "2167"
+    },
+    "meetingStatus": "Scheduled",
+    "title": "\"Drugs, Thugs, and Fish: Examining Coast Guard Law Enforcement Efforts.\"",
+    "type": "Hearing",
+    "updateDate": "2026-10-23T09:57:58Z"
+  },
+  "request": {
+    "chamber": "house",
+    "congress": "119",
+    "contentType": "application/json",
+    "eventId": "118809",
+    "format": "json"
+  }
+}

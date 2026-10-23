@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SYNTHETIC fixture: senate.gov returned 403 (Akamai WAF) to every client; shape follows the published roll_call_votes format. Member list trimmed; the count block is intact. -->
+<roll_call_vote>
+  <congress>119</congress>
+  <session>1</session>
+  <congress_year>2025</congress_year>
+  <vote_number>5</vote_number>
+  <vote_date>January 9, 2025, 5:30 PM</vote_date>
+  <modify_date>January 9, 2025, 06:00 PM</modify_date>
+  <vote_question_text>On the Nomination PN 12</vote_question_text>
+  <vote_document_text>Example Nominee, of Ohio, to be an Example Official</vote_document_text>
+  <vote_result_text>Nomination Confirmed (51-47, 2 Not Voting)</vote_result_text>
+  <question>On the Nomination</question>
+  <vote_title>Nomination</vote_title>
+  <majority_requirement>1/2</majority_requirement>
+  <vote_result>Confirmed</vote_result>
+  <document>
+    <document_congress>119</document_congress>
+    <document_type>PN</document_type>
+    <document_number>12</document_number>
+    <document_name>PN12</document_name>
+    <document_title>Example Nominee, of Ohio, to be an Example Official</document_title>
+  </document>
+  <count>
+    <yeas>51</yeas>
+    <nays>47</nays>
+    <present/>
+    <absent>2</absent>
+  </count>
+  <members>
+    <member>
+      <member_full>Alsobrooks (D-MD)</member_full>
+      <last_name>Alsobrooks</last_name>
+      <first_name>Angela</first_name>
+      <party>D</party>
+      <state>MD</state>
+      <vote_cast>Nay</vote_cast>
+      <lis_member_id>S428</lis_member_id>
+    </member>
+    <member>
+      <member_full>Murkowski (R-AK)</member_full>
+      <last_name>Murkowski</last_name>
+      <first_name>Lisa</first_name>
+      <party>R</party>
+      <state>AK</state>
+      <vote_cast>Yea</vote_cast>
+      <lis_member_id>S288</lis_member_id>
+    </member>
+  </members>
+</roll_call_vote>

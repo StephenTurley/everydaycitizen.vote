@@ -1,0 +1,28 @@
+[
+ {
+  "type": "house",
+  "name": "House Committee on Agriculture",
+  "thomas_id": "HSAG",
+  "house_committee_id": "AG",
+  "subcommittees": [
+   {
+    "name": "Forestry and Horticulture",
+    "thomas_id": "15"
+   },
+   {
+    "name": "Nutrition and Foreign Agriculture",
+    "thomas_id": "03"
+   }
+  ]
+ },
+ {
+  "type": "joint",
+  "name": "Joint Economic Committee",
+  "thomas_id": "JSEC",
+  "house_committee_id": "EC",
+  "senate_committee_id": "JSEC",
+  "minority_rss_url": "http://www.jec.senate.gov/public/?a=RSS.Feed",
+  "wikipedia": "Joint Economic Committee",
+  "subcommittees": []
+ }
+]

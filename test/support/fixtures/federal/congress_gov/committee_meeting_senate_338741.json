@@ -1,0 +1,52 @@
+{
+  "committeeMeeting": {
+    "chamber": "Senate",
+    "committees": [
+      {
+        "name": "Senate Finance",
+        "systemCode": "ssfi00",
+        "url": "https://api.congress.gov/v3/committee/senate/ssfi00?format=json"
+      }
+    ],
+    "congress": 119,
+    "date": "2026-09-15T14:00:00Z",
+    "eventId": "338741",
+    "location": {
+      "building": "Dirksen Senate Office Building",
+      "room": "215"
+    },
+    "meetingStatus": "Scheduled",
+    "relatedItems": {
+      "nominations": [
+        {
+          "congress": 119,
+          "number": 1022,
+          "part": "05",
+          "url": "https://api.congress.gov/v3/nomination/119/1022?format=json"
+        },
+        {
+          "congress": 119,
+          "number": 1098,
+          "part": "03",
+          "url": "https://api.congress.gov/v3/nomination/119/1098?format=json"
+        },
+        {
+          "congress": 119,
+          "number": 1128,
+          "part": "00",
+          "url": "https://api.congress.gov/v3/nomination/119/1128?format=json"
+        }
+      ]
+    },
+    "title": "Hearings to examine the nominations of Gerard Klomp, of Utah, to be Deputy Secretary, and Ge Bai, of Virginia, to be an Assistant Secretary, both of the Department of Health and Human Services, James Gadwood, of Maryland, to be Chief Counsel for the Internal Revenue Service and an Assistant General Counsel in the Department of the Treasury, and Andrew A. De Mello, of Virginia, to be a Judge of the United States Tax Court for a term of fifteen years.",
+    "type": "Open Hearing",
+    "updateDate": "2026-09-14T23:23:23Z"
+  },
+  "request": {
+    "chamber": "senate",
+    "congress": "119",
+    "contentType": "application/json",
+    "eventId": "338741",
+    "format": "json"
+  }
+}
