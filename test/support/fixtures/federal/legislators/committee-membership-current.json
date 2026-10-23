@@ -1,0 +1,13 @@
+{
+  "HSAG": [
+    {"name": "Nick Begich", "party": "majority", "rank": 1, "title": "Chair", "bioguide": "B001323"},
+    {"name": "Maria Cantwell", "party": "minority", "rank": 1, "title": "Ranking Member", "bioguide": "C000127"}
+  ],
+  "HSAG03": [
+    {"name": "Nick Begich", "party": "majority", "rank": 2, "bioguide": "B001323"}
+  ],
+  "JSEC": [
+    {"name": "Michael Bennet", "party": "majority", "rank": 1, "title": "Vice Chairman", "bioguide": "B001267", "chamber": "senate"},
+    {"name": "Not In Legislators", "party": "majority", "rank": 2, "title": "Chairman", "bioguide": "Z999999", "chamber": "house"}
+  ]
+}

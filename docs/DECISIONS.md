@@ -65,3 +65,6 @@ Known limitation: members who leave a committee are not end-dated in M1.
 
 ## 2026-10-23 — Federal session = congress; sub-sessions for vote numbering
 A federal legislative session is the congress (`119`); each congressional session is a child session (`119-1`, `119-2`) because roll-call numbering restarts per session. Sub-session dates are the earliest start / latest end across chambers; the congress is open-ended while any session is. Every list-level job runs inside `Federal.Job.run/2`, which records the ingest run and never advances the cursor on failure.
+
+## 2026-10-23 — Members and committees from unitedstates/congress-legislators
+Members and committees come from the `congress-legislators` JSON files (the only source carrying the LIS ids needed to match Senate votes). The historical file is filtered to legislators with a term ending on/after the session start. Committee memberships have nil dates (source lists current members only) and use the committees file as their source ref; unknown people are skipped and counted rather than failing the run.

@@ -1,0 +1,147 @@
+[
+ {
+  "id": {
+   "bioguide": "B001323",
+   "fec": [
+    "H2AK01083"
+   ],
+   "govtrack": 456970,
+   "opensecrets": "N00049408",
+   "wikipedia": "Nick Begich III",
+   "wikidata": "Q113676482",
+   "google_entity_id": "kg:/g/11tc3qp2lx",
+   "votesmart": 207684,
+   "ballotpedia": "Nicholas Begich"
+  },
+  "name": {
+   "first": "Nicholas",
+   "middle": "Joseph",
+   "last": "Begich",
+   "suffix": "III",
+   "official_full": "Nicholas J. Begich III"
+  },
+  "terms": [
+   {
+    "type": "rep",
+    "start": "2025-01-03",
+    "end": "2027-01-03",
+    "state": "AK",
+    "district": 0,
+    "party": "Republican"
+   }
+  ]
+ },
+ {
+  "id": {
+   "bioguide": "B001267",
+   "thomas": "01965",
+   "lis": "S330",
+   "govtrack": 412330,
+   "opensecrets": "N00030608",
+   "votesmart": 110942,
+   "fec": [
+    "S0CO00211"
+   ],
+   "cspan": 1031622,
+   "wikipedia": "Michael Bennet",
+   "ballotpedia": "Michael Bennet",
+   "maplight": 1092,
+   "icpsr": 40910,
+   "wikidata": "Q554792",
+   "google_entity_id": "kg:/m/05b60qf",
+   "pictorial": 13409
+  },
+  "name": {
+   "first": "Michael",
+   "middle": "F.",
+   "last": "Bennet",
+   "official_full": "Michael F. Bennet"
+  },
+  "terms": [
+   {
+    "type": "sen",
+    "start": "2011-01-05",
+    "end": "2017-01-03",
+    "state": "CO",
+    "class": 3,
+    "party": "Democrat",
+    "state_rank": "senior"
+   },
+   {
+    "type": "sen",
+    "start": "2017-01-03",
+    "end": "2023-01-03",
+    "state": "CO",
+    "class": 3,
+    "state_rank": "senior",
+    "party": "Democrat"
+   },
+   {
+    "type": "sen",
+    "start": "2023-01-03",
+    "end": "2029-01-03",
+    "state": "CO",
+    "class": 3,
+    "state_rank": "senior",
+    "party": "Democrat"
+   }
+  ]
+ },
+ {
+  "id": {
+   "bioguide": "C000127",
+   "thomas": "00172",
+   "lis": "S275",
+   "govtrack": 300018,
+   "opensecrets": "N00007836",
+   "votesmart": 27122,
+   "fec": [
+    "S8WA00194",
+    "H2WA01054"
+   ],
+   "cspan": 26137,
+   "wikipedia": "Maria Cantwell",
+   "house_history": 10608,
+   "ballotpedia": "Maria Cantwell",
+   "maplight": 544,
+   "icpsr": 39310,
+   "wikidata": "Q22250",
+   "google_entity_id": "kg:/m/01x68t",
+   "pictorial": 13398
+  },
+  "name": {
+   "first": "Maria",
+   "last": "Cantwell",
+   "official_full": "Maria Cantwell"
+  },
+  "terms": [
+   {
+    "type": "sen",
+    "start": "2013-01-03",
+    "end": "2019-01-03",
+    "state": "WA",
+    "party": "Democrat",
+    "class": 1,
+    "state_rank": "junior"
+   },
+   {
+    "type": "sen",
+    "start": "2019-01-03",
+    "end": "2025-01-03",
+    "state": "WA",
+    "class": 1,
+    "party": "Democrat",
+    "state_rank": "junior"
+   },
+   {
+    "type": "sen",
+    "start": "2025-01-03",
+    "end": "2031-01-03",
+    "state": "WA",
+    "class": 1,
+    "state_rank": "junior",
+    "party": "Democrat"
+   }
+  ]
+ }
+]
