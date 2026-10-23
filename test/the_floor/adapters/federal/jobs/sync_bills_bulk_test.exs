@@ -38,14 +38,13 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillsBulkTest do
 
         {"www.govinfo.gov", path} ->
           send(self(), {:bulk, path})
-
-          case Map.fetch(zips, path) do
-            {:ok, bytes} -> Plug.Conn.send_resp(conn, 200, bytes)
-            :error -> Plug.Conn.send_resp(conn, 404, "nope")
-          end
+          bulk_response(conn, Map.fetch(zips, path))
       end
     end)
   end
+
+  defp bulk_response(conn, {:ok, bytes}), do: Plug.Conn.send_resp(conn, 200, bytes)
+  defp bulk_response(conn, :error), do: Plug.Conn.send_resp(conn, 404, "nope")
 
   setup do
     stub(%{})
