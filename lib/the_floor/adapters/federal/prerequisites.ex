@@ -14,6 +14,7 @@ defmodule TheFloor.Adapters.Federal.Prerequisites do
 
   alias TheFloor.Adapters.Federal.Sessions
   alias TheFloor.Legislature
+  alias TheFloor.Provenance
   alias TheFloor.Repo
 
   @snooze_seconds 300
@@ -61,6 +62,15 @@ defmodule TheFloor.Adapters.Federal.Prerequisites do
   @doc "At least one person is stored."
   @spec people() :: check()
   def people, do: {:people, &Legislature.any_person?/0}
+
+  @doc """
+  A members sync has succeeded, so every member a bill can reference is stored
+  (sponsorships of people not yet stored are skipped, not deferred).
+  """
+  @spec members_synced() :: check()
+  def members_synced,
+    do:
+      {:members_synced, fn -> Provenance.last_succeeded_run("federal", "sync_members") != nil end}
 
   @doc "At least one committee is stored."
   @spec committees() :: check()

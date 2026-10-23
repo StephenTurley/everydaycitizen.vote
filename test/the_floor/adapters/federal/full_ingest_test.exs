@@ -105,10 +105,19 @@ defmodule TheFloor.Adapters.Federal.FullIngestTest do
   defp respond(%Plug.Conn{host: "unitedstates.github.io", request_path: path} = conn),
     do: json(conn, legislators(Path.basename(path, ".json")))
 
+  # The first bill sync reads the BILLSTATUS bulk zip; the BILLS text zips are
+  # missing, so text falls back to the per-version file.
   defp respond(%Plug.Conn{host: "www.govinfo.gov", request_path: path} = conn) do
-    if path =~ "BILLS-119hr22ih.xml",
-      do: reply(conn, 200, read("govinfo/BILLS-119hr22ih.xml")),
-      else: reply(conn, 404, "")
+    cond do
+      path == "/bulkdata/BILLSTATUS/119/hr/BILLSTATUS-119-hr.zip" ->
+        reply(conn, 200, billstatus_zip())
+
+      path =~ "BILLS-119hr22ih.xml" ->
+        reply(conn, 200, read("govinfo/BILLS-119hr22ih.xml"))
+
+      true ->
+        reply(conn, 404, "")
+    end
   end
 
   defp respond(%Plug.Conn{host: "docs.house.gov"} = conn),
@@ -227,4 +236,10 @@ defmodule TheFloor.Adapters.Federal.FullIngestTest do
   defp json(conn, term), do: reply(conn, 200, JSON.encode!(term))
 
   defp reply(conn, status, body), do: Plug.Conn.send_resp(conn, status, body)
+
+  defp billstatus_zip do
+    entry = {~c"BILLSTATUS-119hr22.xml", read("govinfo/BILLSTATUS-119hr22.xml")}
+    {:ok, {_, bytes}} = :zip.create(~c"BILLSTATUS-119-hr.zip", [entry], [:memory])
+    bytes
+  end
 end
