@@ -50,6 +50,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: superfly/flyctl-actions/setup-flyctl@1.5
-      - run: flyctl deploy --remote-only --ha=false
+      - run: flyctl deploy --remote-only --ha=false --image-label git-${{ github.sha }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

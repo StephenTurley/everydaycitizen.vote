@@ -69,6 +69,9 @@ COPY lib lib
 # Compile the release
 RUN mix compile
 
+# Bundle source for Sentry's stack-trace context (prod config enables it)
+RUN mix sentry.package_source_code
+
 COPY assets assets
 
 # compile assets

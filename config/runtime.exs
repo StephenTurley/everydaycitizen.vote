@@ -16,6 +16,11 @@ import Config
 #
 # Alternatively, you can use `mix phx.gen.release` to generate a `bin/server`
 # script that automatically sets the env var above.
+# Failed jobs to Sentry: a transient source failure only once its last retry
+# fails (TheFloor.SentryJobs). A function, so it lives here, not in config.exs.
+config :sentry,
+  integrations: [oban: [should_report_error_callback: &TheFloor.SentryJobs.report_error?/2]]
+
 if System.get_env("PHX_SERVER") do
   config :the_floor, TheFloorWeb.Endpoint, server: true
 end
@@ -46,6 +51,20 @@ if config_env() == :dev do
 end
 
 if config_env() == :prod do
+  # The deploy labels the image with the commit (`--image-label git-<sha>`), so
+  # each Sentry event names the release that produced it.
+  release_sha =
+    case Regex.run(~r/:git-([0-9a-f]+)$/, System.get_env("FLY_IMAGE_REF", "")) do
+      [_, sha] -> sha
+      _ -> nil
+    end
+
+  # Errors, crashes (the logger handler; no log messages) and failed jobs.
+  config :sentry,
+    dsn: System.get_env("SENTRY_DSN"),
+    release: release_sha && "the-floor@" <> release_sha,
+    logs: []
+
   System.get_env("CONGRESS_GOV_API_KEY") ||
     raise "environment variable CONGRESS_GOV_API_KEY is missing."
 
@@ -79,6 +98,9 @@ if config_env() == :prod do
       """
 
   host = System.get_env("PHX_HOST") || "example.com"
+
+  # Every other host redirects here (TheFloorWeb.CanonicalHost).
+  config :the_floor, :canonical_host, host
 
   config :the_floor, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 

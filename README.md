@@ -50,7 +50,13 @@ run as the Fly release command (`/app/bin/migrate`). One machine always runs, be
 Oban runs the nightly schedule inside the app.
 
 Secrets are Fly secrets, never in the repo: `DATABASE_URL`, `SECRET_KEY_BASE`,
-`CONGRESS_GOV_API_KEY`, `PHX_HOST`. The ingest commands have release equivalents that
+`CONGRESS_GOV_API_KEY`, `PHX_HOST` (the canonical host; every other host, such as `www.`
+or the Fly hostname, redirects to it), `SENTRY_DSN`.
+
+Errors, crashes and failed jobs go to Sentry (org `thefloorvote`, project `the-floor`),
+tagged with the deployed commit. Each nightly job also reports to Sentry's Crons page, which
+flags a run that failed, ran long or never happened. Reports carry no request bodies,
+cookies or query strings. The ingest commands have release equivalents that
 run inside the live app:
 
     fly ssh console -C "/app/bin/the_floor rpc 'TheFloor.Release.ingest()'"

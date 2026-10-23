@@ -1,4 +1,5 @@
 defmodule TheFloorWeb.Endpoint do
+  use Sentry.PlugCapture
   use Phoenix.Endpoint, otp_app: :the_floor
 
   # The session will be stored in the cookie and signed,
@@ -14,6 +15,9 @@ defmodule TheFloorWeb.Endpoint do
   socket "/live", Phoenix.LiveView.Socket,
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
+
+  # www. and the Fly hostname redirect to PHX_HOST (production only).
+  plug TheFloorWeb.CanonicalHost
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -47,6 +51,12 @@ defmodule TheFloorWeb.Endpoint do
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()
+
+  # Error reports carry no request body or cookies, and no query string.
+  plug Sentry.PlugContext,
+    body_scrubber: {TheFloorWeb.SentryScrub, :nothing},
+    cookie_scrubber: {TheFloorWeb.SentryScrub, :nothing},
+    url_scrubber: {TheFloorWeb.SentryScrub, :url}
 
   plug Plug.MethodOverride
   plug Plug.Head

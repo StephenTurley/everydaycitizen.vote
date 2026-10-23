@@ -117,3 +117,9 @@ The first `sync_bills` run (no cursor) reads GovInfo's BILLSTATUS bulk zips (one
 
 ## 2026-10-23 — Bulk jobs time out before Lifeline rescues them
 Oban Lifeline makes a job still `executing` after `rescue_after` runnable again even if it is still running, so `rescue_after` is 2 h and the bulk `SyncBills` and `BackfillBillText` workers time out at 90 min (a test pins timeout < rescue_after). One unreadable, unparseable or failing bulk entry, raised or returned, falls back to its per-item API job instead of failing the run, so a single bad file cannot block the first ingest.
+
+## 2026-10-23 — Sentry for errors and nightly-job monitoring
+Sentry (org `thefloorvote`, project `the-floor`, SDK `sentry ~> 14.0`), set up like turley.dev: request errors via `Sentry.PlugCapture`, crashes via the SDK's logger handler (no log messages), failed Oban jobs as issues (a transient source failure, i.e. transport error, 429 or 5xx, only on its last attempt), and every Oban Cron job on Sentry's Crons page so a nightly ingest that fails, overruns or never starts is visible. Reports carry no request bodies, cookies or query strings, since M2's rep lookup takes a visitor's address. Releases are `the-floor@<git sha>` from the deploy's image label. Tracing and a browser project are left until there is a UI to measure. `SENTRY_DSN` is optional; nothing is sent without it.
+
+## 2026-10-23 — Canonical host thefloor.vote
+The app answers on `thefloor.vote` (A/AAAA to the Fly app's IPs, Fly-issued certificate); `www.thefloor.vote` and `thefloor-vote.fly.dev` redirect (301) to it via `TheFloorWeb.CanonicalHost`, which reads the host from `PHX_HOST`, because LiveView sockets only accept the configured origin.
