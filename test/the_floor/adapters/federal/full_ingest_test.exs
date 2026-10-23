@@ -37,13 +37,13 @@ defmodule TheFloor.Adapters.Federal.FullIngestTest do
   end
 
   test "registry order: a first full ingest links every reference" do
-    TheFloor.Ingest.Mix.enqueue(Jobs.all())
+    TheFloor.Ingest.Jobs.enqueue(Jobs.all())
     drain!()
     assert_complete()
   end
 
   test "reverse order: list jobs finishing before their prerequisites still converge" do
-    TheFloor.Ingest.Mix.enqueue(Enum.reverse(Jobs.all()))
+    TheFloor.Ingest.Jobs.enqueue(Enum.reverse(Jobs.all()))
     drain!()
     assert_complete()
   end

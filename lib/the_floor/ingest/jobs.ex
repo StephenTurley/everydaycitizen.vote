@@ -1,22 +1,31 @@
-defmodule TheFloor.Ingest.Mix do
-  @moduledoc false
-  # Shared setup for the ingest mix tasks.
-
-  @doc """
-  Starts the app with Oban's queues and plugins off, so a task that only
-  enqueues jobs or reads results does not begin running them (or the nightly
-  schedule) in a VM that is about to exit.
+defmodule TheFloor.Ingest.Jobs do
+  @moduledoc """
+  The ingest job list of every configured adapter, and enqueueing it. Shared by
+  the `mix the_floor.ingest` task and `TheFloor.Release.ingest/1`.
   """
-  def start_without_workers do
-    Mix.Task.run("app.config")
-    oban = Application.fetch_env!(:the_floor, Oban)
-    Application.put_env(:the_floor, Oban, Keyword.merge(oban, queues: false, plugins: false))
-    Mix.Task.run("app.start")
-  end
 
   @doc "Every configured adapter's `{name, worker, args}` jobs, in order."
-  def jobs do
+  def all do
     :the_floor |> Application.get_env(:ingest_adapters, []) |> Enum.flat_map(& &1.all())
+  end
+
+  @doc """
+  The jobs to run for an optional job name: all of them for `nil`, otherwise the
+  one with that name. Returns `{:error, message}` for an unknown name.
+  """
+  def select(nil), do: {:ok, all()}
+
+  def select(name) do
+    jobs = all()
+
+    case Enum.filter(jobs, &(elem(&1, 0) == name)) do
+      [] ->
+        names = Enum.map_join(jobs, ", ", &elem(&1, 0))
+        {:error, "unknown job #{inspect(name)}; available: #{names}"}
+
+      selected ->
+        {:ok, selected}
+    end
   end
 
   @doc """

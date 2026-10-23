@@ -55,4 +55,33 @@ defmodule TheFloor.Ingest.Coverage do
   end
 
   defp insert(check), do: {:ok, Repo.insert!(check)}
+
+  @doc "Formats checks as `name expected actual PASS|FAIL [error]` rows."
+  def format_rows(checks) do
+    rows =
+      Enum.map(checks, fn c ->
+        [
+          c.name,
+          show(c.expected),
+          show(c.actual),
+          if(c.passed, do: "PASS", else: "FAIL"),
+          c.error || ""
+        ]
+      end)
+
+    width = rows |> Enum.map(&(&1 |> hd() |> String.length())) |> Enum.max()
+
+    Enum.map_join(rows, "\n", fn [name, expected, actual, status, error] ->
+      line =
+        String.pad_trailing(name, width) <>
+          "  " <>
+          String.pad_leading(expected, 8) <>
+          "  " <> String.pad_leading(actual, 8) <> "  " <> status
+
+      String.trim_trailing(if error == "", do: line, else: line <> "  " <> error)
+    end)
+  end
+
+  defp show(nil), do: "-"
+  defp show(n), do: Integer.to_string(n)
 end

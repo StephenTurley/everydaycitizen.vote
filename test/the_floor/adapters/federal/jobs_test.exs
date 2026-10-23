@@ -1,8 +1,8 @@
 defmodule TheFloor.Adapters.Federal.JobsTest do
   use ExUnit.Case, async: true
 
-  alias Mix.Tasks.TheFloor.Coverage, as: CoverageTask
   alias TheFloor.Adapters.Federal.Jobs
+  alias TheFloor.Ingest.Coverage
   alias TheFloor.Ingest.CoverageCheck
 
   test "the registry lists unique names with loadable workers, coverage last" do
@@ -23,9 +23,9 @@ defmodule TheFloor.Adapters.Federal.JobsTest do
     assert Jobs in Application.fetch_env!(:the_floor, :ingest_adapters)
   end
 
-  test "coverage task output shows PASS, FAIL and a missing expected count" do
+  test "coverage output shows PASS, FAIL and a missing expected count" do
     out =
-      CoverageTask.format_rows([
+      Coverage.format_rows([
         %CoverageCheck{name: "a", expected: 10, actual: 10, passed: true},
         %CoverageCheck{name: "longer", expected: 10, actual: 3, passed: false},
         %CoverageCheck{name: "c", expected: nil, actual: 4, passed: false, error: "403"}

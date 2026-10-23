@@ -51,7 +51,7 @@ defmodule TheFloor.Adapters.Federal.PrerequisitesTest do
 
     priorities =
       TheFloor.Adapters.Federal.Jobs.all()
-      |> TheFloor.Ingest.Mix.enqueue()
+      |> TheFloor.Ingest.Jobs.enqueue()
       |> Enum.map(fn {_name, job} -> job.priority end)
 
     assert Enum.max(priorities) <= 3
