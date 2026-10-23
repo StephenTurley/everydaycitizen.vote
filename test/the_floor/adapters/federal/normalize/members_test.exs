@@ -24,7 +24,7 @@ defmodule TheFloor.Adapters.Federal.Normalize.MembersTest do
 
   test "builds one person per legislator with the identifiers present" do
     people = for %Person{} = p <- records(), do: p
-    assert length(people) == 4
+    assert length(people) == 8
 
     cantwell = Enum.find(people, &({"bioguide", "C000127"} in &1.identifiers))
     assert {"lis", "S275"} in cantwell.identifiers

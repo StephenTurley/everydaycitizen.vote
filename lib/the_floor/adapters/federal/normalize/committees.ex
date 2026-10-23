@@ -8,8 +8,14 @@ defmodule TheFloor.Adapters.Federal.Normalize.Committees do
 
   @jurisdiction "federal"
 
-  @spec records([map()], %{String.t() => [map()]}, SourceRef.t()) :: [Body.t() | Membership.t()]
-  def records(committees, memberships, %SourceRef{} = source) do
+  @spec records([map()], %{String.t() => [map()]}, SourceRef.t(), SourceRef.t()) ::
+          [Body.t() | Membership.t()]
+  def records(
+        committees,
+        memberships,
+        %SourceRef{} = committee_source,
+        %SourceRef{} = membership_source
+      ) do
     bodies =
       Enum.flat_map(committees, fn committee ->
         parent_code = committee["thomas_id"]
@@ -22,12 +28,18 @@ defmodule TheFloor.Adapters.Federal.Normalize.Committees do
               sub["name"],
               "subcommittee",
               parent_id,
-              source
+              committee_source
             )
           end
 
         [
-          body(parent_id, committee["name"], "committee", chamber(committee["type"]), source)
+          body(
+            parent_id,
+            committee["name"],
+            "committee",
+            chamber(committee["type"]),
+            committee_source
+          )
           | subs
         ]
       end)
@@ -45,7 +57,7 @@ defmodule TheFloor.Adapters.Federal.Normalize.Committees do
           person: {"bioguide", member["bioguide"]},
           body_external_id: external_id,
           role: role(member["title"]),
-          source: source
+          source: membership_source
         }
       end
 

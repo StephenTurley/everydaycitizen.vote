@@ -68,3 +68,6 @@ A federal legislative session is the congress (`119`); each congressional sessio
 
 ## 2026-10-23 — Members and committees from unitedstates/congress-legislators
 Members and committees come from the `congress-legislators` JSON files (the only source carrying the LIS ids needed to match Senate votes). The historical file is filtered to legislators with a term ending on/after the session start. Committee memberships have nil dates (source lists current members only) and use the committees file as their source ref; unknown people are skipped and counted rather than failing the run.
+
+## 2026-10-23 — Correction: committee memberships use their own source ref
+Supersedes the provenance line in the members/committees entry above: `Normalize.Committees.records/4` takes separate committee and membership sources, so committee membership rows point at `committee-membership-current.json` and bodies at `committees-current.json`.

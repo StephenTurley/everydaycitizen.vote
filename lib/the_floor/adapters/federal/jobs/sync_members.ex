@@ -26,12 +26,12 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncMembers do
            {:ok, current, src_current} <- fetch("legislators-current"),
            {:ok, historical, src_historical} <- fetch("legislators-historical"),
            {:ok, committees, src_committees} <- fetch("committees-current"),
-           {:ok, seats, _src_seats} <- fetch("committee-membership-current") do
+           {:ok, seats, src_seats} <- fetch("committee-membership-current") do
         member_records =
           Members.records(current, session_start, src_current) ++
             Members.records(historical, session_start, src_historical)
 
-        committee_records = Committees.records(committees, seats, src_committees)
+        committee_records = Committees.records(committees, seats, src_committees, src_seats)
         {:ok, write_groups(member_records, committee_records, run_id)}
       end
     end)

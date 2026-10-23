@@ -12,7 +12,8 @@ defmodule TheFloor.Adapters.Federal.Normalize.CommitteesTest do
     Committees.records(
       load("committees-current.json"),
       load("committee-membership-current.json"),
-      SourceRef.new("https://example.test/x.json", "x")
+      SourceRef.new("https://example.test/committees-current.json", "c"),
+      SourceRef.new("https://example.test/committee-membership-current.json", "m")
     )
   end
 
@@ -40,14 +41,19 @@ defmodule TheFloor.Adapters.Federal.Normalize.CommitteesTest do
   test "titles map to roles" do
     roles = Map.new(memberships(), &{{&1.person, &1.body_external_id}, &1.role})
 
-    assert roles[{{"bioguide", "B001323"}, "hsag00"}] == "chair"
-    assert roles[{{"bioguide", "C000127"}, "hsag00"}] == "ranking_member"
-    assert roles[{{"bioguide", "B001323"}, "hsag03"}] == "member"
-    assert roles[{{"bioguide", "B001267"}, "jsec00"}] == "vice_chair"
-    assert roles[{{"bioguide", "Z999999"}, "jsec00"}] == "chair"
+    assert roles[{{"bioguide", "T000467"}, "hsag00"}] == "chair"
+    assert roles[{{"bioguide", "C001119"}, "hsag00"}] == "ranking_member"
+    assert roles[{{"bioguide", "F000475"}, "hsag03"}] == "chair"
+    assert roles[{{"bioguide", "S001227"}, "jsec00"}] == "vice_chair"
+    assert roles[{{"bioguide", "Z999999"}, "jsec00"}] == "member"
   end
 
   test "committee memberships carry no dates" do
     assert Enum.all?(memberships(), &(is_nil(&1.start_date) and is_nil(&1.end_date)))
+  end
+
+  test "bodies and memberships carry their own source documents" do
+    assert Enum.all?(bodies(), &(&1.source.url =~ "committees-current.json"))
+    assert Enum.all?(memberships(), &(&1.source.url =~ "committee-membership-current.json"))
   end
 end

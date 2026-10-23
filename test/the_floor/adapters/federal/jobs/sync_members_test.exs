@@ -6,6 +6,8 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncMembersTest do
   alias TheFloor.Legislature.{Body, Membership, Person}
   alias TheFloor.Repo
 
+  import Ecto.Query
+
   @dir "test/support/fixtures/federal"
 
   setup do
@@ -26,15 +28,27 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncMembersTest do
   test "writes people, memberships and committees idempotently" do
     assert :ok = perform_job(SyncMembers, %{})
     counts = counts()
-    assert counts.people == 4
+    assert counts.people == 8
     assert counts.bodies == 3 + 4
 
-    # Chamber terms: Cantwell 2, Bennet 1, Begich 1, Brown 1; committee seats: 4 (Z999999 is unknown and skipped).
-    assert counts.memberships == 5 + 4
+    # Chamber terms: 12 across 8 people; committee seats: 4 (Z999999 is a synthetic orphan, skipped).
+    assert counts.memberships == 12 + 4
 
     assert :ok = perform_job(SyncMembers, %{})
     assert counts() == counts
     assert TheFloor.Provenance.last_succeeded_run("federal", "sync_members")
+
+    seat =
+      Repo.one!(
+        from m in Membership,
+          join: b in Body,
+          on: b.id == m.body_id,
+          join: s in assoc(m, :source),
+          where: b.external_id == "hsag00" and m.role == "chair",
+          select: s.url
+      )
+
+    assert seat =~ "committee-membership-current.json"
   end
 
   defp counts do

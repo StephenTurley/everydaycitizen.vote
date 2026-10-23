@@ -143,5 +143,186 @@
     "party": "Democrat"
    }
   ]
+ },
+ {
+  "id": {
+   "bioguide": "T000467",
+   "thomas": "01952",
+   "govtrack": 412317,
+   "opensecrets": "N00029736",
+   "votesmart": 24046,
+   "fec": [
+    "H8PA05071"
+   ],
+   "cspan": 1031359,
+   "wikipedia": "Glenn Thompson (politician)",
+   "maplight": 799,
+   "icpsr": 20946,
+   "house_history": 23213,
+   "wikidata": "Q1531120",
+   "google_entity_id": "kg:/m/0409b0_",
+   "ballotpedia": "Glenn Thompson (Pennsylvania)",
+   "pictorial": 13235
+  },
+  "name": {
+   "first": "Glenn",
+   "last": "Thompson",
+   "official_full": "Glenn Thompson"
+  },
+  "terms": [
+   {
+    "type": "rep",
+    "start": "2021-01-03",
+    "end": "2023-01-03",
+    "state": "PA",
+    "district": 15,
+    "party": "Republican"
+   },
+   {
+    "type": "rep",
+    "start": "2023-01-03",
+    "end": "2025-01-03",
+    "state": "PA",
+    "district": 15,
+    "party": "Republican"
+   },
+   {
+    "type": "rep",
+    "start": "2025-01-03",
+    "end": "2027-01-03",
+    "state": "PA",
+    "district": 15,
+    "party": "Republican"
+   }
+  ]
+ },
+ {
+  "id": {
+   "bioguide": "C001119",
+   "fec": [
+    "H6MN02131",
+    "S6MN00499"
+   ],
+   "govtrack": 412789,
+   "opensecrets": "N00037039",
+   "wikipedia": "Angie Craig",
+   "wikidata": "Q58324174",
+   "votesmart": 166261,
+   "ballotpedia": "Angie Craig",
+   "icpsr": 21910,
+   "google_entity_id": "kg:/g/11fjb43ny7",
+   "pictorial": 13108
+  },
+  "name": {
+   "first": "Angie",
+   "last": "Craig",
+   "official_full": "Angie Craig"
+  },
+  "terms": [
+   {
+    "type": "rep",
+    "start": "2021-01-03",
+    "end": "2023-01-03",
+    "state": "MN",
+    "district": 2,
+    "party": "Democrat"
+   },
+   {
+    "type": "rep",
+    "start": "2023-01-03",
+    "end": "2025-01-03",
+    "state": "MN",
+    "district": 2,
+    "party": "Democrat"
+   },
+   {
+    "type": "rep",
+    "start": "2025-01-03",
+    "end": "2027-01-03",
+    "state": "MN",
+    "district": 2,
+    "party": "Democrat"
+   }
+  ]
+ },
+ {
+  "id": {
+   "bioguide": "F000475",
+   "fec": [
+    "H2MN01223"
+   ],
+   "govtrack": 456869,
+   "opensecrets": "N00050649",
+   "wikipedia": "Brad Finstad",
+   "wikidata": "Q111159803",
+   "ballotpedia": "Brad Finstad",
+   "votesmart": 38612,
+   "pictorial": 13107,
+   "google_entity_id": "kg:/g/11fyyvmqc6"
+  },
+  "name": {
+   "first": "Brad",
+   "last": "Finstad",
+   "official_full": "Brad Finstad"
+  },
+  "terms": [
+   {
+    "type": "rep",
+    "start": "2022-08-12",
+    "end": "2023-01-03",
+    "state": "MN",
+    "district": 1,
+    "party": "Republican"
+   },
+   {
+    "type": "rep",
+    "start": "2023-01-03",
+    "end": "2025-01-03",
+    "state": "MN",
+    "district": 1,
+    "party": "Republican"
+   },
+   {
+    "type": "rep",
+    "start": "2025-01-03",
+    "end": "2027-01-03",
+    "state": "MN",
+    "district": 1,
+    "party": "Republican"
+   }
+  ]
+ },
+ {
+  "id": {
+   "bioguide": "S001227",
+   "lis": "S420",
+   "fec": [
+    "S2MO00544"
+   ],
+   "govtrack": 456875,
+   "opensecrets": "N00048414",
+   "wikidata": "Q5387455",
+   "wikipedia": "Eric Schmitt",
+   "ballotpedia": "Eric Schmitt",
+   "votesmart": 104474,
+   "pictorial": 13416
+  },
+  "name": {
+   "first": "Eric",
+   "middle": "Stephen",
+   "last": "Schmitt",
+   "official_full": "Eric Schmitt"
+  },
+  "terms": [
+   {
+    "type": "sen",
+    "start": "2023-01-03",
+    "end": "2029-01-03",
+    "state": "MO",
+    "class": 3,
+    "state_rank": "junior",
+    "party": "Republican"
+   }
+  ]
  }
 ]
