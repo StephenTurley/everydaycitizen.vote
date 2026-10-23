@@ -45,3 +45,8 @@ Scheduled, incremental, idempotent ingest jobs run as Oban workers (queues
 ## 2026-10-23 — CodeSection deferred to M4 (redline)
 The current-law CodeSection entity is only the redline target, so it is not
 needed for M1 coverage checks; it lands with the redline engine in M4.
+
+## 2026-10-23 — Memberships unique with NULLS NOT DISTINCT (committee memberships have no dates)
+Unique index on (person_id, body_id, role, start_date) uses `NULLS NOT DISTINCT`
+(PG >= 15) so undated committee memberships upsert instead of duplicating.
+Known limitation: members who leave a committee are not end-dated in M1.
