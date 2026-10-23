@@ -37,17 +37,22 @@ defmodule TheFloor.Adapters.Federal.Normalize.BillStatus do
 
   defp value({_name, _attrs, children}) do
     case Enum.filter(children, &is_tuple/1) do
-      [] ->
-        case children |> Enum.join() |> String.trim() do
-          "" -> nil
-          text -> text
-        end
-
-      elements ->
-        if Enum.all?(elements, &match?({"item", _, _}, &1)),
-          do: Enum.map(elements, &value/1),
-          else: Map.new(elements, fn {name, _, _} = el -> {name, value(el)} end)
+      [] -> text(children)
+      elements -> container(elements)
     end
+  end
+
+  defp text(children) do
+    case children |> Enum.join() |> String.trim() do
+      "" -> nil
+      text -> text
+    end
+  end
+
+  defp container(elements) do
+    if Enum.all?(elements, &match?({"item", _, _}, &1)),
+      do: Enum.map(elements, &value/1),
+      else: Map.new(elements, fn {name, _, _} = el -> {name, value(el)} end)
   end
 
   # Bulk formats carry only a url; the API also labels each with a type, which
