@@ -68,4 +68,76 @@ defmodule TheFloor.Ingest.Records do
       :source
     ]
   end
+
+  defmodule Bill do
+    @moduledoc "A bill or resolution within a session."
+    @enforce_keys [:jurisdiction, :session_identifier, :external_id, :identifier, :title, :source]
+    defstruct [
+      :jurisdiction,
+      :session_identifier,
+      :external_id,
+      :identifier,
+      :classification,
+      :title,
+      :from_body_external_id,
+      :introduced_on,
+      :updated_at_source,
+      :source,
+      subjects: []
+    ]
+  end
+
+  defmodule BillAction do
+    @moduledoc """
+    One action on a bill. `position` is its 1-based order within the bill's action list.
+    A nil `classification` marks the action as unclassified (raw text kept).
+    """
+    @enforce_keys [:position, :description]
+    defstruct [
+      :position,
+      :date,
+      :description,
+      :raw_type,
+      :raw_code,
+      :classification,
+      :actor_body_external_id
+    ]
+  end
+
+  defmodule BillActions do
+    @moduledoc "The complete action list of a bill; replaces whatever is stored."
+    @enforce_keys [:jurisdiction, :bill_external_id, :actions, :source]
+    defstruct [:jurisdiction, :bill_external_id, :actions, :source]
+  end
+
+  defmodule Sponsorships do
+    @moduledoc """
+    The complete sponsor/cosponsor list of a bill; replaces whatever is stored.
+    Each entry is `%{person: {scheme, value}, classification: "primary" | "cosponsor",
+    date: Date.t() | nil, withdrawn_on: Date.t() | nil}`.
+    """
+    @enforce_keys [:jurisdiction, :bill_external_id, :sponsorships, :source]
+    defstruct [:jurisdiction, :bill_external_id, :sponsorships, :source]
+  end
+
+  defmodule BillVersion do
+    @moduledoc "A text version of a bill (metadata only; text arrives as `BillVersionText`)."
+    @enforce_keys [:jurisdiction, :bill_external_id, :code, :source]
+    defstruct [
+      :jurisdiction,
+      :bill_external_id,
+      :code,
+      :classification,
+      :date,
+      :xml_url,
+      :text_url,
+      :source
+    ]
+  end
+
+  defmodule BillVersionText do
+    @moduledoc "Fetched text for an existing bill version. `xml_schema` is `uslm` or `other`."
+    @enforce_keys [:jurisdiction, :bill_external_id, :code, :source]
+    defstruct [:jurisdiction, :bill_external_id, :code, :xml, :xml_schema, :plain_text, :source]
+  end
 end

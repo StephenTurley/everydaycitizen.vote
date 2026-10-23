@@ -1,0 +1,38 @@
+defmodule TheFloor.Legislation.BillVersion do
+  @moduledoc """
+  A text version of a bill. Metadata and text are written separately: `source_id`
+  is the metadata's provenance, `text_source_id` the text's.
+  """
+  use Ecto.Schema
+  import Ecto.Changeset
+
+  @type t :: %__MODULE__{}
+
+  schema "bill_versions" do
+    field :code, :string
+    field :classification, :string
+    field :date, :date
+    field :xml_url, :string
+    field :text_url, :string
+    field :xml, :string
+    field :xml_schema, :string
+    field :plain_text, :string
+    belongs_to :bill, TheFloor.Legislation.Bill
+    belongs_to :source, TheFloor.Provenance.Source
+    belongs_to :text_source, TheFloor.Provenance.Source
+    timestamps(type: :utc_datetime_usec)
+  end
+
+  def changeset(struct, attrs) do
+    struct
+    |> cast(attrs, [:bill_id, :code, :classification, :date, :xml_url, :text_url, :source_id])
+    |> validate_required([:bill_id, :code, :source_id])
+  end
+
+  def text_changeset(struct, attrs) do
+    struct
+    |> cast(attrs, [:xml, :xml_schema, :plain_text, :text_source_id])
+    |> validate_required([:text_source_id])
+    |> validate_inclusion(:xml_schema, ~w(uslm other))
+  end
+end

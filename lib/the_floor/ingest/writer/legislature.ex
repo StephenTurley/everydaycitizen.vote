@@ -6,22 +6,15 @@ defmodule TheFloor.Ingest.Writer.Legislature do
   import Ecto.Query
 
   alias TheFloor.Ingest.Records
+  alias TheFloor.Ingest.Writer.Support
   alias TheFloor.Legislature.{Body, Jurisdiction, Membership, Person, PersonIdentifier, Session}
-  alias TheFloor.Provenance
   alias TheFloor.Repo
 
-  @replace {:replace_all_except, [:id, :inserted_at]}
+  import Support, only: [fetch: 4, fetch_person: 2, jurisdiction: 1, upsert: 3]
 
   @spec write(struct(), integer() | nil) :: {:ok, struct()} | {:error, term()}
   def write(record, run_id) do
-    Repo.transaction(fn ->
-      {:ok, source} = Provenance.upsert_source(record.source, run_id)
-
-      case do_write(record, source.id) do
-        {:ok, row} -> row
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
+    Support.transact(record, run_id, &do_write(record, &1))
   end
 
   defp do_write(%Records.Jurisdiction{} = r, source_id) do
@@ -113,26 +106,10 @@ defmodule TheFloor.Ingest.Writer.Legislature do
     end
   end
 
-  defp jurisdiction(key), do: fetch(Jurisdiction, [key: key], :unknown_jurisdiction, key)
-
   defp parent(_schema, _jurisdiction_id, _field, nil), do: {:ok, nil}
 
   defp parent(schema, jurisdiction_id, field, value) do
     fetch(schema, [{:jurisdiction_id, jurisdiction_id}, {field, value}], :unknown_parent, value)
-  end
-
-  defp fetch(schema, clauses, error_tag, error_value) do
-    case Repo.get_by(schema, clauses) do
-      nil -> {:error, {error_tag, error_value}}
-      row -> {:ok, row}
-    end
-  end
-
-  defp fetch_person(scheme, value) do
-    case TheFloor.Legislature.get_person_by_identifier(scheme, value) do
-      nil -> {:error, {:unknown_person, {scheme, value}}}
-      person -> {:ok, person}
-    end
   end
 
   defp find_person(identifiers) do
@@ -168,15 +145,5 @@ defmodule TheFloor.Ingest.Writer.Legislature do
         conflict_target: [:scheme, :value]
       )
     end)
-  end
-
-  defp upsert(schema, attrs, conflict_target) do
-    changeset = schema.changeset(struct(schema), attrs)
-
-    Repo.insert(changeset,
-      on_conflict: @replace,
-      conflict_target: conflict_target,
-      returning: true
-    )
   end
 end

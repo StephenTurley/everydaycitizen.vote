@@ -53,3 +53,9 @@ Known limitation: members who leave a committee are not end-dated in M1.
 
 ## 2026-10-23 — Federal rate limiters live in an adapter supervisor
 `TheFloor.Adapters.Federal.Supervisor` starts the named limiters (intervals from `:federal_rate_limits`); `application.ex` only lists it, and `Ingest.RateLimiter` stays generic. Keeps the jurisdiction boundary intact.
+
+## 2026-10-23 — Bill child sets are replaced wholesale; actions keyed by (bill, position)
+`BillActions` and `Sponsorships` upsert the incoming rows and delete the bill's others in one transaction, so source corrections and withdrawn entries disappear. Actions use `(bill_id, position)` as natural key; sponsorships `(bill, person, classification)`. Bill-scoped records carry `jurisdiction` because external bill ids are only unique per jurisdiction.
+
+## 2026-10-23 — Bill version text has its own provenance column
+`bill_versions.text_source_id` records where the text came from, separate from `source_id` (version metadata); re-ingesting metadata never clears stored text.
