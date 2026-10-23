@@ -24,7 +24,7 @@ defmodule TheFloor.Adapters.Federal.Normalize.BillStatus do
       {:ok,
        %{
          detail: %{"bill" => bill},
-         subjects: %{"subjects" => bill["subjects"]},
+         subjects: %{"subjects" => subjects(bill["subjects"])},
          actions: bill["actions"] || [],
          cosponsors: bill["cosponsors"] || [],
          text: %{"textVersions" => bill["textVersions"] || []}
@@ -54,6 +54,10 @@ defmodule TheFloor.Adapters.Federal.Normalize.BillStatus do
       do: Enum.map(elements, &value/1),
       else: Map.new(elements, fn {name, _, _} = el -> {name, value(el)} end)
   end
+
+  # An empty <legislativeSubjects/> reads as nil; the API returns [].
+  defp subjects(%{} = subjects), do: Map.update(subjects, "legislativeSubjects", [], &(&1 || []))
+  defp subjects(_), do: %{"legislativeSubjects" => []}
 
   # Bulk formats carry only a url; the API also labels each with a type, which
   # `Normalize.Bill.versions/3` keys on.

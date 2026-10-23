@@ -61,6 +61,16 @@ defmodule TheFloor.Adapters.Federal.Normalize.BillStatusTest do
     assert parts.detail["bill"]["number"] == "9"
   end
 
+  test "a bill with no legislative subjects normalizes to no subjects" do
+    xml = """
+    <billStatus><bill><number>9</number><type>HR</type><congress>119</congress>
+    <title>T</title><subjects><legislativeSubjects/></subjects></bill></billStatus>
+    """
+
+    assert {:ok, parts} = BillStatus.parse(xml)
+    assert Bill.bill(parts.detail, parts.subjects, @src).subjects == []
+  end
+
   test "malformed XML returns an error" do
     xml = File.read!("test/support/fixtures/federal/govinfo/malformed.xml")
     assert {:error, _} = BillStatus.parse(xml)
