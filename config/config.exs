@@ -41,7 +41,25 @@ config :the_floor, TheFloor.Mailer, adapter: Swoosh.Adapters.Local
 
 config :the_floor, Oban,
   repo: TheFloor.Repo,
-  queues: [ingest: 4, text: 2]
+  queues: [ingest: 4, text: 2],
+  plugins: [
+    {Oban.Plugins.Cron,
+     timezone: "America/New_York",
+     crontab: [
+       {"0 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncCongress},
+       {"10 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncMembers},
+       {"30 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncBills},
+       {"40 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncHouseVotes},
+       {"40 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncSenateVotes},
+       {"50 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncCommitteeMeetings},
+       {"0 3 * * *", TheFloor.Adapters.Federal.Jobs.SyncHouseFloor},
+       {"0 3 * * *", TheFloor.Adapters.Federal.Jobs.SyncSenateFloor},
+       {"0 6 * * *", TheFloor.Adapters.Federal.Jobs.Coverage}
+     ]}
+  ]
+
+# Adapters whose `all/0` lists their list-level ingest jobs as {name, worker, args}.
+config :the_floor, :ingest_adapters, [TheFloor.Adapters.Federal.Jobs]
 
 config :the_floor, :federal, congress: 119
 

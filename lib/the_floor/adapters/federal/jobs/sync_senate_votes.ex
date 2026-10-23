@@ -26,10 +26,13 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncSenateVotes do
     end)
   end
 
-  defp sync_session(congress, session, run_id) do
-    url = "#{@menu}/vote_menu_#{congress}_#{session}.xml"
+  @doc "URL of the vote menu for a session."
+  @spec menu_url(integer(), integer()) :: String.t()
+  def menu_url(congress, session), do: "#{@menu}/vote_menu_#{congress}_#{session}.xml"
 
-    with {:ok, %{raw: raw}} <- HTTP.get(url, limiter: :senate_gov, decode: :raw) do
+  defp sync_session(congress, session, run_id) do
+    with {:ok, %{raw: raw}} <-
+           HTTP.get(menu_url(congress, session), limiter: :senate_gov, decode: :raw) do
       rolls = SenateVote.menu(raw)
       wanted = rolls_to_fetch(rolls, congress, session)
 
