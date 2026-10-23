@@ -29,14 +29,19 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillText do
   end
 
   defp fetch_first([], bill_id, code) do
-    Logger.warning("sync_bill_text: no XML found for #{bill_id}/#{code}")
+    Logger.warning("sync_bill_text: no usable XML found for #{bill_id}/#{code}")
     :ok
   end
 
   defp fetch_first([url | rest], bill_id, code) do
     case HTTP.get(url, limiter: :govinfo, decode: :raw) do
-      {:ok, %{raw: xml, source: source}} ->
-        store(xml, source, bill_id, code)
+      {:ok, %{raw: raw, source: source}} ->
+        with false <- html?(raw),
+             {:ok, text} <- XmlText.plain_text(raw) do
+          store(raw, text, source, bill_id, code)
+        else
+          _not_xml -> fetch_first(rest, bill_id, code)
+        end
 
       {:error, {:http_status, 404}} ->
         fetch_first(rest, bill_id, code)
@@ -46,29 +51,33 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillText do
     end
   end
 
-  defp store(xml, source, bill_id, code) do
-    case XmlText.plain_text(xml) do
-      {:ok, text} ->
-        {:ok, _} =
-          Ingest.write(
-            %BillVersionText{
-              jurisdiction: "federal",
-              bill_external_id: bill_id,
-              code: code,
-              xml: xml,
-              xml_schema: XmlText.schema(xml),
-              plain_text: text,
-              source: source
-            },
-            nil
-          )
+  # GovInfo signals a missing file with HTTP 200 and an HTML page.
+  defp html?(raw) do
+    head =
+      raw
+      |> binary_part(0, min(byte_size(raw), 512))
+      |> String.trim_leading()
+      |> String.downcase()
 
-        :ok
+    String.starts_with?(head, ["<!doctype html", "<html"])
+  end
 
-      {:error, reason} ->
-        Logger.warning("sync_bill_text: malformed XML for #{bill_id}/#{code}: #{inspect(reason)}")
-        :ok
-    end
+  defp store(xml, text, source, bill_id, code) do
+    {:ok, _} =
+      Ingest.write(
+        %BillVersionText{
+          jurisdiction: "federal",
+          bill_external_id: bill_id,
+          code: code,
+          xml: xml,
+          xml_schema: XmlText.schema(xml),
+          plain_text: text,
+          source: source
+        },
+        nil
+      )
+
+    :ok
   end
 
   # GovInfo serves 119th-Congress bill XML under /xml/ (the /uslm/ path answers 200 with an

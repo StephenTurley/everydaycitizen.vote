@@ -108,6 +108,32 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillTextTest do
     assert [_] = Legislation.versions_missing_text(10)
   end
 
+  @html "<!DOCTYPE html>\n<html lang=\"en\"><head><title>Error</title></head><body><p>Not found</p></body></html>"
+
+  test "an HTML 200 from GovInfo falls through to xml_url" do
+    stub(%{
+      @govinfo => {200, @html},
+      "www.congress.gov/119/bills/hr22/BILLS-119hr22ih.xml" =>
+        {200, File.read!("#{@dir}/BILLS-119hr22ih.xml")}
+    })
+
+    assert :ok = perform_job(SyncBillText, @args)
+    assert version().plain_text =~ "Short title"
+    refute version().xml =~ "<html"
+  end
+
+  @tag :capture_log
+  test "HTML 200 on both URLs leaves text nil and returns :ok" do
+    stub(%{
+      @govinfo => {200, @html},
+      "www.congress.gov/119/bills/hr22/BILLS-119hr22ih.xml" => {200, @html}
+    })
+
+    assert :ok = perform_job(SyncBillText, @args)
+    assert version().text_source_id == nil
+    assert version().plain_text == nil
+  end
+
   @tag :capture_log
   test "malformed xml leaves text nil and returns :ok" do
     stub(%{@govinfo => {200, File.read!("#{@dir}/malformed.xml")}})
