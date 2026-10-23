@@ -71,3 +71,6 @@ Members and committees come from the `congress-legislators` JSON files (the only
 
 ## 2026-10-23 — Correction: committee memberships use their own source ref
 Supersedes the provenance line in the members/committees entry above: `Normalize.Committees.records/4` takes separate committee and membership sources, so committee membership rows point at `committee-membership-current.json` and bodies at `committees-current.json`.
+
+## 2026-10-23 — Bill text from GovInfo package `/xml/`, schema detected from the document
+Verified live: `govinfo.gov/content/pkg/BILLS-119hr22ih/uslm/...xml` does not exist (GovInfo answers 200 with an HTML error page, so a 404 fallback never fires). The real file is `.../content/pkg/BILLS-<congress><type><number><code>/xml/BILLS-....xml` (`application/xml`), and for the 119th Congress it is the legacy bill DTD, not USLM. `SyncBillText` therefore fetches that URL, falls back to the version's Congress.gov `xml_url` on 404, and sets `xml_schema` from the root namespace (`uslm` only if a USLM namespace is declared, else `other`). Missing or malformed XML leaves text nil and the job succeeds; 5xx/timeouts are returned for Oban retry. `versions_missing_text/1` now keys on `text_source_id`.

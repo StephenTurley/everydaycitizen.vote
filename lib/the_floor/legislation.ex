@@ -14,6 +14,11 @@ defmodule TheFloor.Legislation do
     |> Repo.one()
   end
 
+  @spec get_version(Bill.t(), String.t()) :: BillVersion.t() | nil
+  def get_version(%Bill{id: bill_id}, code) do
+    Repo.get_by(BillVersion, bill_id: bill_id, code: code)
+  end
+
   @spec count_bills(integer()) :: non_neg_integer()
   def count_bills(session_id) do
     Bill |> where([b], b.session_id == ^session_id) |> Repo.aggregate(:count)
@@ -33,7 +38,7 @@ defmodule TheFloor.Legislation do
   @spec versions_missing_text(pos_integer()) :: [BillVersion.t()]
   def versions_missing_text(limit) do
     BillVersion
-    |> where([v], is_nil(v.plain_text))
+    |> where([v], is_nil(v.text_source_id))
     |> order_by([v], asc: v.id)
     |> limit(^limit)
     |> Repo.all()

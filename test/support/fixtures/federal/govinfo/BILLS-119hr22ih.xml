@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="billres.xsl"?>
+<!DOCTYPE bill PUBLIC "-//US Congress//DTDs/bill.dtd//EN" "bill.dtd">
+<bill bill-stage="Introduced-in-House" dms-id="H8035C184791A49E6843A2642FF80C76D" public-private="public" key="H" bill-type="olc"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+<dublinCore>
+<dc:title>99 HR 22 IH: Safeguard American Voter Eligibility Act</dc:title>
+<dc:publisher>U.S. House of Representatives</dc:publisher>
+<dc:date>2025-01-03</dc:date>
+<dc:format>text/xml</dc:format>
+<dc:language>EN</dc:language>
+<dc:rights>Pursuant to Title 17 Section 105 of the United States Code, this file is not subject to copyright protection and is in the public domain.</dc:rights>
+</dublinCore>
+</metadata>
+<form><legis-num display="yes">H. R. 22</legis-num></form><legis-body id="H52E72B133ADD4746B370B0C518EDC70C" style="OLC"><section id="H71EBFD16AF144388BF0C2D2F764108A2" section-type="section-one" commented="no"><enum>1.</enum><header>Short title</header><text display-inline="no-display-inline">This Act may be cited as the <quote><short-title>Safeguard American Voter Eligibility Act</short-title></quote> or the <quote><short-title>SAVE Act</short-title></quote>.</text></section><section id="HE249A089661C455A924D2268A2A63F86"><enum>2.</enum><header>Ensuring only citizens are registered to vote in elections for Federal office</header><subsection id="HEB638BE9E29F443E829BCD7FCEF7B864" display-inline="no-display-inline"><enum>(a)</enum><header>Definition of documentary proof of United States citizenship</header><text>Section 3 of the National Voter Registration Act of 1993 (<external-xref legal-doc="usc" parsable-cite="usc/52/20502">52 U.S.C. 20502</external-xref>) is amended—</text><paragraph id="H3D89F26174E9403B9B5005F58F6BEC81"><enum>(1)</enum><text>by striking <quote>As used</quote> and inserting <quote>(a) <header-in-text level="subsection" style="OLC">In general</header-in-text>.—As used</quote>; and</text></paragraph></subsection></section><section id="H4FBAC91D770F45928A521A8F0B5DA4A8"><enum>8.</enum><header>Effective date</header><text display-inline="no-display-inline">This Act and the amendments made by this Act shall take effect on the date of the enactment of this Act, and shall apply with respect to applications for voter registration which are submitted on or after such date. </text></section></legis-body></bill>
