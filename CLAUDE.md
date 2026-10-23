@@ -15,7 +15,9 @@ Decision log: `docs/DECISIONS.md` (append; never rewrite history)
 ## Project facts
 
 - Name: **The Floor**. Domain `thefloor.vote`, registered at Namecheap
-  (2026-10-23). DNS not yet pointed anywhere.
+  (2026-10-23), served by the Fly.io app `thefloor-vote` (iad); `www.` and
+  `thefloor-vote.fly.dev` redirect to it. Errors go to Sentry
+  (`thefloorvote/the-floor`).
 - Elixir app name `the_floor`; modules `TheFloor` (domain) and `TheFloorWeb`
   (LiveView). Generated with `mix phx.new the_floor`.
 
