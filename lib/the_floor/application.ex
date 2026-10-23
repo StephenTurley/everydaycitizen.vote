@@ -10,6 +10,7 @@ defmodule TheFloor.Application do
     children = [
       TheFloorWeb.Telemetry,
       TheFloor.Repo,
+      {Oban, Application.fetch_env!(:the_floor, Oban)},
       {DNSCluster, query: Application.get_env(:the_floor, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: TheFloor.PubSub},
       # Start a worker by calling: TheFloor.Worker.start_link(arg)

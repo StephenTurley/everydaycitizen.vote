@@ -32,3 +32,16 @@ transferring after the 60-day registration lock. DNS not yet configured.
 Pinned in `.tool-versions`. OTP 29 instead of the originally noted OTP 28
 because it is what is installed locally and Elixir 1.20 supports it; no Node
 pin since Phoenix 1.8 uses standalone esbuild/tailwind binaries.
+
+## 2026-10-23 — Provenance as a `sources` table referenced by every row
+Every domain row points at a `sources` row (url, fetched_at, last_seen_at,
+content_hash) deduplicated on (url, content_hash); re-fetching identical bytes
+only advances `last_seen_at`. Keeps provenance non-null without duplicating it.
+
+## 2026-10-23 — Oban for ingest
+Scheduled, incremental, idempotent ingest jobs run as Oban workers (queues
+`ingest` and `text`), with each execution recorded in `ingest_runs`.
+
+## 2026-10-23 — CodeSection deferred to M4 (redline)
+The current-law CodeSection entity is only the redline target, so it is not
+needed for M1 coverage checks; it lands with the redline engine in M4.

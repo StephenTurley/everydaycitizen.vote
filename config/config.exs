@@ -36,6 +36,10 @@ config :phoenix_live_view,
 # at the `config/runtime.exs`.
 config :the_floor, TheFloor.Mailer, adapter: Swoosh.Adapters.Local
 
+config :the_floor, Oban,
+  repo: TheFloor.Repo,
+  queues: [ingest: 4, text: 2]
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.25.4",
