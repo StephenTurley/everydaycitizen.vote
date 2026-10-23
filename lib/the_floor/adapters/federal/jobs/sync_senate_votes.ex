@@ -7,10 +7,10 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncSenateVotes do
   """
   use Oban.Worker, queue: :ingest, max_attempts: 3
 
-  alias TheFloor.Adapters.Federal.{HTTP, Job}
+  alias TheFloor.Adapters.Federal.{HTTP, Job, Sessions}
   alias TheFloor.Adapters.Federal.Jobs.SyncSenateVote
   alias TheFloor.Adapters.Federal.Normalize.SenateVote
-  alias TheFloor.{Legislature, Votes}
+  alias TheFloor.Votes
 
   @menu "https://www.senate.gov/legislative/LIS/roll_call_lists"
   @recent 10
@@ -21,28 +21,8 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncSenateVotes do
 
     Job.run("sync_senate_votes", fn run_id, _cursor ->
       congress
-      |> sessions(args["session"])
-      |> Enum.reduce_while({:ok, %{}}, &accumulate(&1, &2, congress, run_id))
-    end)
-  end
-
-  defp accumulate(session, {:ok, stats}, congress, run_id) do
-    case sync_session(congress, session, run_id) do
-      {:ok, session_stats} ->
-        {:cont, {:ok, Map.put(stats, "#{congress}-#{session}", session_stats)}}
-
-      {:error, _} = error ->
-        {:halt, error}
-    end
-  end
-
-  defp sessions(_congress, session) when not is_nil(session), do: [session]
-
-  defp sessions(congress, nil) do
-    "federal"
-    |> Legislature.child_sessions("#{congress}")
-    |> Enum.map(fn %{identifier: identifier} ->
-      identifier |> String.split("-") |> List.last() |> String.to_integer()
+      |> Sessions.numbers(args["session"])
+      |> Sessions.reduce(congress, &sync_session(congress, &1, run_id))
     end)
   end
 

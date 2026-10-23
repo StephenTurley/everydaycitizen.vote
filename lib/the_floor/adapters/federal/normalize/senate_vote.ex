@@ -3,7 +3,7 @@ defmodule TheFloor.Adapters.Federal.Normalize.SenateVote do
   Normalizes senate.gov roll-call XML: the vote menu (list of roll numbers) and a
   single vote document into a `Records.Vote` with per-member positions keyed by LIS id.
   """
-  alias TheFloor.Adapters.Federal.BillId
+  alias TheFloor.Adapters.Federal.{BillId, VoteSupport}
   alias TheFloor.Ingest.Records.{SourceRef, Vote}
 
   @months ~w(January February March April May June July August September October November December)
@@ -16,9 +16,6 @@ defmodule TheFloor.Adapters.Federal.Normalize.SenateVote do
     "Present" => "present",
     "Not Voting" => "absent"
   }
-
-  @negative ~r/rejected|failed|not (sustained|agreed|confirmed|passed|guilty)|defeated|not invoked/i
-  @positive ~r/agreed to|passed|confirmed|adopted|sustained|invoked|guilty|ratified/i
 
   @doc "Roll numbers listed in a vote menu document, in document order."
   @spec menu(binary()) :: [pos_integer()]
@@ -40,7 +37,7 @@ defmodule TheFloor.Adapters.Federal.Normalize.SenateVote do
     congress = root |> text("congress") |> String.to_integer()
     session = text(root, "session")
     roll = root |> text("vote_number") |> String.to_integer()
-    result = blank_to_nil(text(root, "vote_result"))
+    result = VoteSupport.blank_to_nil(text(root, "vote_result"))
 
     %Vote{
       jurisdiction: "federal",
@@ -48,9 +45,9 @@ defmodule TheFloor.Adapters.Federal.Normalize.SenateVote do
       session_identifier: "#{congress}-#{session}",
       external_id: external_id(congress, session, roll),
       identifier: "Roll Call #{roll}",
-      question: blank_to_nil(text(root, "question")),
+      question: VoteSupport.blank_to_nil(text(root, "question")),
       result: result,
-      passed: passed(result),
+      passed: VoteSupport.passed(result),
       voted_at: parse_date!(text(root, "vote_date")),
       bill_external_id: bill_id(root, congress),
       counts: counts(root),
@@ -87,20 +84,10 @@ defmodule TheFloor.Adapters.Federal.Normalize.SenateVote do
 
       %{
         person: {"lis", text(member, "lis_member_id")},
-        raw_label: blank_to_nil(text(member, "member_full")),
+        raw_label: VoteSupport.blank_to_nil(text(member, "member_full")),
         option: Map.get(@options, raw, "absent"),
         raw_option: raw
       }
-    end
-  end
-
-  defp passed(nil), do: nil
-
-  defp passed(result) do
-    cond do
-      Regex.match?(@negative, result) -> false
-      Regex.match?(@positive, result) -> true
-      true -> nil
     end
   end
 
@@ -123,21 +110,11 @@ defmodule TheFloor.Adapters.Federal.Normalize.SenateVote do
         0
       )
 
-    local =
-      case DateTime.from_naive(naive, "America/New_York") do
-        {:ok, dt} -> dt
-        {:ambiguous, first, _second} -> first
-        {:gap, _before, after_gap} -> after_gap
-      end
-
-    DateTime.shift_zone!(local, "Etc/UTC")
+    VoteSupport.eastern_to_utc(naive)
   end
 
   defp to_int(""), do: 0
   defp to_int(string), do: String.to_integer(string)
-
-  defp blank_to_nil(""), do: nil
-  defp blank_to_nil(string), do: string
 
   defp parse!(xml) do
     {:ok, root} = Saxy.SimpleForm.parse_string(xml)
