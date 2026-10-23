@@ -24,15 +24,16 @@ committee meetings 02:50, floor schedules 03:00, coverage checks 06:00.
 * `mix the_floor.ingest` enqueues every list-level job in dependency order;
   `mix the_floor.ingest bills` enqueues one by name (`congress`, `members`, `bills`,
   `house_votes`, `senate_votes`, `committee_meetings`, `house_floor`, `senate_floor`,
-  `coverage`). It only enqueues, so the app must be running for the jobs to execute.
-  On an empty database run `mix the_floor.ingest congress` and `members` first and let
-  them finish before the rest.
+  `relink`, `coverage`). It only enqueues, so the app must be running for the jobs to
+  execute. On an empty database a single `mix the_floor.ingest` is enough: jobs whose
+  prerequisites (congress sessions, members, committees) are not stored yet snooze and
+  retry, and `relink` and `coverage` wait for the other ingest jobs to finish.
 * `mix the_floor.coverage` prints the latest coverage check per name (stored count vs the
   source's count, `PASS`/`FAIL`) and exits non-zero if any fail. The checks are produced by
   the `coverage` job. A check whose source count could not be fetched shows `-` and `FAIL`.
 
-The first backfill is slow: about 15,000 bills at 5 requests each, limited to 4,800
-requests/hour, takes roughly 16 hours. Later runs are incremental.
+The first backfill is slow: about 19,775 bills at roughly 6 requests each, limited
+to 4,800 requests/hour, takes roughly 25 hours. Later runs are incremental.
 
 ## Learn more
 
