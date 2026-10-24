@@ -207,7 +207,7 @@ defmodule TheFloorWeb.RepsLive do
         </span>
       </div>
       <p class="m-0 text-[16px] font-semibold leading-snug">
-        <a :if={@item.bill} href={"/bills/#{@item.bill.external_id}"} class="text-floor-ink">
+        <a :if={@item.bill} href={~p"/bills/#{@item.bill.external_id}"} class="text-floor-ink">
           {bill_label(@item.bill)}
         </a>
         <span :if={!@item.bill}>{@item.vote.question}</span>
@@ -224,7 +224,7 @@ defmodule TheFloorWeb.RepsLive do
     <.card class="flex flex-col gap-2 !p-3.5">
       <span class="text-[13px] font-semibold text-floor-accent">{kind_label(@item.kind)}</span>
       <p class="m-0 text-[16px] font-semibold leading-snug">
-        <a href={"/bills/#{@item.bill.external_id}"} class="text-floor-ink">{bill_label(@item.bill)}</a>
+        <a href={~p"/bills/#{@item.bill.external_id}"} class="text-floor-ink">{bill_label(@item.bill)}</a>
       </p>
       <p :if={line = item_line(@item, @latest)} class="m-0 text-[14px] text-floor-ink-2">{line}</p>
       <div

@@ -20,6 +20,7 @@ defmodule TheFloorWeb.Router do
     live "/", HomeLive
     get "/district/:district", DistrictController, :show
     live "/reps/:district", RepsLive
+    live "/bills/:id", BillLive
   end
 
   # Other scopes may use custom stacks.
