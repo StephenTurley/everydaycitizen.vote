@@ -68,6 +68,8 @@ config :everyday_citizen, :anthropic_req_options,
 
 config :everyday_citizen, :anthropic_api_key, "test-anthropic-key"
 
+config :everyday_citizen, :fly_oidc_req_options, plug: {Req.Test, EverydayCitizen.FlyOidc}
+
 config :everyday_citizen, :federal_req_options,
   plug: {Req.Test, EverydayCitizen.Federal},
   retry_delay: 0,

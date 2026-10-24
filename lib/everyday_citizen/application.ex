@@ -11,6 +11,7 @@ defmodule EverydayCitizen.Application do
       EverydayCitizenWeb.Telemetry,
       EverydayCitizen.Repo,
       EverydayCitizen.RateLimit,
+      EverydayCitizen.Summaries.Credentials,
       EverydayCitizen.Adapters.Federal.Supervisor,
       {Oban, Application.fetch_env!(:everyday_citizen, Oban)},
       # Heartbeat and release of jobs left by stopped nodes (production only)

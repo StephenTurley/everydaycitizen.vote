@@ -6,6 +6,8 @@ defmodule EverydayCitizen.Summaries.Claude do
   Temperature 0 and a short reply cap keep it steady and cheap.
   """
 
+  alias EverydayCitizen.Summaries.Credentials
+
   @url "https://api.anthropic.com/v1/messages"
   @max_tokens 400
 
@@ -18,11 +20,11 @@ defmodule EverydayCitizen.Summaries.Claude do
 
   @doc "Whether summaries can be written (credentials are configured)."
   @spec enabled?() :: boolean()
-  def enabled?, do: match?({:ok, _}, auth_header())
+  def enabled?, do: Credentials.configured?()
 
   @spec summarize(String.t()) :: {:ok, result()} | {:error, term()}
   def summarize(text) when is_binary(text) do
-    with {:ok, header} <- auth_header() do
+    with {:ok, header} <- Credentials.auth_header() do
       body = %{
         model: config(:model),
         max_tokens: @max_tokens,
@@ -63,13 +65,6 @@ defmodule EverydayCitizen.Summaries.Claude do
 
   defp parse({:ok, %Req.Response{status: status}}), do: {:error, {:http_status, status}}
   defp parse({:error, reason}), do: {:error, reason}
-
-  defp auth_header do
-    case Application.get_env(:everyday_citizen, :anthropic_api_key) do
-      key when is_binary(key) and key != "" -> {:ok, {"x-api-key", key}}
-      _ -> {:error, :disabled}
-    end
-  end
 
   defp prompt do
     path =
