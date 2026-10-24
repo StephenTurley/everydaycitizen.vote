@@ -8,6 +8,24 @@ defmodule TheFloorWeb.ThisWeekLiveTest do
     :ok
   end
 
+  test "previous and next week links keep the My reps choice", %{conn: conn} do
+    conn = init_test_session(conn, %{district: "IA-1"})
+    {:ok, view, _html} = live(conn, ~p"/this-week?from=2026-10-26&mine=1")
+
+    assert has_element?(
+             view,
+             ~s(a[aria-label="Previous week"][href="/this-week?from=2026-10-19&mine=1"])
+           )
+
+    assert has_element?(
+             view,
+             ~s(a[aria-label="Next week"][href="/this-week?from=2026-11-02&mine=1"])
+           )
+
+    assert render(view) =~
+             "Bills your reps sponsor or cosponsor, and meetings of committees they sit on."
+  end
+
   test "an empty week says so", %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/this-week?from=2026-10-26")
     assert html =~ "Nothing scheduled"

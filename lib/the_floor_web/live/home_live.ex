@@ -91,116 +91,144 @@ defmodule TheFloorWeb.HomeLive do
   defp split_text(zip, [a, b]), do: "ZIP code #{zip} is split between #{a} and #{b}."
   defp split_text(zip, many), do: "ZIP code #{zip} is split between #{Enum.join(many, ", ")}."
 
+  @features [
+    {"How they voted", "Every roll call, with the question and the result."},
+    {"What they introduced", "Their bills and where each one stands."},
+    {"The text itself", "Each bill by section, beside the official summary."}
+  ]
+
   @impl true
   def render(assigns) do
+    assigns = assign(assigns, :features, @features)
+
     ~H"""
-    <Layouts.app flash={@flash}>
-      <section class="pt-10 pb-6 flex flex-col gap-3">
-        <h1 class="m-0 text-[28px] leading-tight font-bold tracking-tight">
-          What are your representatives doing?
-        </h1>
-        <p class="m-0 text-[15px] leading-relaxed text-floor-ink-2">
-          See how your senators and representative voted, what they introduced, and what
-          they got changed, with every item linked to the official record.
-        </p>
-      </section>
+    <Layouts.app flash={@flash} width={:full}>
+      <%!-- Large screens: the finder on the left, what you will find on the right --%>
+      <div class="lg:max-w-[1000px] lg:mx-auto lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:gap-16 lg:pt-20 lg:items-start">
+        <div class="lg:max-w-[540px]">
+          <section class="pt-10 lg:pt-0 pb-6 flex flex-col gap-3 lg:gap-4">
+            <h1 class="m-0 text-[28px] lg:text-[46px] leading-tight lg:leading-[1.08] font-bold tracking-tight">
+              What are your representatives doing?
+            </h1>
+            <p class="m-0 text-[15px] lg:text-[18px] leading-relaxed text-floor-ink-2">
+              See how your senators and representative voted, what they introduced, and what
+              they got changed, with every item linked to the official record.
+            </p>
+          </section>
 
-      <.card :if={@district} class="mb-4">
-        <a href={~p"/reps/#{@district}"} class="text-[15px] font-semibold text-floor-accent">
-          Your reps ({@district}) ›
-        </a>
-      </.card>
+          <.card :if={@district} class="mb-4">
+            <a href={~p"/reps/#{@district}"} class="text-[15px] font-semibold text-floor-accent">
+              Your reps ({@district}) ›
+            </a>
+          </.card>
 
-      <%!-- Every form: method/action so that before the live connection is up it is
+          <%!-- Every form: method/action so that before the live connection is up it is
            a plain POST, never a GET that would put the ZIP or address in a URL --%>
-      <form
-        :if={@step == :zip}
-        id="zip-form"
-        method="post"
-        action={~p"/district"}
-        phx-submit="zip"
-        class="flex flex-col gap-2"
-      >
-        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
-        <label for="zip" class="text-[13px] font-semibold text-floor-muted">Your ZIP code</label>
-        <input
-          type="text"
-          id="zip"
-          name="zip"
-          value={@value}
-          inputmode="numeric"
-          autocomplete="postal-code"
-          maxlength="5"
-          placeholder="e.g. 52240"
-          class="text-[16px] px-3 py-3 rounded-xl border border-[#b8bdc4] bg-floor-card"
-          aria-describedby={if @error, do: "find-error"}
-        />
-        <.find_error error={@error} />
-        <.submit label="Find my representatives" />
-        <button
-          type="button"
-          phx-click="full"
-          class="self-start py-2 text-[14px] font-medium text-floor-accent"
-        >
-          Enter your full address instead
-        </button>
-      </form>
+          <form
+            :if={@step == :zip}
+            id="zip-form"
+            method="post"
+            action={~p"/district"}
+            phx-submit="zip"
+            class="flex flex-col gap-2"
+          >
+            <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+            <label for="zip" class="text-[13px] font-semibold text-floor-muted">Your ZIP code</label>
+            <div class="flex flex-col lg:flex-row gap-2">
+              <input
+                type="text"
+                id="zip"
+                name="zip"
+                value={@value}
+                inputmode="numeric"
+                autocomplete="postal-code"
+                maxlength="5"
+                placeholder="e.g. 52240"
+                class="lg:flex-1 lg:min-w-0 text-[16px] lg:text-[17px] px-3 py-3 rounded-xl border border-[#b8bdc4] bg-floor-card"
+                aria-describedby={if @error, do: "find-error"}
+              />
+              <.submit label="Find my representatives" />
+            </div>
+            <.find_error error={@error} />
+            <button
+              type="button"
+              phx-click="full"
+              class="self-start py-2 text-[14px] font-medium text-floor-accent"
+            >
+              Enter your full address instead
+            </button>
+          </form>
 
-      <form
-        :if={@step == :street}
-        id="street-form"
-        method="post"
-        action={~p"/district"}
-        phx-submit="street"
-        class="flex flex-col gap-2"
-      >
-        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
-        <input type="hidden" name="zip" value={@zip} />
-        <p class="m-0 text-[15px]">
-          {split_text(@zip, @split)} Enter your street address to find yours.
-        </p>
-        <label for="street" class="text-[13px] font-semibold text-floor-muted">Street address</label>
-        <input
-          type="text"
-          id="street"
-          name="street"
-          value={@value}
-          autocomplete="address-line1"
-          placeholder="e.g. 400 S Clinton St"
-          class="text-[16px] px-3 py-3 rounded-xl border border-[#b8bdc4] bg-floor-card"
-          aria-describedby={if @error, do: "find-error"}
-        />
-        <.find_error error={@error} />
-        <.submit label="Find my representatives" />
-      </form>
+          <form
+            :if={@step == :street}
+            id="street-form"
+            method="post"
+            action={~p"/district"}
+            phx-submit="street"
+            class="flex flex-col gap-2"
+          >
+            <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+            <input type="hidden" name="zip" value={@zip} />
+            <p class="m-0 text-[15px]">
+              {split_text(@zip, @split)} Enter your street address to find yours.
+            </p>
+            <label for="street" class="text-[13px] font-semibold text-floor-muted">Street address</label>
+            <input
+              type="text"
+              id="street"
+              name="street"
+              value={@value}
+              autocomplete="address-line1"
+              placeholder="e.g. 400 S Clinton St"
+              class="text-[16px] px-3 py-3 rounded-xl border border-[#b8bdc4] bg-floor-card"
+              aria-describedby={if @error, do: "find-error"}
+            />
+            <.find_error error={@error} />
+            <.submit label="Find my representatives" />
+          </form>
 
-      <form
-        :if={@step == :address}
-        id="address-form"
-        method="post"
-        action={~p"/district"}
-        phx-submit="find"
-        class="flex flex-col gap-2"
-      >
-        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
-        <label for="address" class="text-[13px] font-semibold text-floor-muted">Your address</label>
-        <input
-          type="text"
-          id="address"
-          name="address"
-          value={@value}
-          autocomplete="street-address"
-          placeholder="Street, city, state, ZIP"
-          class="text-[16px] px-3 py-3 rounded-xl border border-[#b8bdc4] bg-floor-card"
-          aria-describedby={if @error, do: "find-error"}
-        />
-        <.find_error error={@error} />
-        <.submit label="Find my representatives" />
-      </form>
+          <form
+            :if={@step == :address}
+            id="address-form"
+            method="post"
+            action={~p"/district"}
+            phx-submit="find"
+            class="flex flex-col gap-2"
+          >
+            <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+            <label for="address" class="text-[13px] font-semibold text-floor-muted">Your address</label>
+            <input
+              type="text"
+              id="address"
+              name="address"
+              value={@value}
+              autocomplete="street-address"
+              placeholder="Street, city, state, ZIP"
+              class="text-[16px] px-3 py-3 rounded-xl border border-[#b8bdc4] bg-floor-card"
+              aria-describedby={if @error, do: "find-error"}
+            />
+            <.find_error error={@error} />
+            <.submit label="Find my representatives" />
+          </form>
 
-      <p class="mt-2 text-[13px] text-floor-muted">
-        Your ZIP code and address are used once to find your district. They are not saved.
-      </p>
+          <p class="mt-2 text-[13px] text-floor-muted">
+            Your ZIP code and address are used once to find your district. They are not saved.
+          </p>
+        </div>
+
+        <section aria-label="What you'll find" class="hidden lg:flex flex-col gap-3">
+          <.card :for={{heading, text} <- @features} class="!px-5 !py-[18px] flex flex-col gap-1">
+            <h2 class="m-0 text-[16px] font-bold">{heading}</h2>
+            <p class="m-0 text-[14px] leading-normal text-floor-ink-2">{text}</p>
+          </.card>
+          <.link
+            navigate={~p"/this-week"}
+            class="self-start py-2 text-[14px] font-semibold text-floor-accent"
+          >
+            See what's scheduled this week ›
+          </.link>
+        </section>
+      </div>
     </Layouts.app>
     """
   end
@@ -220,7 +248,7 @@ defmodule TheFloorWeb.HomeLive do
     <button
       type="submit"
       phx-disable-with="Looking up…"
-      class="mt-1 py-3 rounded-xl bg-floor-ink text-white text-[16px] font-semibold"
+      class="mt-1 lg:mt-0 py-3 lg:px-5 lg:flex-none rounded-xl bg-floor-ink text-white text-[16px] font-semibold"
     >
       {@label}
     </button>

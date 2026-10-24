@@ -156,3 +156,6 @@ Language a bill inserts into existing law (`<quoted-block>`, USLM `<quotedConten
 
 ## 2026-10-24 — Desktop bill page
 From 1024px the bill page widens to a 1280px column: the bill text (720px max, Source Serif 4 at 17px) beside a sticky sidebar with where it stands (as a vertical list), your reps and votes; from 1280px a contents list of the bill's sections sits on the left. Expand all / Collapse all is `?section=all`. Phones keep the approved single column. A status step reached with no date of its own (a bill that went to the floor without a committee report) reads "Skipped".
+
+## 2026-10-24 — Desktop layouts for home, your reps and this week
+From 1024px every page's header spans the same 1280px column. Your reps puts the reps in a left column (300px, the selected one marked with `aria-current`) beside a 720px feed; This week puts the days in a 720px column beside a sidebar with previous/next week links and the Everything / My reps switch, which now says what My reps includes; Home sets the ZIP finder beside three short cards on what the site shows. Phones keep the single column; This week gains the week links there too. UI copy names no legislature ("This week's schedule"), so the pages stay jurisdiction-neutral.

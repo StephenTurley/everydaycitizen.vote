@@ -97,98 +97,118 @@ defmodule TheFloorWeb.RepsLive do
     assigns = assign(assigns, :filters, @filters)
 
     ~H"""
-    <Layouts.app flash={@flash}>
-      <section class="pt-5 pb-2 flex flex-col gap-3">
-        <.eyebrow>Your representatives · {@district}</.eyebrow>
-        <p :if={@reps == []} class="m-0 text-[15px]">No current members found for {@district}.</p>
-        <div
-          :if={@reps != []}
-          class="grid gap-2"
-          style={"grid-template-columns: repeat(#{length(@reps)}, minmax(0, 1fr))"}
-        >
-          <.link
-            :for={r <- @reps}
-            patch={rep_path(@district, r, nil)}
-            aria-pressed={to_string(r == @rep)}
-            class={[
-              "flex flex-col items-center gap-1.5 px-1.5 py-3 rounded-xl bg-floor-card text-center",
-              if(r == @rep, do: "border-2 border-floor-accent", else: "border border-floor-line")
-            ]}
+    <Layouts.app flash={@flash} width={:full}>
+      <%!-- Large screens: reps down a left column beside a 720px feed --%>
+      <div class="lg:grid lg:grid-cols-[300px_minmax(0,720px)] lg:justify-center lg:gap-10 lg:pt-8 lg:items-start">
+        <section class="pt-5 pb-2 lg:p-0 flex flex-col gap-3 lg:sticky lg:top-4">
+          <.eyebrow>Your representatives · {@district}</.eyebrow>
+          <p :if={@reps == []} class="m-0 text-[15px]">No current members found for {@district}.</p>
+          <nav
+            :if={@reps != []}
+            aria-label="Representatives"
+            class="grid gap-2 lg:flex lg:flex-col"
+            style={"grid-template-columns: repeat(#{length(@reps)}, minmax(0, 1fr))"}
           >
-            <span
-              aria-hidden="true"
-              class="size-11 rounded-full bg-[#e3e6e9] flex items-center justify-center font-semibold text-[15px] text-floor-ink-2"
+            <.link
+              :for={r <- @reps}
+              patch={rep_path(@district, r, nil)}
+              aria-current={if r == @rep, do: "page"}
+              class={[
+                "flex flex-col lg:flex-row items-center gap-1.5 lg:gap-3 px-1.5 py-3 lg:px-3.5 rounded-xl bg-floor-card text-center lg:text-left",
+                if(r == @rep, do: "border-2 border-floor-accent", else: "border border-floor-line")
+              ]}
             >
-              {initials(r.person.name)}
-            </span>
-            <span class="text-[14px] font-semibold leading-tight text-floor-ink">{r.person.name}</span>
-            <span class="text-[12px] text-floor-muted">
-              {r.body.name}{if p = party(r.membership), do: " · #{p}"}
-            </span>
-          </.link>
-        </div>
-      </section>
-
-      <section :if={@rep} class="py-3 flex flex-col gap-3.5">
-        <div class="flex flex-col gap-1">
-          <h1 class="m-0 text-[24px] font-bold tracking-tight">{@rep.person.name}</h1>
-          <p class="m-0 text-[14px] text-floor-muted">
-            {@rep.body.name}{if @rep.membership.party, do: " · #{@rep.membership.party}"} · {@rep.membership.district}
-          </p>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <.card class="!p-3">
-            <p class="m-0 text-[22px] font-bold">{@counts.sponsored}</p>
-            <p class="m-0 mt-0.5 text-[13px] text-floor-muted">bills introduced</p>
-          </.card>
-          <.card class="!p-3">
-            <p class="m-0 text-[22px] font-bold">{@counts.cosponsored}</p>
-            <p class="m-0 mt-0.5 text-[13px] text-floor-muted">bills cosponsored</p>
-          </.card>
-        </div>
-        <nav aria-label="Show" class="flex flex-wrap gap-1.5">
+              <span
+                aria-hidden="true"
+                class="size-11 flex-none rounded-full bg-[#e3e6e9] flex items-center justify-center font-semibold text-[15px] text-floor-ink-2"
+              >
+                {initials(r.person.name)}
+              </span>
+              <span class="flex flex-col gap-1.5 lg:gap-0.5">
+                <span class="text-[14px] lg:text-[15px] font-semibold leading-tight text-floor-ink">
+                  {r.person.name}
+                </span>
+                <span class="text-[12px] lg:text-[13px] text-floor-muted">
+                  {r.body.name}{if p = party(r.membership), do: " · #{p}"}
+                </span>
+              </span>
+            </.link>
+          </nav>
           <.link
-            :for={{key, label, _} <- @filters}
-            patch={rep_path(@district, @rep, key)}
-            aria-current={if elem(@filter, 0) == key, do: "page"}
-            class={[
-              "flex-none px-3.5 py-2.5 rounded-full text-[14px]",
-              if(elem(@filter, 0) == key,
-                do: "bg-floor-ink text-white font-semibold",
-                else: "bg-floor-card border border-floor-line text-floor-ink font-medium"
-              )
-            ]}
+            navigate={~p"/this-week"}
+            class="hidden lg:block self-start py-1.5 text-[14px] font-semibold text-floor-accent"
           >
-            {label}
+            This week's schedule ›
           </.link>
-        </nav>
-      </section>
+        </section>
 
-      <section :if={@rep} aria-label="Activity" class="flex flex-col gap-2.5">
-        <p :if={@items == []} class="m-0 py-6 text-[15px] text-floor-muted">Nothing yet.</p>
-        <%= for items <- @days do %>
-          <h2 class="mt-2.5 mb-0 text-[13px] font-semibold text-floor-muted">
-            {day(hd(items).date)}
-          </h2>
-          <.activity_item
-            :for={item <- items}
-            item={item}
-            summary={item.bill && @summaries[item.bill.id]}
-            latest={item.bill && @latest[item.bill.id]}
-          />
-        <% end %>
-        <button
-          :if={@next}
-          type="button"
-          phx-click="more"
-          class="mt-2 py-3 rounded-xl bg-floor-card border border-floor-line text-[14px] font-semibold text-floor-accent"
-        >
-          Load more
-        </button>
-        <.source_line>
-          Votes and bills from the official record; every item links to its source.
-        </.source_line>
-      </section>
+        <div class="min-w-0">
+          <section :if={@rep} class="py-3 lg:pt-0 flex flex-col gap-3.5 lg:gap-4">
+            <div class="flex flex-col lg:flex-row lg:flex-wrap lg:items-end lg:justify-between gap-3.5 lg:gap-4">
+              <div class="flex flex-col gap-1">
+                <h1 class="m-0 text-[24px] lg:text-[32px] leading-tight font-bold tracking-tight">
+                  {@rep.person.name}
+                </h1>
+                <p class="m-0 text-[14px] lg:text-[15px] text-floor-muted">
+                  {@rep.body.name}{if @rep.membership.party, do: " · #{@rep.membership.party}"} · {@rep.membership.district}
+                </p>
+              </div>
+              <div class="grid grid-cols-2 lg:flex gap-2">
+                <.card class="!p-3 lg:!px-4 lg:min-w-[120px]">
+                  <p class="m-0 text-[22px] font-bold">{@counts.sponsored}</p>
+                  <p class="m-0 mt-0.5 text-[13px] text-floor-muted">bills introduced</p>
+                </.card>
+                <.card class="!p-3 lg:!px-4 lg:min-w-[120px]">
+                  <p class="m-0 text-[22px] font-bold">{@counts.cosponsored}</p>
+                  <p class="m-0 mt-0.5 text-[13px] text-floor-muted">bills cosponsored</p>
+                </.card>
+              </div>
+            </div>
+            <nav aria-label="Show" class="flex flex-wrap gap-1.5">
+              <.link
+                :for={{key, label, _} <- @filters}
+                patch={rep_path(@district, @rep, key)}
+                aria-current={if elem(@filter, 0) == key, do: "page"}
+                class={[
+                  "flex-none px-3.5 py-2.5 rounded-full text-[14px]",
+                  if(elem(@filter, 0) == key,
+                    do: "bg-floor-ink text-white font-semibold",
+                    else: "bg-floor-card border border-floor-line text-floor-ink font-medium"
+                  )
+                ]}
+              >
+                {label}
+              </.link>
+            </nav>
+          </section>
+
+          <section :if={@rep} aria-label="Activity" class="flex flex-col gap-2.5">
+            <p :if={@items == []} class="m-0 py-6 text-[15px] text-floor-muted">Nothing yet.</p>
+            <%= for items <- @days do %>
+              <h2 class="mt-2.5 mb-0 text-[13px] font-semibold text-floor-muted">
+                {day(hd(items).date)}
+              </h2>
+              <.activity_item
+                :for={item <- items}
+                item={item}
+                summary={item.bill && @summaries[item.bill.id]}
+                latest={item.bill && @latest[item.bill.id]}
+              />
+            <% end %>
+            <button
+              :if={@next}
+              type="button"
+              phx-click="more"
+              class="mt-2 py-3 rounded-xl bg-floor-card border border-floor-line text-[14px] font-semibold text-floor-accent"
+            >
+              Load more
+            </button>
+            <.source_line>
+              Votes and bills from the official record; every item links to its source.
+            </.source_line>
+          </section>
+        </div>
+      </div>
     </Layouts.app>
     """
   end
