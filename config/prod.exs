@@ -15,7 +15,8 @@ config :everyday_citizen, EverydayCitizenWeb.Endpoint,
   force_ssl: [
     rewrite_on: [:x_forwarded_proto],
     exclude: [
-      # paths: ["/health"],
+      # Fly's health checks call the machine directly over plain HTTP.
+      paths: ["/health", "/health/ready"],
       hosts: ["localhost", "127.0.0.1"]
     ]
   ]

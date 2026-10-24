@@ -53,9 +53,9 @@ if config_env() == :dev do
 end
 
 if config_env() == :prod do
-  # Oban's node names the machine and the deploy's image, so a deploy's jobs are
-  # told apart from the previous deploy's, which EverydayCitizen.ObanRescue releases at
-  # boot. (The release node name stays the machine id, for `rpc` and ssh.)
+  # Oban's node names the machine and the deploy's image, so each deploy's jobs
+  # are told apart; EverydayCitizen.NodeHeartbeat releases jobs of nodes that
+  # stopped. (The release node name stays the machine id, for `rpc` and ssh.)
   image_tag =
     case String.split(System.get_env("FLY_IMAGE_REF", ""), ":") do
       [_, tag] -> tag
@@ -65,7 +65,7 @@ if config_env() == :prod do
   config :everyday_citizen, Oban,
     node: "#{System.get_env("FLY_MACHINE_ID", "machine")}-#{image_tag}"
 
-  config :everyday_citizen, :rescue_orphaned_jobs, true
+  config :everyday_citizen, :node_heartbeat, true
 
   # The deploy labels the image with the commit (`--image-label git-<sha>`), so
   # each Sentry event names the release that produced it.

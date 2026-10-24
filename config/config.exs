@@ -61,6 +61,8 @@ config :everyday_citizen, :webauthn,
   rp_name: "Everyday Citizen"
 
 config :everyday_citizen, Oban,
+  # a deploy stops the old machine: running jobs get 25 s to finish
+  shutdown_grace_period: :timer.seconds(25),
   repo: EverydayCitizen.Repo,
   # bulk: the first-run bulk load's chunk jobs (Federal.BulkBatch)
   queues: [ingest: 4, text: 2, bulk: 4, mail: 2],
