@@ -8,7 +8,11 @@ defmodule TheFloor.Adapters.Federal.Jobs do
   ingest jobs. Generic tooling reads it through the `:ingest_adapters` config.
   """
   alias TheFloor.Adapters.Federal.Jobs.{
+    BackfillBillSections,
+    BackfillBillSummaries,
     Coverage,
+    ReclassifyActions,
+    ReclassifyVotes,
     Relink,
     SyncBills,
     SyncCommitteeMeetings,
@@ -19,6 +23,20 @@ defmodule TheFloor.Adapters.Federal.Jobs do
     SyncSenateFloor,
     SyncSenateVotes
   }
+
+  @doc """
+  Jobs run only by name (`mix the_floor.ingest <name>`, `TheFloor.Release.ingest/1`),
+  never by the full ingest: one-off backfills and reprocessing.
+  """
+  @spec on_demand() :: [{String.t(), module(), map()}]
+  def on_demand do
+    [
+      {"reclassify_actions", ReclassifyActions, %{}},
+      {"bill_summaries", BackfillBillSummaries, %{}},
+      {"reclassify_votes", ReclassifyVotes, %{}},
+      {"bill_sections", BackfillBillSections, %{}}
+    ]
+  end
 
   @spec all() :: [{String.t(), module(), map()}]
   def all do

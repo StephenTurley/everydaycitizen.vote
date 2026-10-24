@@ -110,6 +110,18 @@ defmodule TheFloor.Ingest.Records do
     defstruct [:jurisdiction, :bill_external_id, :actions, :source]
   end
 
+  defmodule BillSummaries do
+    @moduledoc """
+    The complete set of a bill's official summaries by one author; replaces whatever
+    is stored. Each entry is `%{version_code, action_date, action_description, html,
+    updated_at_source}`, `html` already sanitized.
+    """
+    @enforce_keys [:jurisdiction, :bill_external_id, :author, :summaries, :source]
+    defstruct [:jurisdiction, :bill_external_id, :author, :summaries, :source]
+
+    @type t :: %__MODULE__{}
+  end
+
   defmodule Sponsorships do
     @moduledoc """
     The complete sponsor/cosponsor list of a bill; replaces whatever is stored.
@@ -136,9 +148,21 @@ defmodule TheFloor.Ingest.Records do
   end
 
   defmodule BillVersionText do
-    @moduledoc "Fetched text for an existing bill version. `xml_schema` is `uslm` or `other`."
+    @moduledoc """
+    Fetched text for an existing bill version. `xml_schema` is `uslm` or `other`;
+    `sections` is the text split into sections (see the adapter's section parser).
+    """
     @enforce_keys [:jurisdiction, :bill_external_id, :code, :source]
-    defstruct [:jurisdiction, :bill_external_id, :code, :xml, :xml_schema, :plain_text, :source]
+    defstruct [
+      :jurisdiction,
+      :bill_external_id,
+      :code,
+      :xml,
+      :xml_schema,
+      :plain_text,
+      :sections,
+      :source
+    ]
   end
 
   defmodule Vote do
@@ -162,6 +186,7 @@ defmodule TheFloor.Ingest.Records do
       :external_id,
       :identifier,
       :question,
+      :classification,
       :result,
       :passed,
       :voted_at,

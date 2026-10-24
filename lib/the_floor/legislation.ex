@@ -2,7 +2,7 @@ defmodule TheFloor.Legislation do
   @moduledoc "Queries over bills, actions, sponsorships and text versions."
   import Ecto.Query
 
-  alias TheFloor.Legislation.{Bill, BillAction, BillVersion}
+  alias TheFloor.Legislation.{Bill, BillAction, BillSummary, BillVersion}
   alias TheFloor.Legislature.Jurisdiction
   alias TheFloor.Repo
 
@@ -72,5 +72,109 @@ defmodule TheFloor.Legislation do
     |> where([a], like(a.description, ^pattern))
     |> select([a], {a.date, a.description})
     |> Repo.all()
+  end
+
+  @doc """
+  A page of the jurisdiction's actions after `after_id`, in id order, as
+  `%{id, description, raw_type, classification}`.
+  """
+  @spec actions_page(String.t(), integer(), pos_integer()) :: [map()]
+  def actions_page(jurisdiction_key, after_id, limit) do
+    BillAction
+    |> join(:inner, [a], b in Bill, on: b.id == a.bill_id)
+    |> join(:inner, [_a, b], j in Jurisdiction, on: j.id == b.jurisdiction_id)
+    |> where([a, _b, j], j.key == ^jurisdiction_key and a.id > ^after_id)
+    |> order_by([a], asc: a.id)
+    |> limit(^limit)
+    |> select([a], %{
+      id: a.id,
+      description: a.description,
+      raw_type: a.raw_type,
+      classification: a.classification
+    })
+    |> Repo.all()
+  end
+
+  @doc "Sets each action's classification (nil marks it unclassified)."
+  @spec update_action_classifications([{integer(), String.t() | nil}]) :: :ok
+  def update_action_classifications(changes) do
+    Repo.transaction(fn ->
+      for {id, classification} <- changes do
+        BillAction
+        |> where([a], a.id == ^id)
+        |> Repo.update_all(
+          set: [classification: classification, unclassified: is_nil(classification)]
+        )
+      end
+    end)
+
+    :ok
+  end
+
+  @doc "The bill's most recent official summary (latest action date), or nil."
+  @spec latest_summary(Bill.t()) :: BillSummary.t() | nil
+  def latest_summary(%Bill{id: bill_id}) do
+    BillSummary
+    |> where([s], s.bill_id == ^bill_id)
+    |> order_by([s], desc_nulls_last: s.action_date, desc: s.id)
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  @doc "Ids of the given bills that have no summary stored."
+  @spec bill_ids_without_summary([integer()]) :: MapSet.t(integer())
+  def bill_ids_without_summary(bill_ids) do
+    with_summary =
+      BillSummary
+      |> where([s], s.bill_id in ^bill_ids)
+      |> select([s], s.bill_id)
+      |> distinct(true)
+      |> Repo.all()
+
+    MapSet.difference(MapSet.new(bill_ids), MapSet.new(with_summary))
+  end
+
+  @doc "Up to `limit` versions with stored XML and no sections yet, as `%{id, xml}`."
+  @spec versions_without_sections(pos_integer()) :: [%{id: integer(), xml: String.t()}]
+  def versions_without_sections(limit) do
+    BillVersion
+    |> where([v], not is_nil(v.xml) and is_nil(v.sections))
+    |> order_by([v], asc: v.id)
+    |> limit(^limit)
+    |> select([v], %{id: v.id, xml: v.xml})
+    |> Repo.all()
+  end
+
+  @doc "Stores a version's sections."
+  @spec put_sections(integer(), [map()]) :: :ok
+  def put_sections(version_id, sections) do
+    BillVersion |> where([v], v.id == ^version_id) |> Repo.update_all(set: [sections: sections])
+    :ok
+  end
+
+  @doc "Each bill's latest action (highest position), keyed by bill id."
+  @spec latest_actions([integer()]) :: %{integer() => BillAction.t()}
+  def latest_actions([]), do: %{}
+
+  def latest_actions(bill_ids) do
+    BillAction
+    |> where([a], a.bill_id in ^bill_ids)
+    |> distinct([a], a.bill_id)
+    |> order_by([a], asc: a.bill_id, desc: a.position)
+    |> Repo.all()
+    |> Map.new(&{&1.bill_id, &1})
+  end
+
+  @doc "Each bill's latest official summary, keyed by bill id."
+  @spec latest_summaries([integer()]) :: %{integer() => BillSummary.t()}
+  def latest_summaries([]), do: %{}
+
+  def latest_summaries(bill_ids) do
+    BillSummary
+    |> where([s], s.bill_id in ^bill_ids)
+    |> distinct([s], s.bill_id)
+    |> order_by([s], asc: s.bill_id, desc_nulls_last: s.action_date, desc: s.id)
+    |> Repo.all()
+    |> Map.new(&{&1.bill_id, &1})
   end
 end

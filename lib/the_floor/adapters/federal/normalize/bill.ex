@@ -5,8 +5,18 @@ defmodule TheFloor.Adapters.Federal.Normalize.Bill do
   response its input came from.
   """
   alias TheFloor.Adapters.Federal.{ActionClassifier, BillId}
-  alias TheFloor.Ingest.Records.{Bill, BillAction, BillActions, BillVersion, Sponsorships}
+
+  alias TheFloor.Ingest.Records.{
+    Bill,
+    BillAction,
+    BillActions,
+    BillSummaries,
+    BillVersion,
+    Sponsorships
+  }
+
   alias TheFloor.Ingest.Records.SourceRef
+  alias TheFloor.Ingest.SafeHtml
 
   @jurisdiction "federal"
 
@@ -79,6 +89,32 @@ defmodule TheFloor.Adapters.Federal.Normalize.Bill do
       jurisdiction: @jurisdiction,
       bill_external_id: bill_external_id,
       sponsorships: primary ++ others,
+      source: source
+    }
+  end
+
+  @doc """
+  Builds the bill's summary set from a `summaries` list (the API's `/summaries`
+  response or a BILLSTATUS file's), sanitized and attributed to CRS.
+  """
+  @spec summaries([map()], String.t(), SourceRef.t()) :: BillSummaries.t()
+  def summaries(summaries, bill_external_id, %SourceRef{} = source) do
+    %BillSummaries{
+      jurisdiction: @jurisdiction,
+      bill_external_id: bill_external_id,
+      author: "Congressional Research Service",
+      summaries:
+        summaries
+        |> Enum.map(fn s ->
+          %{
+            version_code: s["versionCode"],
+            action_date: date(s["actionDate"]),
+            action_description: s["actionDesc"],
+            html: SafeHtml.sanitize(s["text"] || ""),
+            updated_at_source: datetime(s["updateDate"])
+          }
+        end)
+        |> Enum.uniq_by(&{&1.version_code, &1.action_date}),
       source: source
     }
   end

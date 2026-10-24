@@ -25,6 +25,7 @@ defmodule TheFloor.Adapters.Federal.HTTP do
         decode_body: false,
         raw: true
       )
+      |> Req.merge(Keyword.get(opts, :req, []))
 
     case Req.get(req, url: url) do
       {:ok, %Req.Response{status: 200, body: raw}} when is_binary(raw) ->

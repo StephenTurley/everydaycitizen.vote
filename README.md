@@ -44,6 +44,26 @@ per-version API jobs. Bills wait for a successful `members` run. Bulk files lag 
 few hours; the next nightly run lists from the API with a 2-day overlap and catches up.
 Later runs are incremental.
 
+## Pages
+
+* `/`: enter an address; it is used once to find the district and never stored.
+* `/district/:district` remembers the district in the session and shows `/reps/:district`.
+* `/reps/:district`: the district's reps, one at a time, with their activity feed
+  (`?rep=<person id>&filter=all|votes|bills|law`).
+* `/bills/:id` (e.g. `/bills/119-s-5`): status, your reps' part, the official summary,
+  the text by section (`?version=<code>&section=<enum>`), and roll calls.
+* `/this-week`: the next seven days' floor and committee items (`?mine=1` for your reps).
+
+## One-off jobs
+
+Run by name only, never by the full ingest (`mix the_floor.ingest <name>` locally,
+`TheFloor.Release.ingest("<name>")` in production):
+
+* `bill_summaries`: fill official summaries for bills stored before summaries were kept.
+* `bill_sections`: split stored bill text into sections (500 versions per run, re-queues).
+* `reclassify_actions`: re-run the action classifier over stored actions.
+* `reclassify_votes`: re-type stored votes from their questions.
+
 ## Deploy
 
 The app runs on Fly.io as `thefloor-vote` (region `iad`) with a Fly Postgres cluster

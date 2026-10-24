@@ -21,7 +21,13 @@ defmodule TheFloor.Adapters.Federal.ActionClassifierTest do
     {"Signed by President.", "signed"},
     {"Vetoed by President.", "vetoed"},
     {"Became Public Law No: 119-4.", "became_law"},
-    {"Motion to reconsider laid on the table Agreed to without objection.", nil}
+    {"Motion to reconsider laid on the table Agreed to without objection.", nil},
+    {"Motion to proceed to consideration of measure agreed to in Senate by Yea-Nay Vote. 77 - 22. Record Vote Number: 233.",
+     nil},
+    {"Cloture on the motion to proceed to the measure invoked in Senate by Yea-Nay Vote. 74 - 24.",
+     nil},
+    {"Passed Senate with an amendment by Yea-Nay Vote. 77 - 22. Record Vote Number: 250.",
+     "passed_chamber"}
   ]
 
   describe "classify/1" do

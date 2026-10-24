@@ -132,3 +132,15 @@ On Fly the first bill load wrote ~200 bills a minute (shared CPUs), so one job f
 
 ## 2026-10-24 — Production sizing for the first backfill
 The app machine is 1 GB (512 MB was killed decoding `legislators-historical.json`). The Postgres machine runs on `performance-1x` / 2 GB only for the first backfill (a trivial query took 36 ms on throttled `shared-cpu-1x`), then returns to `shared-cpu-1x` / 1 GB.
+
+## 2026-10-24 — Official bill summaries stored, attributed and sanitized
+`bill_summaries` holds each bill's official summaries (one row per version code and action date), with an `author` the adapter sets ("Congressional Research Service" for federal), so the UI labels a summary by its author without knowing the jurisdiction. Summary HTML is reduced on write to `p ul ol li strong em b i br` without attributes (`TheFloor.Ingest.SafeHtml`), so it can be rendered as HTML safely. The API path fetches `/summaries` per bill; the bulk path reads them from BILLSTATUS. Bills stored before this are filled by the on-demand `bill_summaries` job (bulk chunks in summaries-only mode). On-demand jobs (`Jobs.on_demand/0`) run only by name, never in the full ingest.
+
+## 2026-10-24 — Votes carry a normalized type
+`votes.classification` is one of `passage cloture amendment nomination procedural other`, set by the adapter from the roll call's question (`Federal.VoteClassifier`; procedural motions are matched before amendments, so tabling an amendment is procedural). Pages use it to pick a bill's main vote per chamber (passage there, else the latest roll call). Stored votes are retyped by the on-demand `reclassify_votes` job.
+
+## 2026-10-24 — Bill text stored split into sections
+`bill_versions.sections` (JSON) holds each version's text as titles and sections, each section's text flattened into indented blocks (level 0 section text and subsections, 1 paragraphs, down to 5 items), parsed from the stored XML (bill DTD or USLM) when text is stored. Sections quoted into existing law (`<quoted-block>`) stay inline in the quoting block. The bill page renders sections from it, and M3 summaries will attach per section. Versions stored earlier are split by the on-demand `bill_sections` job (500 per run, re-queueing itself); unparseable XML gets `[]`. Live check: 2,000 random stored versions, 0 errors, ~2.6 ms each.
+
+## 2026-10-24 — Finding reps from an address
+`TheFloor.Reps` finds a place's current members through a per-jurisdiction `TheFloor.Reps.Locator` (`config :the_floor, :locators`); the federal one is the Census Geocoder, using the geography vintage that holds the sitting congress's districts (`census_vintages: %{119 => "ACS2025_Current"}`), because the current vintage already carries the next congress's districts and several states redrew mid-decade. A locator returns a district key (`"IA-1"`, `"DC-AL"`) and its seats (`{"senate","IA"}`, `{"house","IA-1"}`); pages and the session keep only the key, never the address. Places without senators simply match none.

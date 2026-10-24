@@ -12,7 +12,8 @@ defmodule TheFloor.Adapters.Federal.Normalize.BillStatus do
           subjects: map(),
           actions: [map()],
           cosponsors: [map()],
-          text: map()
+          text: map(),
+          summaries: [map()]
         }
 
   @spec parse(binary()) :: {:ok, parts()} | {:error, term()}
@@ -27,7 +28,8 @@ defmodule TheFloor.Adapters.Federal.Normalize.BillStatus do
          subjects: %{"subjects" => subjects(bill["subjects"])},
          actions: bill["actions"] || [],
          cosponsors: bill["cosponsors"] || [],
-         text: %{"textVersions" => bill["textVersions"] || []}
+         text: %{"textVersions" => bill["textVersions"] || []},
+         summaries: summaries(bill["summaries"])
        }}
     else
       {:ok, {other, _, _}} -> {:error, {:unexpected_root, other}}
@@ -49,11 +51,25 @@ defmodule TheFloor.Adapters.Federal.Normalize.BillStatus do
     end
   end
 
+  # A name repeated among the children (`<summaries><summary>…<summary>`) maps to
+  # the list of their values, so none is lost; a name seen once maps to its value.
   defp container(elements) do
-    if Enum.all?(elements, &match?({"item", _, _}, &1)),
-      do: Enum.map(elements, &value/1),
-      else: Map.new(elements, fn {name, _, _} = el -> {name, value(el)} end)
+    if Enum.all?(elements, &match?({"item", _, _}, &1)) do
+      Enum.map(elements, &value/1)
+    else
+      elements
+      |> Enum.group_by(fn {name, _, _} -> name end, &value/1)
+      |> Map.new(fn
+        {name, [one]} -> {name, one}
+        {name, many} -> {name, many}
+      end)
+    end
   end
+
+  # `<summaries>` holds one `<summary>` (a map) or several (a list), or is empty.
+  defp summaries(%{"summary" => list}) when is_list(list), do: list
+  defp summaries(%{"summary" => %{} = one}), do: [one]
+  defp summaries(_), do: []
 
   # An empty <legislativeSubjects/> reads as nil; the API returns [].
   defp subjects(%{} = subjects), do: Map.update(subjects, "legislativeSubjects", [], &(&1 || []))

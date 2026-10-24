@@ -36,7 +36,11 @@ Decision log: `docs/DECISIONS.md` (append; never rewrite history)
 
 ## Current milestone
 
-M1: schema + federal adapter. See `docs/SPEC.md` → Milestones.
+M2 (see `docs/SPEC.md` → Milestones), designed in
+`docs/superpowers/specs/2026-10-23-m2-frontend-design.md`. M2a (public pages: find
+your reps, rep feed, bill page, this week) is built; M2b (accounts with email link
+and passkeys, following, daily email) is next. M1 (schema + federal adapter) is done
+pending its first nightly runs.
 
 ## Working conventions
 

@@ -103,3 +103,25 @@
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
 /* This file is for your main application CSS */
+
+/* The Floor: tokens from the approved mockups (neutral, no party colors). */
+@theme {
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-floor-ground: #f4f5f6;
+  --color-floor-card: #ffffff;
+  --color-floor-line: #dadde1;
+  --color-floor-line-soft: #e6e8eb;
+  --color-floor-ink: #15171a;
+  --color-floor-ink-2: #3a4048;
+  --color-floor-muted: #4a5058;
+  --color-floor-accent: #0b5563;
+  --color-floor-accent-dark: #073b45;
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--color-floor-ground);
+  color: var(--color-floor-ink);
+  font-variant-numeric: tabular-nums;
+}

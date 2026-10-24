@@ -30,6 +30,7 @@ defmodule TheFloor.Adapters.Federal.Normalize.HouseVoteTest do
       assert vote.identifier == "Roll Call 17"
       assert vote.bill_external_id == "119-hr-30"
       assert vote.question == "On Passage"
+      assert vote.classification == "passage"
       assert vote.result == "Passed"
       assert vote.passed == true
     end

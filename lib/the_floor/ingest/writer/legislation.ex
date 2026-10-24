@@ -24,7 +24,7 @@ defmodule TheFloor.Ingest.Writer.Legislation do
 
   alias TheFloor.Ingest.Records
   alias TheFloor.Ingest.Writer.Support
-  alias TheFloor.Legislation.{Bill, BillAction, BillVersion, Sponsorship}
+  alias TheFloor.Legislation.{Bill, BillAction, BillSummary, BillVersion, Sponsorship}
   alias TheFloor.Legislature.Session
   alias TheFloor.Repo
 
@@ -71,6 +71,16 @@ defmodule TheFloor.Ingest.Writer.Legislation do
          {:ok, bill} <- bill(j, r.bill_external_id),
          {:ok, ids} <- upsert_all(r.actions, &action_row(&1, j, bill, source_id), BillAction) do
       delete_others(BillAction, bill.id, ids)
+      {:ok, %{written: length(ids)}}
+    end
+  end
+
+  defp do_write(%Records.BillSummaries{} = r, source_id) do
+    with {:ok, j} <- jurisdiction(r.jurisdiction),
+         {:ok, bill} <- bill(j, r.bill_external_id),
+         {:ok, ids} <-
+           upsert_all(r.summaries, &summary_row(&1, bill, r.author, source_id), BillSummary) do
+      delete_others(BillSummary, bill.id, ids)
       {:ok, %{written: length(ids)}}
     end
   end
@@ -124,6 +134,7 @@ defmodule TheFloor.Ingest.Writer.Legislation do
         xml: r.xml,
         xml_schema: r.xml_schema,
         plain_text: r.plain_text,
+        sections: r.sections,
         text_source_id: source_id
       })
       |> Repo.update()
@@ -154,6 +165,20 @@ defmodule TheFloor.Ingest.Writer.Legislation do
           source_id: source_id
         }, [:bill_id, :position]}}
     end
+  end
+
+  defp summary_row(s, bill, author, source_id) do
+    {:ok,
+     {%{
+        bill_id: bill.id,
+        version_code: s.version_code,
+        action_date: s.action_date,
+        action_description: s.action_description,
+        author: author,
+        html: s.html,
+        updated_at_source: s.updated_at_source,
+        source_id: source_id
+      }, [:bill_id, :version_code, :action_date]}}
   end
 
   defp sponsorship_row({person, s}, bill, source_id) do

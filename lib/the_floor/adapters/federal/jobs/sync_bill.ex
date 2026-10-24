@@ -28,6 +28,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBill do
          {:ok, actions} <- fetch_all(base <> "/actions", "actions"),
          {:ok, cosponsors} <- fetch_all(base <> "/cosponsors", "cosponsors"),
          {:ok, text, text_src} <- CongressGov.get(base <> "/text", limit: 250),
+         {:ok, summaries} <- fetch_all(base <> "/summaries", "summaries"),
          {:ok, id} <-
            BillWriter.write(
              %{
@@ -35,7 +36,8 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBill do
                subjects: subjects,
                actions: actions,
                cosponsors: cosponsors,
-               text: {text, text_src}
+               text: {text, text_src},
+               summaries: summaries
              },
              run_id
            ) do

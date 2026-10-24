@@ -17,7 +17,12 @@ defmodule TheFloorWeb.Router do
   scope "/", TheFloorWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", HomeLive
+    get "/district/:district", DistrictController, :show
+    post "/district", DistrictController, :create
+    live "/reps/:district", RepsLive
+    live "/bills/:id", BillLive
+    live "/this-week", ThisWeekLive
   end
 
   # Other scopes may use custom stacks.
