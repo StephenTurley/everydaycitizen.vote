@@ -30,12 +30,12 @@ defmodule TheFloorWeb.Layouts do
     <header class="bg-floor-card border-b border-floor-line">
       <nav
         aria-label="Main"
-        class="mx-auto max-w-3xl lg:max-w-[1280px] px-5 lg:px-10 flex items-center justify-between gap-4"
+        class="mx-auto max-w-3xl lg:max-w-[1280px] px-5 lg:px-10 flex flex-wrap items-center justify-between gap-x-3 sm:gap-x-4"
       >
-        <a href={~p"/"} class="py-4 text-[19px] font-bold tracking-tight text-floor-ink">
-          The Floor
+        <a href={~p"/"} class="py-4 text-[17px] sm:text-[19px] font-bold tracking-tight whitespace-nowrap text-floor-ink">
+          Everyday Citizen
         </a>
-        <div class="flex items-center gap-5 text-sm font-medium">
+        <div class="flex items-center gap-3 sm:gap-5 text-[13px] sm:text-sm font-medium whitespace-nowrap">
           <a href={~p"/this-week"} class="py-3 text-floor-accent hover:text-floor-accent-dark">
             This week
           </a>

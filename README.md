@@ -1,4 +1,6 @@
-# TheFloor
+# Everyday Citizen (everydaycitizen.vote)
+
+Code name `the_floor`. See `CLAUDE.md` and `docs/SPEC.md`.
 
 To start your Phoenix server:
 

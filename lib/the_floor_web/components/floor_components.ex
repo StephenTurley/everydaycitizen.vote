@@ -1,6 +1,6 @@
 defmodule TheFloorWeb.FloorComponents do
   @moduledoc """
-  The Floor's page pieces, drawn from the approved mockups: cards, vote chips
+  The site's page pieces, drawn from the approved mockups: cards, vote chips
   (solid Yea, outlined Nay, gray otherwise: told apart by fill and label, never
   by color alone), section headings and the closing source line.
   """

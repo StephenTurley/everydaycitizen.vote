@@ -6,7 +6,7 @@ defmodule TheFloor.Adapters.Federal.HTTP do
   alias TheFloor.Ingest.RateLimiter
   alias TheFloor.Ingest.Records.SourceRef
 
-  @user_agent "TheFloor/0.1 (+https://thefloor.vote)"
+  @user_agent "EverydayCitizen/0.1 (+https://everydaycitizen.vote)"
 
   @spec get(String.t(), keyword()) ::
           {:ok, %{body: term(), raw: binary(), source: SourceRef.t()}} | {:error, term()}

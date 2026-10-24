@@ -1,4 +1,6 @@
-# The Floor (thefloor.vote) — v1 Spec
+# Everyday Citizen (everydaycitizen.vote) — v1 Spec
+
+_Renamed from The Floor (thefloor.vote) on 2026-10-24; see DECISIONS._
 
 Last updated: 2026-10-23
 
