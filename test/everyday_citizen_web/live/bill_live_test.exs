@@ -10,6 +10,7 @@ defmodule EverydayCitizenWeb.BillLiveTest do
   alias EverydayCitizen.Ingest.Records
 
   @src Records.SourceRef.new("https://www.congress.gov/x", "x")
+  @googlebot "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
 
   setup %{conn: conn} do
     people = EverydayCitizen.FloorFixtures.iowa!()
@@ -467,6 +468,28 @@ defmodule EverydayCitizenWeb.BillLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es")
       assert has_element?(view, "#bill-summary", "Written by AI from the bill's text below")
+    end
+
+    test "a crawler is shown summaries already written but never starts one", %{
+      conn: conn,
+      bill: bill
+    } do
+      conn = Plug.Conn.put_req_header(conn, "user-agent", @googlebot)
+
+      {:ok, view, html} = live(conn, ~p"/bills/119-s-5?version=es&section=1")
+      refute has_element?(view, "#bill-summary")
+      refute has_element?(view, "#summary-1")
+      refute html =~ "Writing a plain-English summary"
+      assert [] = all_enqueued(worker: EverydayCitizen.Jobs.SummarizeSubject)
+      assert [] = all_enqueued(worker: EverydayCitizen.Jobs.SummarizeSection)
+
+      {subject, input} = EverydayCitizen.Summaries.Inputs.bill(bill)
+
+      {:ok, _} =
+        EverydayCitizen.Summaries.put_ai(:bill, subject, input, %{summary: "Cached.", model: "m"})
+
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+      assert has_element?(view, "#bill-summary", "Cached.")
     end
 
     test "without one, the page asks for it and shows it when it lands", %{conn: conn, bill: bill} do

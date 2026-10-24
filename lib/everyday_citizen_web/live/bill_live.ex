@@ -31,6 +31,7 @@ defmodule EverydayCitizenWeb.BillLive do
            page_title: page.bill.identifier,
            following: Follows.following?(socket.assigns.current_scope, {:bill, page.bill.id}),
            remote_ip: EverydayCitizenWeb.RemoteIp.from_socket(socket),
+           crawler: EverydayCitizenWeb.Crawler.crawler?(socket),
            summaries: %{},
            summary_topics: []
          )
@@ -90,7 +91,10 @@ defmodule EverydayCitizenWeb.BillLive do
   defp load_bill_summary(socket) do
     with true <- Claude.enabled?(),
          {subject, input} <- Inputs.bill(socket.assigns.page.bill) do
-      assign(socket, :bill_summary, {subject, bill_summary_state(socket, subject, input)})
+      case bill_summary_state(socket, subject, input) do
+        :none -> assign(socket, :bill_summary, nil)
+        state -> assign(socket, :bill_summary, {subject, state})
+      end
     else
       _ -> assign(socket, :bill_summary, nil)
     end
@@ -100,6 +104,9 @@ defmodule EverydayCitizenWeb.BillLive do
     cond do
       summary = Summaries.get_ai(:bill, subject, input) ->
         {:ok, summary.summary}
+
+      socket.assigns.crawler ->
+        :none
 
       not connected?(socket) ->
         :loading
@@ -171,6 +178,9 @@ defmodule EverydayCitizenWeb.BillLive do
     cond do
       summary = Summaries.get(version_id, i, text) ->
         {:ok, summary.summary}
+
+      socket.assigns.crawler ->
+        :disabled
 
       not live? ->
         :loading

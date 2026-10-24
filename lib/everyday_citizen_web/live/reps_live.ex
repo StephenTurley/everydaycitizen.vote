@@ -31,6 +31,7 @@ defmodule EverydayCitizenWeb.RepsLive do
        district: district,
        reps: Reps.for_district(district),
        remote_ip: EverydayCitizenWeb.RemoteIp.from_socket(socket),
+       crawler: EverydayCitizenWeb.Crawler.crawler?(socket),
        week_summary: nil,
        week_topic: nil
      )}
@@ -114,6 +115,9 @@ defmodule EverydayCitizenWeb.RepsLive do
     cond do
       summary = Summaries.get_ai(:rep_week, subject, input) ->
         assign(socket, :week_summary, {subject, {:ok, summary.summary}})
+
+      socket.assigns.crawler ->
+        socket
 
       not connected?(socket) ->
         assign(socket, :week_summary, {subject, :loading})
