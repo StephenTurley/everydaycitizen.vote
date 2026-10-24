@@ -5,7 +5,7 @@ defmodule TheFloor.PostalDistrictsTest do
   alias TheFloor.Ingest.Records
   alias TheFloor.Reps
 
-  @src Records.SourceRef.new("https://x.test/z", "z")
+  @src Records.SourceRef.new("https://x.test/postal-districts-test", "z")
 
   setup do
     {:ok, _} =
