@@ -53,6 +53,13 @@ config :phoenix_live_view,
 config :everyday_citizen, EverydayCitizen.Mailer, adapter: Swoosh.Adapters.Local
 config :everyday_citizen, :mail_from, {"Everyday Citizen", "hello@everydaycitizen.vote"}
 
+# Plain-English section summaries (EverydayCitizen.Summaries): written on first
+# view and cached; the prompt is priv/prompts/section_summary.<prompt_version>.md.
+config :everyday_citizen, :summaries,
+  model: "claude-haiku-5-5",
+  prompt_version: "v1",
+  daily_limit: 300
+
 # WebAuthn relying party (passkeys). Dev values; test.exs and runtime.exs (prod)
 # override. The origin must match the browser's address bar exactly.
 config :everyday_citizen, :webauthn,
