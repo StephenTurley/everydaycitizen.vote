@@ -23,15 +23,18 @@ defmodule EverydayCitizen.Jobs.SummarizeSection do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"version_id" => version_id, "index" => index}} = job) do
-    with %{"kind" => "section"} = section <- section(version_id, index) do
-      text = Summaries.section_text(section)
-
-      case Summaries.get(version_id, index, text) do
-        nil -> write(job, version_id, index, text)
-        summary -> broadcast(version_id, index, {:ok, summary.summary})
-      end
-    else
+    case section(version_id, index) do
+      %{"kind" => "section"} = section -> summarize(job, version_id, index, section)
       _not_a_section -> :ok
+    end
+  end
+
+  defp summarize(job, version_id, index, section) do
+    text = Summaries.section_text(section)
+
+    case Summaries.get(version_id, index, text) do
+      nil -> write(job, version_id, index, text)
+      summary -> broadcast(version_id, index, {:ok, summary.summary})
     end
   end
 
