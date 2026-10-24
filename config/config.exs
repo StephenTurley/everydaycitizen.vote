@@ -67,10 +67,10 @@ config :the_floor, Oban,
 
 # Adapters whose `all/0` lists their list-level ingest jobs as {name, worker, args}.
 # Errors, crashes and failed jobs go to Sentry (inert without SENTRY_DSN).
-# Oban: failed jobs become issues; scheduled (cron) jobs report each run to
-# Sentry's Crons page, which flags a run that failed, ran long or never came.
+# Oban: failed jobs become issues. Only the coverage job reports its runs to
+# Sentry's Crons page (TheFloor.SentryCrons); the plan allows one monitor.
 config :sentry,
-  integrations: [oban: [capture_errors: true, cron: [enabled: true]]],
+  integrations: [oban: [capture_errors: true, cron: [enabled: false]]],
   in_app_otp_apps: [:the_floor]
 
 config :the_floor, :ingest_adapters, [TheFloor.Adapters.Federal.Jobs]

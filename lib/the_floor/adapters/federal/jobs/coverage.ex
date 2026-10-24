@@ -4,17 +4,21 @@ defmodule TheFloor.Adapters.Federal.Jobs.Coverage do
   check whose source count cannot be fetched is recorded as failed (never
   raised), so one blocked source does not hide the others. Waits (snoozes) while
   other ingest jobs are still to run, so a full ingest is measured once it settles.
+  As the night's last job, it is the one scheduled run reported to Sentry's Crons
+  page (`TheFloor.SentryCrons`): if it reports on time, the night ran.
   """
   use Oban.Worker, queue: :ingest, max_attempts: 1
 
   alias TheFloor.Adapters.Federal.{Coverage, Job, Prerequisites}
   alias TheFloor.Ingest.Coverage, as: Checks
+  alias TheFloor.SentryCrons
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
     congress = args["congress"] || Application.fetch_env!(:the_floor, :federal)[:congress]
 
-    with :ok <- Prerequisites.after_other_jobs(job, []), do: run(congress)
+    with :ok <- Prerequisites.after_other_jobs(job, []),
+         do: SentryCrons.monitor(job, fn -> run(congress) end)
   end
 
   defp run(congress) do
