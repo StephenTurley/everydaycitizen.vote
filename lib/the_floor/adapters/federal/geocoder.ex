@@ -20,7 +20,8 @@ defmodule TheFloor.Adapters.Federal.Geocoder do
 
     params = [address: address, benchmark: "Public_AR_Current", vintage: vintage, format: "json"]
 
-    case HTTP.get(@url, params: params, limiter: :census) do
+    # A person is waiting: one try with a short timeout, no shared rate limit.
+    case HTTP.get(@url, params: params, req: [retry: false, receive_timeout: 5_000]) do
       {:ok, %{body: %{"result" => %{"addressMatches" => [match | _]}}}} ->
         district(match["geographies"], congress)
 
@@ -30,6 +31,9 @@ defmodule TheFloor.Adapters.Federal.Geocoder do
       _ ->
         {:error, :unavailable}
     end
+  rescue
+    # never let a lookup crash: a crash report would carry the address
+    _ -> {:error, :unavailable}
   end
 
   @impl true
@@ -40,16 +44,30 @@ defmodule TheFloor.Adapters.Federal.Geocoder do
     end
   end
 
+  # A missing layer means the service changed (vintage, layer name): unavailable,
+  # not "we couldn't find that address". `ZZ` marks an area with no district.
   defp district(geographies, congress) do
-    with [%{"STUSAB" => state} | _] <- geographies["States"],
-         [%{"GEOID" => geoid} | _] <- geographies["#{congress}th Congressional Districts"] do
-      key = "#{state}-#{code(String.slice(geoid, 2, 2))}"
+    with {:ok, state} <- state(geographies["States"]),
+         {:ok, geoid} <- layer(geographies["#{congress}th Congressional Districts"]),
+         {:ok, code} <- code(String.slice(geoid, 2, 2)) do
+      key = "#{state}-#{code}"
       {:ok, key, districts_for(key)}
-    else
-      _ -> {:error, :not_found}
     end
   end
 
-  defp code(cd) when cd in ["00", "98"], do: "AL"
-  defp code(cd), do: cd |> String.to_integer() |> Integer.to_string()
+  defp state([%{"STUSAB" => state} | _]), do: {:ok, state}
+  defp state(_), do: {:error, :unavailable}
+
+  defp layer([%{"GEOID" => geoid} | _]), do: {:ok, geoid}
+  defp layer([]), do: {:error, :not_found}
+  defp layer(_), do: {:error, :unavailable}
+
+  defp code(cd) when cd in ["00", "98"], do: {:ok, "AL"}
+
+  defp code(cd) do
+    case Integer.parse(cd) do
+      {n, ""} -> {:ok, Integer.to_string(n)}
+      _ -> {:error, :not_found}
+    end
+  end
 end

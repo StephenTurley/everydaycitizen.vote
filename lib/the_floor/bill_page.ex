@@ -63,14 +63,27 @@ defmodule TheFloor.BillPage do
       latest_action: List.last(actions),
       reps: Enum.map(reps, &rep_state(&1, sponsorships, votes)),
       summary: Legislation.latest_summary(bill),
+      # metadata only: the XML, text and sections of every version would be
+      # many MB on large bills; `sections/2` loads one version's
       versions:
         Repo.all(
           from v in BillVersion,
             where: v.bill_id == ^bill.id,
-            order_by: [desc_nulls_last: v.date, desc: v.id]
+            order_by: [desc_nulls_last: v.date, desc: v.id],
+            select: struct(v, [:id, :bill_id, :code, :classification, :date])
         ),
       votes: votes
     }
+  end
+
+  @doc "The sections of one of the bill's versions (`[]` when not split yet)."
+  @spec sections(struct(), String.t() | nil) :: [map()]
+  def sections(_bill, nil), do: []
+
+  def sections(bill, code) do
+    Repo.one(
+      from v in BillVersion, where: v.bill_id == ^bill.id and v.code == ^code, select: v.sections
+    ) || []
   end
 
   defp steps(bill, actions) do

@@ -69,7 +69,9 @@ defmodule TheFloor.Activity do
         kind: "vote",
         rank: 1,
         ref_id: v.id,
-        date: fragment("(? AT TIME ZONE 'America/New_York')::date", v.voted_at),
+        # voted_at holds UTC without a zone: mark it UTC, then take the Eastern date
+        date:
+          fragment("((? AT TIME ZONE 'UTC') AT TIME ZONE 'America/New_York')::date", v.voted_at),
         bill_id: v.bill_id,
         option: p.option
       }

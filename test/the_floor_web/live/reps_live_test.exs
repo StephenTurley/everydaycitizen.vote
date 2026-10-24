@@ -104,4 +104,35 @@ defmodule TheFloorWeb.RepsLiveTest do
     assert html =~ "Cloture on the Motion to Proceed Rejected, 64–35."
     refute html =~ "On Cloture on the Motion to Proceed. Cloture"
   end
+
+  test "the form also works without the live connection, by POST, never GET", %{conn: conn} do
+    {:ok, _view, html} = live(conn, ~p"/")
+    assert html =~ ~s(method="post")
+    assert html =~ ~s(action="/district")
+
+    stub_census("iowa_city.json")
+    conn = post(conn, ~p"/district", %{"address" => @address})
+    assert redirected_to(conn) == "/reps/IA-1"
+    assert get_session(conn, :district) == "IA-1"
+  end
+
+  test "a POST lookup that fails goes back home with a message and no address", %{conn: conn} do
+    stub_census("no_match.json")
+    conn = post(conn, ~p"/district", %{"address" => "99 Nowhere Rd"})
+    assert redirected_to(conn) == "/"
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "couldn't find that address"
+    refute redirected_to(conn) =~ "Nowhere"
+  end
+
+  test "a blank address is caught before any lookup", %{conn: conn} do
+    Req.Test.stub(TheFloor.Federal, fn _conn -> flunk("no lookup expected") end)
+    {:ok, view, _html} = live(conn, ~p"/")
+    assert view |> form("#address-form", address: "  ") |> render_submit() =~ "Enter your address"
+  end
+
+  test "a district key that names no place is not saved", %{conn: conn} do
+    conn = get(conn, "/district/nonsense")
+    assert redirected_to(conn) == "/"
+    refute get_session(conn, :district)
+  end
 end

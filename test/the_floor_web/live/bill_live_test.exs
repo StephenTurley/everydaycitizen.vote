@@ -93,7 +93,7 @@ defmodule TheFloorWeb.BillLiveTest do
 
   test "opening a section shows its text, indented by level", %{conn: conn} do
     add_versions!()
-    {:ok, _view, html} = live(conn, ~p"/bills/119-s-5?section=2.")
+    {:ok, _view, html} = live(conn, ~p"/bills/119-s-5?section=1")
     assert html =~ "Deeper."
     assert html =~ ~s(data-level="2")
   end
@@ -105,5 +105,53 @@ defmodule TheFloorWeb.BillLiveTest do
 
   test "an unknown bill is a 404", %{conn: conn} do
     assert_error_sent 404, fn -> get(conn, ~p"/bills/119-hr-99999") end
+  end
+
+  test "sections open by position, so repeated or missing numbers work", %{conn: conn} do
+    {:ok, _} =
+      Ingest.write(
+        %Records.BillVersion{
+          jurisdiction: "federal",
+          bill_external_id: "119-s-5",
+          code: "is",
+          date: ~D[2026-01-06],
+          source: @src
+        },
+        nil
+      )
+
+    v =
+      TheFloor.Legislation.get_version(TheFloor.Legislation.get_bill("federal", "119-s-5"), "is")
+
+    :ok =
+      TheFloor.Legislation.put_sections(v.id, [
+        %{
+          "kind" => "section",
+          "enum" => "101.",
+          "heading" => "A",
+          "blocks" => [
+            %{"level" => 0, "enum" => nil, "heading" => nil, "text" => "First division text."}
+          ]
+        },
+        %{
+          "kind" => "section",
+          "enum" => "101.",
+          "heading" => "B",
+          "blocks" => [
+            %{"level" => 0, "enum" => nil, "heading" => nil, "text" => "Second division text."}
+          ]
+        },
+        %{
+          "kind" => "section",
+          "enum" => nil,
+          "heading" => "Unnumbered",
+          "blocks" => [%{"level" => 0, "enum" => nil, "heading" => nil, "text" => "Loose text."}]
+        }
+      ])
+
+    {:ok, _view, html} = live(conn, ~p"/bills/119-s-5?section=1")
+    assert html =~ "Second division text."
+    refute html =~ "First division text."
+    refute html =~ "Loose text."
   end
 end

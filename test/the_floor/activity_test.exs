@@ -200,4 +200,9 @@ defmodule TheFloor.ActivityTest do
     assert %{items: [_], next: nil} = Activity.feed(p2, [])
     assert %{items: [], next: nil} = Activity.feed(p2, filter: :votes)
   end
+
+  test "a late-evening vote is on its Eastern date", %{p1: p1} do
+    TheFloor.Repo.update_all(TheFloor.Votes.Vote, set: [voted_at: ~U[2025-04-02 00:30:00Z]])
+    assert [%{date: ~D[2025-04-01]}] = Activity.feed(p1, filter: :votes).items
+  end
 end

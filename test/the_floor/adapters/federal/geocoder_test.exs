@@ -42,4 +42,37 @@ defmodule TheFloor.Adapters.Federal.GeocoderTest do
     assert Geocoder.districts_for("DC-AL") == [{"senate", "DC"}, {"house", "DC-AL"}]
     assert Geocoder.districts_for("nonsense") == []
   end
+
+  test "an area with no congressional district (code ZZ) is not_found, not a crash" do
+    body =
+      "#{@dir}/iowa_city.json"
+      |> File.read!()
+      |> String.replace(~s("GEOID":"1901"), ~s("GEOID":"19ZZ"))
+
+    Req.Test.stub(TheFloor.Federal, fn conn -> Plug.Conn.send_resp(conn, 200, body) end)
+    assert {:error, :not_found} = Geocoder.locate("somewhere")
+  end
+
+  test "a missing district layer means the service changed: unavailable, not not_found" do
+    body =
+      "#{@dir}/iowa_city.json"
+      |> File.read!()
+      |> String.replace("119th Congressional Districts", "Other")
+
+    Req.Test.stub(TheFloor.Federal, fn conn -> Plug.Conn.send_resp(conn, 200, body) end)
+    assert {:error, :unavailable} = Geocoder.locate("somewhere")
+  end
+
+  test "a failing service is asked once, not retried, so visitors are not kept waiting" do
+    test_pid = self()
+
+    Req.Test.stub(TheFloor.Federal, fn conn ->
+      send(test_pid, :asked)
+      Plug.Conn.send_resp(conn, 503, "busy")
+    end)
+
+    assert {:error, :unavailable} = Geocoder.locate("400 S Clinton St")
+    assert_received :asked
+    refute_received :asked
+  end
 end

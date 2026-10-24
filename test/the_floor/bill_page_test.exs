@@ -153,4 +153,32 @@ defmodule TheFloor.BillPageTest do
     {:ok, page} = BillPage.load("federal", "119-s-5", [])
     assert Enum.map(page.votes, & &1.identifier) == ["Roll Call 9", "Roll Call 8", "Roll Call 7"]
   end
+
+  test "versions are listed without their text; sections load for one version" do
+    src = Records.SourceRef.new("https://x.test/t", "t")
+
+    {:ok, _} =
+      Ingest.write(
+        %Records.BillVersion{
+          jurisdiction: "federal",
+          bill_external_id: "119-s-5",
+          code: "is",
+          source: src
+        },
+        nil
+      )
+
+    bill = TheFloor.Legislation.get_bill("federal", "119-s-5")
+    v = TheFloor.Legislation.get_version(bill, "is")
+
+    TheFloor.Repo.update_all(TheFloor.Legislation.BillVersion,
+      set: [xml: "<bill/>", plain_text: "text"]
+    )
+
+    :ok = TheFloor.Legislation.put_sections(v.id, [%{"kind" => "section", "enum" => "1."}])
+
+    {:ok, page} = BillPage.load("federal", "119-s-5", [])
+    assert [%{code: "is", xml: nil, plain_text: nil, sections: nil}] = page.versions
+    assert [%{"enum" => "1."}] = BillPage.sections(page.bill, "is")
+  end
 end

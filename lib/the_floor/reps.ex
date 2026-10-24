@@ -21,6 +21,10 @@ defmodule TheFloor.Reps do
     Legislature.current_members(jurisdiction(), locator().districts_for(key), Date.utc_today())
   end
 
+  @doc "True when the district key names a place the locator knows."
+  @spec known_district?(String.t()) :: boolean()
+  def known_district?(key), do: locator().districts_for(key) != []
+
   @doc "The default jurisdiction's key, for pages that show one jurisdiction."
   @spec jurisdiction() :: String.t()
   def jurisdiction, do: Application.fetch_env!(:the_floor, :default_jurisdiction)

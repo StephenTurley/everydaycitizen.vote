@@ -19,6 +19,7 @@ defmodule TheFloorWeb.Router do
 
     live "/", HomeLive
     get "/district/:district", DistrictController, :show
+    post "/district", DistrictController, :create
     live "/reps/:district", RepsLive
     live "/bills/:id", BillLive
     live "/this-week", ThisWeekLive

@@ -26,7 +26,15 @@ defmodule TheFloorWeb.BillLive do
   def handle_params(params, _uri, socket) do
     versions = socket.assigns.page.versions
     version = Enum.find(versions, &(&1.code == params["version"])) || List.first(versions)
-    {:noreply, assign(socket, version: version, open: params["section"])}
+
+    open =
+      case Integer.parse(params["section"] || "") do
+        {n, ""} -> n
+        _ -> nil
+      end
+
+    sections = BillPage.sections(socket.assigns.page.bill, version && version.code)
+    {:noreply, assign(socket, version: version, sections: Enum.with_index(sections), open: open)}
   end
 
   @impl true
@@ -39,9 +47,8 @@ defmodule TheFloorWeb.BillLive do
     ~p"/bills/#{bill.external_id}?#{Enum.reject([version: version && version.code, section: enum], &is_nil(elem(&1, 1)))}"
   end
 
-  defp sections(nil), do: []
-  defp sections(%{sections: nil}), do: []
-  defp sections(%{sections: list}), do: list
+  defp toggle(true), do: "−"
+  defp toggle(false), do: "+"
 
   defp date(d), do: Calendar.strftime(d, "%b %-d")
 
@@ -166,14 +173,14 @@ defmodule TheFloorWeb.BillLive do
             </option>
           </select>
         </form>
-        <p :if={@version && sections(@version) == []} class="m-0 text-[15px] text-floor-muted">
+        <p :if={@version && @sections == []} class="m-0 text-[15px] text-floor-muted">
           The text of this version isn't available yet.
         </p>
         <div
-          :if={sections(@version) != []}
+          :if={@sections != []}
           class="bg-floor-card border border-floor-line rounded-xl overflow-hidden"
         >
-          <%= for entry <- sections(@version) do %>
+          <%= for {entry, i} <- @sections do %>
             <p
               :if={entry["kind"] == "title"}
               class="m-0 px-4 pt-4 pb-1 text-[12px] font-semibold uppercase tracking-wide text-floor-muted"
@@ -186,22 +193,21 @@ defmodule TheFloorWeb.BillLive do
                   section_path(
                     @page.bill,
                     @version,
-                    if(@open == entry["enum"], do: nil, else: entry["enum"])
+                    if(@open == i, do: nil, else: i)
                   )
                 }
                 class="flex justify-between items-center gap-2 px-4 py-3.5 text-floor-ink"
-                aria-expanded={to_string(@open == entry["enum"])}
+                aria-expanded={to_string(@open == i)}
               >
-                <span class="text-[15px]"><strong class="font-semibold">Sec. {entry["enum"]}</strong> {entry[
-                  "heading"
-                ]}</span>
-                <span aria-hidden="true" class="text-floor-muted">{if @open == entry["enum"],
-                  do: "−",
-                  else: "+"}</span>
+                <span class="text-[15px]">
+                  <strong :if={entry["enum"]} class="font-semibold">Sec. {entry["enum"]}</strong>
+                  {entry["heading"]}
+                </span>
+                <span aria-hidden="true" class="text-floor-muted">{toggle(@open == i)}</span>
               </.link>
               <%!-- M3 puts each section's plain-language summary above its text --%>
               <div
-                :if={@open == entry["enum"]}
+                :if={@open == i}
                 class="section-text px-4 pb-4 font-serif text-[15px] leading-relaxed flex flex-col gap-2"
               >
                 <p

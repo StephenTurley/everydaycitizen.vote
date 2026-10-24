@@ -21,17 +21,29 @@ defmodule TheFloorWeb.HomeLive do
 
   @impl true
   def handle_event("find", %{"address" => address}, socket) do
-    case Reps.find(String.trim(address)) do
-      {:ok, district, _reps} ->
-        {:noreply, redirect(socket, to: ~p"/district/#{district}")}
-
+    with {:ok, trimmed} <- present(address),
+         {:ok, district, _reps} <- Reps.find(trimmed) do
+      {:noreply, redirect(socket, to: ~p"/district/#{district}")}
+    else
       {:error, reason} ->
         {:noreply, assign(socket, form: to_form(%{"address" => address}), error: message(reason))}
     end
   end
 
-  defp message(:not_found), do: "We couldn't find that address. Check the street and ZIP code."
-  defp message(:unavailable), do: "Address lookup is unavailable right now. Please try again."
+  @doc "The trimmed address, or `{:error, :blank}`."
+  def present(address) when is_binary(address) do
+    case String.trim(address) do
+      "" -> {:error, :blank}
+      trimmed -> {:ok, trimmed}
+    end
+  end
+
+  def present(_), do: {:error, :blank}
+
+  @doc "What to tell a visitor when their address lookup did not work."
+  def message(:blank), do: "Enter your address to find your representatives."
+  def message(:not_found), do: "We couldn't find that address. Check the street and ZIP code."
+  def message(:unavailable), do: "Address lookup is unavailable right now. Please try again."
 
   @impl true
   def render(assigns) do
@@ -53,7 +65,15 @@ defmodule TheFloorWeb.HomeLive do
         </a>
       </.card>
 
-      <.form for={@form} id="address-form" phx-submit="find" class="flex flex-col gap-2">
+      <%!-- method/action: before the live connection is up, a plain POST, never a GET --%>
+      <.form
+        for={@form}
+        id="address-form"
+        method="post"
+        action={~p"/district"}
+        phx-submit="find"
+        class="flex flex-col gap-2"
+      >
         <label for="address" class="text-[13px] font-semibold text-floor-muted">Your address</label>
         <input
           type="text"
@@ -70,6 +90,7 @@ defmodule TheFloorWeb.HomeLive do
         </p>
         <button
           type="submit"
+          phx-disable-with="Looking up…"
           class="mt-1 py-3 rounded-xl bg-floor-ink text-white text-[16px] font-semibold"
         >
           Find my representatives
