@@ -3,11 +3,12 @@ defmodule TheFloorWeb.ThisWeekLive do
   What is scheduled in the next seven days: floor items and committee meetings,
   each with its time, body, title and bills, a week at a time (previous and next
   week links). With a saved district, "My reps" narrows it to their bills and
-  committees.
+  committees; signed in, "Followed" narrows it to events on followed bills.
   """
   use TheFloorWeb, :live_view
 
   alias TheFloor.Calendar, as: Schedule
+  alias TheFloor.Follows
   alias TheFloor.Reps
 
   @zone "America/New_York"
@@ -19,22 +20,55 @@ defmodule TheFloorWeb.ThisWeekLive do
 
   @impl true
   def handle_params(params, _uri, socket) do
-    from =
-      case Date.from_iso8601(params["from"] || "") do
-        {:ok, date} -> date
-        _ -> DateTime.now!(@zone) |> DateTime.to_date()
-      end
+    %{current_scope: scope, district: district} = socket.assigns
+    signed_in = !!(scope && scope.user)
+    from = from_date(params["from"])
+    show = show(params, signed_in, district)
 
-    mine = params["mine"] == "1" and socket.assigns.district != nil
-    people = if mine, do: Enum.map(Reps.for_district(socket.assigns.district), & &1.person.id)
-    days = Schedule.week(Reps.jurisdiction(), from, if(people, do: [people: people], else: []))
-
-    {:noreply, assign(socket, from: from, mine: mine, days: days)}
+    {:noreply,
+     assign(socket,
+       from: from,
+       show: show,
+       shows: shows(signed_in, district),
+       days: Schedule.week(Reps.jurisdiction(), from, filter(show, scope, district))
+     )}
   end
 
-  defp week_path(from, mine),
-    do:
-      ~p"/this-week?#{Enum.reject([from: Date.to_iso8601(from), mine: mine && "1"], &(!elem(&1, 1)))}"
+  defp from_date(param) do
+    case Date.from_iso8601(param || "") do
+      {:ok, date} -> date
+      _ -> DateTime.now!(@zone) |> DateTime.to_date()
+    end
+  end
+
+  defp show(%{"followed" => "1"}, true, _district), do: :followed
+  defp show(%{"mine" => "1"}, _signed_in, district) when is_binary(district), do: :mine
+  defp show(_params, _signed_in, _district), do: :all
+
+  defp shows(signed_in, district) do
+    [{"Everything", :all}] ++
+      if(district, do: [{"My reps", :mine}], else: []) ++
+      if(signed_in, do: [{"Followed", :followed}], else: [])
+  end
+
+  defp filter(:mine, _scope, district),
+    do: [people: Enum.map(Reps.for_district(district), & &1.person.id)]
+
+  defp filter(:followed, scope, _district), do: [bills: Follows.followed_bill_ids(scope)]
+  defp filter(:all, _scope, _district), do: []
+
+  defp week_path(from, show) do
+    params = [from: Date.to_iso8601(from)]
+
+    params =
+      case show do
+        :mine -> params ++ [mine: "1"]
+        :followed -> params ++ [followed: "1"]
+        :all -> params
+      end
+
+    ~p"/this-week?#{params}"
+  end
 
   defp time(%{all_day: true}), do: "All day"
 
@@ -44,7 +78,7 @@ defmodule TheFloorWeb.ThisWeekLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} width={:full}>
+    <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>
       <%!-- Phones: title, then the week and filter, then the days. Large screens:
            title and days in a 720px column, week and filter in a sidebar. --%>
       <div class="flex flex-col lg:grid lg:grid-cols-[minmax(0,720px)_300px] lg:justify-center lg:gap-x-10 lg:pt-8 lg:items-start">
@@ -63,7 +97,7 @@ defmodule TheFloorWeb.ThisWeekLive do
             class="flex items-center justify-between gap-2 lg:p-4 lg:bg-floor-card lg:border lg:border-floor-line lg:rounded-xl"
           >
             <.link
-              patch={week_path(Date.add(@from, -7), @mine)}
+              patch={week_path(Date.add(@from, -7), @show)}
               aria-label="Previous week"
               class="px-3.5 py-2.5 rounded-[10px] border border-floor-line bg-floor-card font-semibold text-floor-accent"
             >
@@ -73,7 +107,7 @@ defmodule TheFloorWeb.ThisWeekLive do
               {Calendar.strftime(@from, "%b %-d")} – {Calendar.strftime(Date.add(@from, 6), "%b %-d")}
             </span>
             <.link
-              patch={week_path(Date.add(@from, 7), @mine)}
+              patch={week_path(Date.add(@from, 7), @show)}
               aria-label="Next week"
               class="px-3.5 py-2.5 rounded-[10px] border border-floor-line bg-floor-card font-semibold text-floor-accent"
             >
@@ -81,19 +115,19 @@ defmodule TheFloorWeb.ThisWeekLive do
             </.link>
           </section>
           <section
-            :if={@district}
+            :if={length(@shows) > 1}
             aria-label="Show"
             class="flex flex-col gap-2.5 lg:p-4 lg:bg-floor-card lg:border lg:border-floor-line lg:rounded-xl"
           >
             <h2 class="hidden lg:block m-0 text-[15px] font-bold">Show</h2>
-            <nav class="flex gap-1.5">
+            <nav class="flex flex-wrap gap-1.5">
               <.link
-                :for={{label, mine} <- [{"Everything", false}, {"My reps", true}]}
-                patch={week_path(@from, mine)}
-                aria-current={if @mine == mine, do: "page"}
+                :for={{label, show} <- @shows}
+                patch={week_path(@from, show)}
+                aria-current={if @show == show, do: "page"}
                 class={[
                   "px-3.5 py-2.5 rounded-full text-[14px]",
-                  if(@mine == mine,
+                  if(@show == show,
                     do: "bg-floor-ink text-white font-semibold",
                     else: "bg-floor-card border border-floor-line font-medium"
                   )
@@ -102,8 +136,11 @@ defmodule TheFloorWeb.ThisWeekLive do
                 {label}
               </.link>
             </nav>
-            <p class="m-0 text-[13px] leading-normal text-floor-muted">
+            <p :if={@district} class="m-0 text-[13px] leading-normal text-floor-muted">
               My reps: Bills your reps sponsor or cosponsor, and meetings of committees they sit on.
+            </p>
+            <p :if={@show == :followed} class="m-0 text-[13px] leading-normal text-floor-muted">
+              Followed: events on bills you follow.
             </p>
           </section>
         </aside>

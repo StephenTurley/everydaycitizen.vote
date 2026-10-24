@@ -33,7 +33,8 @@ defmodule TheFloor.Calendar do
   The jurisdiction's events in the seven days from `from` (America/New_York),
   grouped by day: `[%{date, events}]`, events with their body and bills. With
   `people: ids`, only events on bills they sponsor or cosponsor and meetings of
-  committees where they hold a current membership.
+  committees where they hold a current membership; with `bills: ids`, only
+  events linking one of those bills.
   """
   @spec week(String.t(), Date.t(), keyword()) :: [%{date: Date.t(), events: [Event.t()]}]
   def week(jurisdiction_key, %Date{} = from, opts) do
@@ -46,12 +47,20 @@ defmodule TheFloor.Calendar do
     |> join(:inner, [e], j in Jurisdiction, on: j.id == e.jurisdiction_id)
     |> where([e, j], j.key == ^jurisdiction_key and e.start_at >= ^start and e.start_at < ^stop)
     |> for_people(opts[:people], from)
+    |> for_bills(opts[:bills])
     |> order_by([e], asc: e.start_at, asc: e.id)
     |> preload([:body, event_bills: :bill])
     |> Repo.all()
     |> Enum.group_by(&(&1.start_at |> DateTime.shift_zone!(@zone) |> DateTime.to_date()))
     |> Enum.sort_by(&elem(&1, 0), Date)
     |> Enum.map(fn {date, events} -> %{date: date, events: events} end)
+  end
+
+  defp for_bills(query, nil), do: query
+
+  defp for_bills(query, bills) do
+    linked = from eb in EventBill, where: eb.bill_id in ^bills, select: eb.event_id
+    where(query, [e], e.id in subquery(linked))
   end
 
   defp for_people(query, nil, _on), do: query

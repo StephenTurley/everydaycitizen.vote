@@ -6,7 +6,7 @@ defmodule TheFloorWeb.RepsLive do
   """
   use TheFloorWeb, :live_view
 
-  alias TheFloor.{Activity, Legislation, Reps}
+  alias TheFloor.{Activity, Follows, Legislation, Reps}
 
   @filters [
     {"all", "Everything", :all},
@@ -30,12 +30,19 @@ defmodule TheFloorWeb.RepsLive do
       socket
       |> assign(rep: rep, filter: filter, page_title: rep && rep.person.name)
       |> assign(counts: rep && Activity.counts(rep.person.id))
+      |> assign(
+        following:
+          !!rep && Follows.following?(socket.assigns.current_scope, {:person, rep.person.id})
+      )
       |> load_feed(nil, [])
 
     {:noreply, socket}
   end
 
   @impl true
+  def handle_event("toggle_follow", _params, %{assigns: %{rep: %{} = rep}} = socket),
+    do: {:noreply, TheFloorWeb.FollowToggle.toggle(socket, {:person, rep.person.id})}
+
   def handle_event("more", _params, socket) do
     {:noreply, load_feed(socket, socket.assigns.next, socket.assigns.items)}
   end
@@ -97,11 +104,16 @@ defmodule TheFloorWeb.RepsLive do
     assigns = assign(assigns, :filters, @filters)
 
     ~H"""
-    <Layouts.app flash={@flash} width={:full}>
+    <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>
       <%!-- Large screens: reps down a left column beside a 720px feed --%>
       <div class="lg:grid lg:grid-cols-[300px_minmax(0,720px)] lg:justify-center lg:gap-10 lg:pt-8 lg:items-start">
         <section class="pt-5 pb-2 lg:p-0 flex flex-col gap-3 lg:sticky lg:top-4">
-          <.eyebrow>Your representatives · {@district}</.eyebrow>
+          <div class="flex items-baseline justify-between gap-3">
+            <.eyebrow>Your representatives · {@district}</.eyebrow>
+            <.link navigate={~p"/"} class="py-1 text-[13px] font-medium text-floor-accent">
+              Change address
+            </.link>
+          </div>
           <p :if={@reps == []} class="m-0 text-[15px]">No current members found for {@district}.</p>
           <nav
             :if={@reps != []}
@@ -146,9 +158,17 @@ defmodule TheFloorWeb.RepsLive do
           <section :if={@rep} class="py-3 lg:pt-0 flex flex-col gap-3.5 lg:gap-4">
             <div class="flex flex-col lg:flex-row lg:flex-wrap lg:items-end lg:justify-between gap-3.5 lg:gap-4">
               <div class="flex flex-col gap-1">
-                <h1 class="m-0 text-[24px] lg:text-[32px] leading-tight font-bold tracking-tight">
-                  {@rep.person.name}
-                </h1>
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <h1 class="m-0 text-[24px] lg:text-[32px] leading-tight font-bold tracking-tight">
+                    {@rep.person.name}
+                  </h1>
+                  <.follow_button
+                    id="follow-rep"
+                    signed_in={!!(@current_scope && @current_scope.user)}
+                    following={@following}
+                    return_to={rep_path(@district, @rep, nil)}
+                  />
+                </div>
                 <p class="m-0 text-[14px] lg:text-[15px] text-floor-muted">
                   {@rep.body.name}{if @rep.membership.party, do: " · #{@rep.membership.party}"} · {@rep.membership.district}
                 </p>

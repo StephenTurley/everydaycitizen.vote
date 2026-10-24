@@ -7,6 +7,19 @@
 # General application configuration
 import Config
 
+config :the_floor, :scopes,
+  user: [
+    default: true,
+    module: TheFloor.Accounts.Scope,
+    assign_key: :current_scope,
+    access_path: [:user, :id],
+    schema_key: :user_id,
+    schema_type: :id,
+    schema_table: :users,
+    test_data_fixture: TheFloor.AccountsFixtures,
+    test_setup_helper: :register_and_log_in_user
+  ]
+
 config :the_floor,
   ecto_repos: [TheFloor.Repo],
   generators: [timestamp_type: :utc_datetime]
@@ -38,11 +51,19 @@ config :phoenix_live_view,
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
 config :the_floor, TheFloor.Mailer, adapter: Swoosh.Adapters.Local
+config :the_floor, :mail_from, {"Everyday Citizen", "hello@everydaycitizen.vote"}
+
+# WebAuthn relying party (passkeys). Dev values; test.exs and runtime.exs (prod)
+# override. The origin must match the browser's address bar exactly.
+config :the_floor, :webauthn,
+  origin: "http://localhost:4000",
+  rp_id: "localhost",
+  rp_name: "Everyday Citizen"
 
 config :the_floor, Oban,
   repo: TheFloor.Repo,
   # bulk: the first-run bulk load's chunk jobs (Federal.BulkBatch)
-  queues: [ingest: 4, text: 2, bulk: 4],
+  queues: [ingest: 4, text: 2, bulk: 4, mail: 2],
   plugins: [
     # Rescue jobs left executing by a crashed node; prune finished jobs after a week.
     # rescue_after must exceed every worker's timeout (the bulk bill and text
@@ -61,7 +82,8 @@ config :the_floor, Oban,
        {"0 3 * * *", TheFloor.Adapters.Federal.Jobs.SyncHouseFloor},
        {"0 3 * * *", TheFloor.Adapters.Federal.Jobs.SyncSenateFloor},
        {"30 5 * * *", TheFloor.Adapters.Federal.Jobs.Relink},
-       {"0 6 * * *", TheFloor.Adapters.Federal.Jobs.Coverage}
+       {"0 6 * * *", TheFloor.Adapters.Federal.Jobs.Coverage},
+       {"0 7 * * *", TheFloor.Jobs.DigestScheduler}
      ]}
   ]
 

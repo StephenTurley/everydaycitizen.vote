@@ -10,6 +10,7 @@ defmodule TheFloor.Adapters.Federal.Jobs do
   alias TheFloor.Adapters.Federal.Jobs.{
     BackfillBillSections,
     BackfillBillSummaries,
+    BackfillBillWebUrls,
     Coverage,
     ReclassifyActions,
     ReclassifyVotes,
@@ -36,7 +37,8 @@ defmodule TheFloor.Adapters.Federal.Jobs do
       {"bill_summaries", BackfillBillSummaries, %{}},
       {"reclassify_votes", ReclassifyVotes, %{}},
       {"bill_sections", BackfillBillSections, %{}},
-      {"zip_districts", SyncZipDistricts, %{}}
+      {"zip_districts", SyncZipDistricts, %{}},
+      {"bill_web_urls", BackfillBillWebUrls, %{}}
     ]
   end
 

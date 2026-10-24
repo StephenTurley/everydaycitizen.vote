@@ -9,6 +9,7 @@ defmodule TheFloor.Legislation.Bill do
 
   schema "bills" do
     field :external_id, :string
+    field :web_url, :string
     field :identifier, :string
     field :classification, :string
     field :title, :string
@@ -32,6 +33,7 @@ defmodule TheFloor.Legislation.Bill do
       :session_id,
       :from_body_id,
       :external_id,
+      :web_url,
       :identifier,
       :classification,
       :title,

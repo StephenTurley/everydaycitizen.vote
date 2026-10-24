@@ -6,7 +6,7 @@ defmodule TheFloorWeb.BillLive do
   """
   use TheFloorWeb, :live_view
 
-  alias TheFloor.{BillPage, Reps}
+  alias TheFloor.{BillPage, Follows, Reps}
 
   @impl true
   def mount(%{"id" => id}, session, socket) do
@@ -15,7 +15,13 @@ defmodule TheFloorWeb.BillLive do
 
     case BillPage.load(Reps.jurisdiction(), id, reps) do
       {:ok, page} ->
-        {:ok, assign(socket, page: page, district: district, page_title: page.bill.identifier)}
+        {:ok,
+         assign(socket,
+           page: page,
+           district: district,
+           page_title: page.bill.identifier,
+           following: Follows.following?(socket.assigns.current_scope, {:bill, page.bill.id})
+         )}
 
       :not_found ->
         raise TheFloorWeb.NotFoundError
@@ -44,6 +50,10 @@ defmodule TheFloorWeb.BillLive do
   end
 
   @impl true
+  def handle_event("toggle_follow", _params, socket) do
+    {:noreply, TheFloorWeb.FollowToggle.toggle(socket, {:bill, socket.assigns.page.bill.id})}
+  end
+
   def handle_event("version", %{"version" => code}, socket) do
     {:noreply,
      push_patch(socket, to: ~p"/bills/#{socket.assigns.page.bill.external_id}?#{[version: code]}")}
@@ -120,7 +130,7 @@ defmodule TheFloorWeb.BillLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} width={:full}>
+    <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>
       <%!-- From lg the band's white runs edge to edge (the ::before), past the
            1280px column --%>
       <section class="relative z-0 -mx-5 px-5 lg:-mx-10 lg:px-10 pt-4 pb-5 lg:pt-5 lg:pb-7 bg-floor-card border-b border-floor-line lg:bg-transparent lg:border-b-0 lg:before:absolute lg:before:inset-y-0 lg:before:left-1/2 lg:before:w-screen lg:before:-translate-x-1/2 lg:before:-z-10 lg:before:bg-floor-card lg:before:border-b lg:before:border-floor-line flex flex-col gap-2.5">
@@ -135,9 +145,18 @@ defmodule TheFloorWeb.BillLive do
         <h1 class="m-0 text-[26px] lg:text-[34px] lg:max-w-[920px] leading-tight font-bold tracking-tight">
           {@page.bill.title}
         </h1>
-        <p :if={@page.sponsor} class="m-0 text-[14px] lg:text-[15px] text-floor-muted">
-          Sponsor: {@page.sponsor.name} · {cosponsors(@page.cosponsor_count)}
-        </p>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <p :if={@page.sponsor} class="m-0 text-[14px] lg:text-[15px] text-floor-muted">
+            Sponsor: {@page.sponsor.name} · {cosponsors(@page.cosponsor_count)}
+          </p>
+          <.follow_button
+            id="follow-bill"
+            label="Follow this bill"
+            signed_in={!!(@current_scope && @current_scope.user)}
+            following={@following}
+            return_to={~p"/bills/#{@page.bill.external_id}"}
+          />
+        </div>
       </section>
 
       <%!-- Phones: one column in the order below (`order-*`; the two wrappers are
@@ -279,9 +298,9 @@ defmodule TheFloorWeb.BillLive do
 
           <footer class="order-6 pb-4 flex flex-col gap-2">
             <a
-              href={@page.bill.source.url}
+              href={@page.bill.web_url || @page.bill.source.url}
               class="self-start text-[14px] font-semibold text-floor-accent py-1"
-            >Source record</a>
+            >Official page</a>
             <.source_line>Every item on this page comes from the official record.</.source_line>
           </footer>
         </aside>

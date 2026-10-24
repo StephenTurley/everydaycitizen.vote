@@ -134,6 +134,26 @@ defmodule TheFloor.Legislation do
     MapSet.difference(MapSet.new(bill_ids), MapSet.new(with_summary))
   end
 
+  @doc "Up to `limit` of a jurisdiction's bills with no `web_url`, as `%{id, external_id, source_url}`."
+  @spec bills_without_web_url(String.t(), pos_integer()) :: [map()]
+  def bills_without_web_url(jurisdiction_key, limit) do
+    Bill
+    |> join(:inner, [b], j in assoc(b, :jurisdiction))
+    |> join(:inner, [b], s in assoc(b, :source))
+    |> where([b, j], j.key == ^jurisdiction_key and is_nil(b.web_url))
+    |> order_by([b], asc: b.id)
+    |> limit(^limit)
+    |> select([b, _j, s], %{id: b.id, external_id: b.external_id, source_url: s.url})
+    |> Repo.all()
+  end
+
+  @doc "Stores a bill's official page for people."
+  @spec put_web_url(integer(), String.t()) :: :ok
+  def put_web_url(bill_id, url) do
+    Bill |> where([b], b.id == ^bill_id) |> Repo.update_all(set: [web_url: url])
+    :ok
+  end
+
   @doc """
   Up to `limit` versions with stored XML whose sections are missing or were split
   by a format other than `format`, as `%{id, xml}`.

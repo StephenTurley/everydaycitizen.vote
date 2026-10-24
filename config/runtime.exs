@@ -51,6 +51,18 @@ if config_env() == :dev do
 end
 
 if config_env() == :prod do
+  # Oban's node names the machine and the deploy's image, so a deploy's jobs are
+  # told apart from the previous deploy's, which TheFloor.ObanRescue releases at
+  # boot. (The release node name stays the machine id, for `rpc` and ssh.)
+  image_tag =
+    case String.split(System.get_env("FLY_IMAGE_REF", ""), ":") do
+      [_, tag] -> tag
+      _ -> "local"
+    end
+
+  config :the_floor, Oban, node: "#{System.get_env("FLY_MACHINE_ID", "machine")}-#{image_tag}"
+  config :the_floor, :rescue_orphaned_jobs, true
+
   # The deploy labels the image with the commit (`--image-label git-<sha>`), so
   # each Sentry event names the release that produced it.
   release_sha =
@@ -98,6 +110,13 @@ if config_env() == :prod do
       """
 
   host = System.get_env("PHX_HOST") || "example.com"
+
+  # Passkeys are bound to this RP ID forever: changing it orphans every
+  # registered passkey. PHX_HOST is everydaycitizen.vote.
+  config :the_floor, :webauthn,
+    origin: "https://#{host}",
+    rp_id: host,
+    rp_name: "Everyday Citizen"
 
   # Every other host redirects here (TheFloorWeb.CanonicalHost).
   config :the_floor, :canonical_host, host
@@ -147,21 +166,11 @@ if config_env() == :prod do
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
 
-  # ## Configuring the mailer
-  #
-  # In production you need to configure the mailer to use a different adapter.
-  # Here is an example configuration for Mailgun:
-  #
-  #     config :the_floor, TheFloor.Mailer,
-  #       adapter: Swoosh.Adapters.Mailgun,
-  #       api_key: System.get_env("MAILGUN_API_KEY"),
-  #       domain: System.get_env("MAILGUN_DOMAIN")
-  #
-  # Most non-SMTP adapters require an API client. Swoosh supports Req, Hackney,
-  # and Finch out-of-the-box. This configuration is typically done at
-  # compile-time in your config/prod.exs:
-  #
-  #     config :swoosh, :api_client, Swoosh.ApiClient.Req
-  #
-  # See https://swoosh.hexdocs.pm/Swoosh.html#module-installation for details.
+  # Email (sign-in links, the daily email) goes through Resend; the domain is
+  # verified there. Required: without it no one could sign in.
+  config :the_floor, TheFloor.Mailer,
+    adapter: Swoosh.Adapters.Resend,
+    api_key:
+      System.get_env("RESEND_API_KEY") ||
+        raise("environment variable RESEND_API_KEY is missing.")
 end

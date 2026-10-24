@@ -2,6 +2,7 @@ defmodule TheFloorWeb.ThisWeekLiveTest do
   use TheFloorWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+  import TheFloor.AccountsFixtures
 
   setup do
     TheFloor.FloorFixtures.iowa!()
@@ -57,5 +58,45 @@ defmodule TheFloorWeb.ThisWeekLiveTest do
     assert has_element?(view, ~s(a[href="/bills/119-s-5"]))
     assert html =~ "H.R. 999999"
     assert has_element?(view, "a", "My reps")
+  end
+
+  test "signed in, the Followed filter shows events on followed bills", %{conn: conn} do
+    for {id, bills} <- [{"floor-1", ["119-s-5"]}, {"floor-2", []}] do
+      {:ok, _} =
+        TheFloor.Ingest.write(
+          %TheFloor.Ingest.Records.Event{
+            jurisdiction: "federal",
+            body_external_id: "senate",
+            external_id: id,
+            classification: "floor",
+            title: "Event #{id}",
+            start_at: ~U[2026-10-26 14:00:00Z],
+            bill_external_ids: bills,
+            source: TheFloor.Ingest.Records.SourceRef.new("https://x.test/#{id}", id)
+          },
+          nil
+        )
+    end
+
+    user = user_fixture()
+    scope = TheFloor.Accounts.Scope.for_user(user)
+
+    {:ok, _} =
+      TheFloor.Follows.follow(
+        scope,
+        {:bill, TheFloor.Legislation.get_bill("federal", "119-s-5").id}
+      )
+
+    {:ok, view, _html} =
+      conn |> log_in_user(user) |> live(~p"/this-week?from=2026-10-26&followed=1")
+
+    assert has_element?(view, ~s(a[aria-current="page"]), "Followed")
+    assert render(view) =~ "Event floor-1"
+    refute render(view) =~ "Event floor-2"
+  end
+
+  test "signed out, there is no Followed filter", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/this-week?from=2026-10-26&followed=1")
+    refute has_element?(view, "a", "Followed")
   end
 end

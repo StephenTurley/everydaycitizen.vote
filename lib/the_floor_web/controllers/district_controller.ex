@@ -1,13 +1,13 @@
 defmodule TheFloorWeb.DistrictController do
   @moduledoc """
-  Remembers a visitor's district (never their address) in the session, then
-  shows its reps. `show` is reached from the home page after a live lookup;
+  Remembers a visitor's district (never their address) in the session, and on
+  their account when signed in, then shows its reps. `show` is reached from the home page after a live lookup;
   `create` is the same lookup for a form posted before the live connection is
   up, so the address is never sent in a URL.
   """
   use TheFloorWeb, :controller
 
-  alias TheFloor.Reps
+  alias TheFloor.{Accounts, Reps}
   alias TheFloorWeb.HomeLive
 
   def show(conn, %{"district" => district}) do
@@ -52,8 +52,13 @@ defmodule TheFloorWeb.DistrictController do
     end
   end
 
-  defp remember(conn, district),
-    do: conn |> put_session(:district, district) |> redirect(to: ~p"/reps/#{district}")
+  # Signed in, the district is also saved on the account (replacing the last one).
+  defp remember(conn, district) do
+    with %{user: %Accounts.User{} = user} <- conn.assigns[:current_scope],
+         do: {:ok, _user} = Accounts.put_district(user, district)
+
+    conn |> put_session(:district, district) |> redirect(to: ~p"/reps/#{district}")
+  end
 
   defp back_home(conn, reason),
     do: conn |> put_flash(:error, HomeLive.message(reason)) |> redirect(to: ~p"/")

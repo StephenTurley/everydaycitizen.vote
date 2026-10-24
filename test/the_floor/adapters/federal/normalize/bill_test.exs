@@ -30,6 +30,7 @@ defmodule TheFloor.Adapters.Federal.Normalize.BillTest do
       assert length(bill.subjects) == 11
       assert "Citizenship and naturalization" in bill.subjects
       assert bill.source.url == "https://example.test/bill"
+      assert bill.web_url == "https://www.congress.gov/bill/119th-congress/house-bill/22"
     end
 
     test "HJRES 5 maps to 119-hjres-5 / H.J.Res. 5" do

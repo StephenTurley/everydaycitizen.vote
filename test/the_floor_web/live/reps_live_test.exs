@@ -2,6 +2,7 @@ defmodule TheFloorWeb.RepsLiveTest do
   use TheFloorWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+  import TheFloor.AccountsFixtures
 
   @census "test/support/fixtures/federal/census"
   @address "400 S Clinton St, Iowa City, IA 52240"
@@ -223,5 +224,19 @@ defmodule TheFloorWeb.RepsLiveTest do
     stub_census("iowa_city.json")
     conn3 = post(conn, ~p"/district", %{"zip" => "52031", "street" => "400 S Clinton St"})
     assert redirected_to(conn3) == "/reps/IA-1"
+  end
+
+  test "a signed-in person can follow a rep", %{conn: conn, grassley: g} do
+    conn = log_in_user(conn, user_fixture())
+    {:ok, view, _html} = live(conn, ~p"/reps/IA-1?rep=#{g.id}")
+
+    view |> element("#follow-rep") |> render_click()
+    assert has_element?(view, ~s(#follow-rep[aria-pressed="true"]), "Following")
+  end
+
+  test "signed out, following a rep leads to sign-in and back", %{conn: conn, grassley: g} do
+    {:ok, view, _html} = live(conn, ~p"/reps/IA-1?rep=#{g.id}")
+    to = URI.encode_www_form("/reps/IA-1?rep=#{g.id}")
+    assert has_element?(view, ~s(a[href="/users/sign-in-to?to=#{to}"]), "Follow")
   end
 end
