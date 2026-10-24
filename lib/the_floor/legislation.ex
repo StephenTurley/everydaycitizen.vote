@@ -134,21 +134,30 @@ defmodule TheFloor.Legislation do
     MapSet.difference(MapSet.new(bill_ids), MapSet.new(with_summary))
   end
 
-  @doc "Up to `limit` versions with stored XML and no sections yet, as `%{id, xml}`."
-  @spec versions_without_sections(pos_integer()) :: [%{id: integer(), xml: String.t()}]
-  def versions_without_sections(limit) do
+  @doc """
+  Up to `limit` versions with stored XML whose sections are missing or were split
+  by a format other than `format`, as `%{id, xml}`.
+  """
+  @spec versions_needing_sections(pos_integer(), pos_integer()) :: [
+          %{id: integer(), xml: String.t()}
+        ]
+  def versions_needing_sections(format, limit) do
     BillVersion
-    |> where([v], not is_nil(v.xml) and is_nil(v.sections))
+    |> where([v], not is_nil(v.xml))
+    |> where([v], is_nil(v.sections_version) or v.sections_version != ^format)
     |> order_by([v], asc: v.id)
     |> limit(^limit)
     |> select([v], %{id: v.id, xml: v.xml})
     |> Repo.all()
   end
 
-  @doc "Stores a version's sections."
-  @spec put_sections(integer(), [map()]) :: :ok
-  def put_sections(version_id, sections) do
-    BillVersion |> where([v], v.id == ^version_id) |> Repo.update_all(set: [sections: sections])
+  @doc "Stores a version's sections and the format they were split with."
+  @spec put_sections(integer(), [map()], pos_integer()) :: :ok
+  def put_sections(version_id, sections, format) do
+    BillVersion
+    |> where([v], v.id == ^version_id)
+    |> Repo.update_all(set: [sections: sections, sections_version: format])
+
     :ok
   end
 

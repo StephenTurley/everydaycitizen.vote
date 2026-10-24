@@ -64,6 +64,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillText do
           xml_schema: XmlText.schema(xml),
           plain_text: text,
           sections: BillSections.sections_or_empty(xml),
+          sections_version: BillSections.format(),
           source: source
         },
         nil

@@ -35,30 +35,34 @@ defmodule TheFloorWeb.BillLiveTest do
       v = TheFloor.Legislation.get_version(bill, code)
 
       :ok =
-        TheFloor.Legislation.put_sections(v.id, [
-          %{
-            "kind" => "section",
-            "enum" => "1.",
-            "heading" => heading,
-            "blocks" => [
-              %{
-                "level" => 0,
-                "enum" => nil,
-                "heading" => nil,
-                "text" => "This Act may be cited as #{code}."
-              }
-            ]
-          },
-          %{
-            "kind" => "section",
-            "enum" => "2.",
-            "heading" => "Detention",
-            "blocks" => [
-              %{"level" => 0, "enum" => "(a)", "heading" => "In general", "text" => "Text."},
-              %{"level" => 2, "enum" => "(A)", "heading" => nil, "text" => "Deeper."}
-            ]
-          }
-        ])
+        TheFloor.Legislation.put_sections(
+          v.id,
+          [
+            %{
+              "kind" => "section",
+              "enum" => "1.",
+              "heading" => heading,
+              "blocks" => [
+                %{
+                  "level" => 0,
+                  "enum" => nil,
+                  "heading" => nil,
+                  "text" => "This Act may be cited as #{code}."
+                }
+              ]
+            },
+            %{
+              "kind" => "section",
+              "enum" => "2.",
+              "heading" => "Detention",
+              "blocks" => [
+                %{"level" => 0, "enum" => "(a)", "heading" => "In general", "text" => "Text."},
+                %{"level" => 2, "enum" => "(A)", "heading" => nil, "text" => "Deeper."}
+              ]
+            }
+          ],
+          2
+        )
     end
   end
 
@@ -124,30 +128,36 @@ defmodule TheFloorWeb.BillLiveTest do
       TheFloor.Legislation.get_version(TheFloor.Legislation.get_bill("federal", "119-s-5"), "is")
 
     :ok =
-      TheFloor.Legislation.put_sections(v.id, [
-        %{
-          "kind" => "section",
-          "enum" => "101.",
-          "heading" => "A",
-          "blocks" => [
-            %{"level" => 0, "enum" => nil, "heading" => nil, "text" => "First division text."}
-          ]
-        },
-        %{
-          "kind" => "section",
-          "enum" => "101.",
-          "heading" => "B",
-          "blocks" => [
-            %{"level" => 0, "enum" => nil, "heading" => nil, "text" => "Second division text."}
-          ]
-        },
-        %{
-          "kind" => "section",
-          "enum" => nil,
-          "heading" => "Unnumbered",
-          "blocks" => [%{"level" => 0, "enum" => nil, "heading" => nil, "text" => "Loose text."}]
-        }
-      ])
+      TheFloor.Legislation.put_sections(
+        v.id,
+        [
+          %{
+            "kind" => "section",
+            "enum" => "101.",
+            "heading" => "A",
+            "blocks" => [
+              %{"level" => 0, "enum" => nil, "heading" => nil, "text" => "First division text."}
+            ]
+          },
+          %{
+            "kind" => "section",
+            "enum" => "101.",
+            "heading" => "B",
+            "blocks" => [
+              %{"level" => 0, "enum" => nil, "heading" => nil, "text" => "Second division text."}
+            ]
+          },
+          %{
+            "kind" => "section",
+            "enum" => nil,
+            "heading" => "Unnumbered",
+            "blocks" => [
+              %{"level" => 0, "enum" => nil, "heading" => nil, "text" => "Loose text."}
+            ]
+          }
+        ],
+        2
+      )
 
     {:ok, _view, html} = live(conn, ~p"/bills/119-s-5?section=1")
     assert html =~ "Second division text."

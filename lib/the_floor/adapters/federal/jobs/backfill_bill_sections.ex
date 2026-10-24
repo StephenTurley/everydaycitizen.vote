@@ -1,8 +1,10 @@
 defmodule TheFloor.Adapters.Federal.Jobs.BackfillBillSections do
   @moduledoc """
-  Splits the stored text of versions saved before sections existed. Each run
-  handles `batch_size` versions (default 500) and queues itself again while any
-  remain, so no single job runs long. Run by name (`bill_sections`).
+  Splits the stored text of versions saved before sections existed, or split by
+  an older format of `BillSections` (`BillSections.format/0`). Each run handles
+  `batch_size` versions (default 100, each holding its XML in memory) and queues
+  itself again while any remain, so no single job runs long. Run by name
+  (`bill_sections`).
   """
   use Oban.Worker, queue: :text, max_attempts: 3
 
@@ -11,13 +13,14 @@ defmodule TheFloor.Adapters.Federal.Jobs.BackfillBillSections do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
-    size = args["batch_size"] || 500
+    size = args["batch_size"] || 100
 
     Job.run("backfill_bill_sections", fn _run_id, _cursor ->
-      versions = Legislation.versions_without_sections(size)
+      format = BillSections.format()
+      versions = Legislation.versions_needing_sections(format, size)
 
       for v <- versions,
-          do: :ok = Legislation.put_sections(v.id, BillSections.sections_or_empty(v.xml))
+          do: :ok = Legislation.put_sections(v.id, BillSections.sections_or_empty(v.xml), format)
 
       if length(versions) == size, do: Oban.insert!(new(args))
       {:ok, %{"split" => length(versions)}}

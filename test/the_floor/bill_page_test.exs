@@ -175,7 +175,7 @@ defmodule TheFloor.BillPageTest do
       set: [xml: "<bill/>", plain_text: "text"]
     )
 
-    :ok = TheFloor.Legislation.put_sections(v.id, [%{"kind" => "section", "enum" => "1."}])
+    :ok = TheFloor.Legislation.put_sections(v.id, [%{"kind" => "section", "enum" => "1."}], 2)
 
     {:ok, page} = BillPage.load("federal", "119-s-5", [])
     assert [%{code: "is", xml: nil, plain_text: nil, sections: nil}] = page.versions
