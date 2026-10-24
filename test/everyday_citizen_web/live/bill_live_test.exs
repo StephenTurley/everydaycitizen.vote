@@ -492,6 +492,57 @@ defmodule EverydayCitizenWeb.BillLiveTest do
       assert has_element?(view, "#bill-summary", "Cached.")
     end
 
+    test "a reader can report a problem with the summary, which stores what they saw", %{
+      conn: conn,
+      bill: bill
+    } do
+      {subject, input} = EverydayCitizen.Summaries.Inputs.bill(bill)
+
+      {:ok, _} =
+        EverydayCitizen.Summaries.put_ai(:bill, subject, input, %{
+          summary: "It does one thing.",
+          model: "m"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+      refute has_element?(view, "#bill-summary form")
+      view |> element("#bill-summary button", "Report a problem") |> render_click()
+
+      view
+      |> form("#bill-summary form", report: %{reason: "inaccurate", note: "Wrong section."})
+      |> render_submit()
+
+      assert has_element?(view, "#bill-summary", "Thanks")
+
+      assert [report] = EverydayCitizen.Repo.all(EverydayCitizen.Feedback.Report)
+      assert %{kind: "bill", reason: "inaccurate", summary: "It does one thing."} = report
+      assert report.subject == subject
+      assert report.page == "/bills/119-s-5"
+    end
+
+    test "after five reports in an hour, a visitor is asked to wait", %{conn: conn, bill: bill} do
+      {subject, input} = EverydayCitizen.Summaries.Inputs.bill(bill)
+
+      {:ok, _} =
+        EverydayCitizen.Summaries.put_ai(:bill, subject, input, %{summary: "S.", model: "m"})
+
+      conn =
+        Plug.Conn.put_req_header(
+          conn,
+          "x-forwarded-for",
+          "203.0.113.#{System.unique_integer([:positive])}"
+        )
+
+      for n <- 1..6 do
+        {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+        view |> element("#bill-summary button", "Report a problem") |> render_click()
+        view |> form("#bill-summary form", report: %{reason: "other"}) |> render_submit()
+        if n == 6, do: assert(has_element?(view, "#bill-summary", "try again later"))
+      end
+
+      assert EverydayCitizen.Repo.aggregate(EverydayCitizen.Feedback.Report, :count) == 5
+    end
+
     test "without one, the page asks for it and shows it when it lands", %{conn: conn, bill: bill} do
       {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
       assert has_element?(view, "#bill-summary", "Writing a plain-English summary")

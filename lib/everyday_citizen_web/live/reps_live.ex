@@ -38,7 +38,9 @@ defmodule EverydayCitizenWeb.RepsLive do
   end
 
   @impl true
-  def handle_params(params, _uri, socket) do
+  def handle_params(params, uri, socket) do
+    %URI{path: path, query: query} = URI.parse(uri)
+    socket = assign(socket, :path, if(query, do: "#{path}?#{query}", else: path))
     reps = socket.assigns.reps
     rep = Enum.find(reps, &(to_string(&1.person.id) == params["rep"])) || List.first(reps)
     filter = Enum.find(@filters, {"all", "Everything", :all}, &(elem(&1, 0) == params["filter"]))
@@ -333,6 +335,16 @@ defmodule EverydayCitizenWeb.RepsLive do
               source="this week's record below"
               state={elem(@week_summary, 1)}
               prompt_url={@repo_url <> Claude.prompt_path(:rep_week)}
+              report={
+                %{
+                  kind: "rep_week",
+                  subject: elem(@week_summary, 0),
+                  prompt_version: Summaries.prompt_version(:rep_week),
+                  page: @path,
+                  user: @current_scope && @current_scope.user,
+                  remote_ip: @remote_ip
+                }
+              }
             />
             <p :if={@items == []} class="m-0 py-6 text-[15px] text-floor-muted">
               Nothing on the record for this week.

@@ -22,6 +22,7 @@ config :everyday_citizen, EverydayCitizenWeb.Endpoint,
 
 # In test we don't send emails
 config :everyday_citizen, EverydayCitizen.Mailer, adapter: Swoosh.Adapters.Test
+config :everyday_citizen, :feedback_to, "admin@example.com"
 
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false

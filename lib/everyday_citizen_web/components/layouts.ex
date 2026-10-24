@@ -68,6 +68,13 @@ defmodule EverydayCitizenWeb.Layouts do
       {render_slot(@inner_block)}
     </main>
 
+    <footer class={[
+      "mx-auto px-5 pb-8 max-w-xl text-[13px] text-floor-muted",
+      @width == :full && "lg:max-w-[1280px] lg:px-10"
+    ]}>
+      <.link navigate={~p"/feedback"} class="underline">Send feedback</.link>
+    </footer>
+
     <.flash_group flash={@flash} />
     """
   end
