@@ -66,6 +66,38 @@ defmodule TheFloorWeb.BillLive do
   defp rep_note(%{vote: vote}) when not is_nil(vote), do: "#{vote.question}, #{vote_date(vote)}"
   defp rep_note(_), do: nil
 
+  attr :blocks, :list, required: true
+
+  # A section's text by level; law the bill quotes is set off as its own block.
+  defp blocks(assigns) do
+    ~H"""
+    <%= for block <- @blocks do %>
+      <figure
+        :if={block["quote"]}
+        class="m-0 ml-[calc(var(--level)*16px)] lg:ml-[calc(var(--level)*24px)] px-3 py-3 lg:px-5 lg:py-4 rounded-[10px] bg-floor-ground flex flex-col gap-2"
+        style={"--level: #{block["level"]}"}
+      >
+        <figcaption class="font-sans text-[11px] lg:text-[12px] font-semibold uppercase tracking-wide text-floor-muted">
+          Text this section adds to the law
+        </figcaption>
+        <.blocks blocks={block["quote"]} />
+      </figure>
+      <p
+        :if={!block["quote"]}
+        data-level={block["level"]}
+        class="m-0 pl-[calc(var(--level)*16px)] lg:pl-[calc(var(--level)*24px)]"
+        style={"--level: #{block["level"]}"}
+      >
+        <strong :if={block["enum"] || block["heading"]}>
+          {block["enum"]} {block["heading"]}{if block["heading"] && block["text"] not in [nil, ""],
+            do: "."}
+        </strong>
+        {block["text"]}
+      </p>
+    <% end %>
+    """
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -208,19 +240,9 @@ defmodule TheFloorWeb.BillLive do
               <%!-- M3 puts each section's plain-language summary above its text --%>
               <div
                 :if={@open == i}
-                class="section-text px-4 pb-4 font-serif text-[15px] leading-relaxed flex flex-col gap-2"
+                class="section-text px-4 pb-4 font-serif text-[16px] leading-[1.6] lg:text-[17px] lg:leading-[1.65] flex flex-col gap-2.5"
               >
-                <p
-                  :for={block <- entry["blocks"]}
-                  data-level={block["level"]}
-                  class="m-0"
-                  style={"padding-left: #{block["level"] * 16}px"}
-                >
-                  <strong :if={block["enum"] || block["heading"]}>
-                    {block["enum"]} {block["heading"]}{if block["heading"], do: "."}
-                  </strong>
-                  {block["text"]}
-                </p>
+                <.blocks blocks={entry["blocks"]} />
               </div>
             </div>
           <% end %>

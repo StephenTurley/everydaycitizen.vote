@@ -66,6 +66,58 @@ defmodule TheFloorWeb.BillLiveTest do
     end
   end
 
+  test "law the bill quotes shows as its own labeled block", %{conn: conn} do
+    {:ok, _} =
+      Ingest.write(
+        %Records.BillVersion{
+          jurisdiction: "federal",
+          bill_external_id: "119-s-5",
+          code: "is",
+          classification: "is",
+          date: ~D[2026-01-06],
+          source: @src
+        },
+        nil
+      )
+
+    bill = TheFloor.Legislation.get_bill("federal", "119-s-5")
+
+    :ok =
+      TheFloor.Legislation.put_sections(
+        TheFloor.Legislation.get_version(bill, "is").id,
+        [
+          %{
+            "kind" => "section",
+            "enum" => "1.",
+            "heading" => "Amendment",
+            "blocks" => [
+              %{
+                "level" => 0,
+                "enum" => nil,
+                "heading" => nil,
+                "text" => "Section 5 is amended by adding:"
+              },
+              %{
+                "level" => 0,
+                "quote" => [
+                  %{"level" => 0, "enum" => "6.", "heading" => "New", "text" => "Inserted text."}
+                ]
+              }
+            ]
+          }
+        ],
+        2
+      )
+
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?section=0")
+
+    assert has_element?(view, "figure figcaption", "Text this section adds to the law")
+    assert has_element?(view, "figure", "6.")
+    assert has_element?(view, "figure", "Inserted text.")
+    assert has_element?(view, ".section-text", "Section 5 is amended by adding:")
+    refute has_element?(view, "figure", "amended by adding")
+  end
+
   test "the bill, where it stands, and how your reps were involved", %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/bills/119-s-5")
 
