@@ -395,11 +395,13 @@ defmodule EverydayCitizenWeb.RepsLive do
         <a :if={@item.bill} href={~p"/bills/#{@item.bill.external_id}"} class="text-floor-ink">
           {bill_label(@item.bill)}
         </a>
-        <span :if={!@item.bill}>{@item.vote.question}</span>
+        <span :if={!@item.bill}>{@item.vote.description || @item.vote.question}</span>
       </p>
+      <.vote_subject :if={@item.bill} vote={@item.vote} />
       <p class="m-0 text-[14px] text-floor-ink-2">
-        {if @item.bill, do: question_prefix(@item.vote)}{result(@item.vote)}
+        {if @item.bill || @item.vote.description, do: question_prefix(@item.vote)}{result(@item.vote)}
       </p>
+      <.term_note question={@item.vote.question} />
     </.card>
     """
   end

@@ -16,6 +16,11 @@ defmodule EverydayCitizen.Votes.Vote do
     field :bill_ref, :string
     field :identifier, :string
     field :question, :string
+    # What was voted on, in the source's words (a nominee, an amendment's purpose),
+    # and the source's reference and official page for it when it is not the bill.
+    field :description, :string
+    field :subject_ref, :string
+    field :subject_url, :string
     field :classification, :string, default: "other"
     field :result, :string
     field :passed, :boolean
@@ -42,6 +47,9 @@ defmodule EverydayCitizen.Votes.Vote do
       :external_id,
       :identifier,
       :question,
+      :description,
+      :subject_ref,
+      :subject_url,
       :classification,
       :result,
       :passed,

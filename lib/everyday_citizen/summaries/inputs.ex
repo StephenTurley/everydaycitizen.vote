@@ -84,7 +84,8 @@ defmodule EverydayCitizen.Summaries.Inputs do
   defp bill_label(bill), do: "#{bill.identifier} (#{bill.title})"
 
   defp detail(%Item{kind: :vote, vote: vote}) when not is_nil(vote),
-    do: "#{vote.question}: #{vote.result}, #{vote.yea_count}–#{vote.nay_count}"
+    do:
+      "#{vote.question}#{if vote.description, do: " (#{vote.description})"}: #{vote.result}, #{vote.yea_count}–#{vote.nay_count}"
 
   defp detail(%Item{kind: :moved, action: action}) when not is_nil(action), do: action.description
   defp detail(_item), do: nil

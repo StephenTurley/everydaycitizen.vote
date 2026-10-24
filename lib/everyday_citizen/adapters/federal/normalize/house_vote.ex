@@ -49,6 +49,9 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.HouseVote do
       external_id: external_id(congress, session, roll),
       identifier: "Roll Call #{roll}",
       question: detail["voteQuestion"],
+      description: amendment(detail, & &1["amendmentAuthor"]),
+      subject_ref: amendment(detail, &"#{&1["amendmentType"]}#{&1["amendmentNumber"]}"),
+      subject_url: amendment(detail, & &1["legislationUrl"]),
       classification: VoteClassifier.classify(detail["voteQuestion"]),
       result: detail["result"],
       passed: VoteSupport.passed(detail["result"]),
@@ -59,6 +62,13 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.HouseVote do
       source: source
     }
   end
+
+  # an amendment vote names the amendment (its sponsor's label) and links its
+  # page; the source's legislationUrl is then the amendment's, not the bill's
+  defp amendment(%{"amendmentNumber" => n} = detail, field) when is_binary(n) and n != "",
+    do: VoteSupport.blank_to_nil(field.(detail) || "")
+
+  defp amendment(_detail, _field), do: nil
 
   defp bill_id(%{"legislationType" => type, "legislationNumber" => number}, congress),
     do: BillId.external_id(congress, type, number)

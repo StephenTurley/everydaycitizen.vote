@@ -554,6 +554,42 @@ defmodule EverydayCitizenWeb.BillLiveTest do
     end
   end
 
+  test "an amendment vote says which amendment, linked to its official page", %{conn: conn} do
+    {:ok, _} =
+      Ingest.write(
+        %Records.Vote{
+          jurisdiction: "federal",
+          body_external_id: "senate",
+          session_identifier: "119-2",
+          external_id: "senate-119-2-8",
+          identifier: "Roll Call 8",
+          question: "On the Amendment",
+          classification: "amendment",
+          result: "Amendment Rejected",
+          passed: false,
+          voted_at: ~U[2026-01-19 17:00:00Z],
+          bill_external_id: "119-s-5",
+          description: "To limit price increases for tickets.",
+          subject_url: "https://example.test/amendment/1",
+          source: @src
+        },
+        nil
+      )
+
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+
+    assert has_element?(
+             view,
+             "section[aria-label='Votes on this bill']",
+             "To limit price increases for tickets."
+           )
+
+    assert has_element?(
+             view,
+             ~s(section[aria-label='Votes on this bill'] a[href="https://example.test/amendment/1"])
+           )
+  end
+
   test "a bill with no text shows no executive summary", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
     refute has_element?(view, "#bill-summary")
