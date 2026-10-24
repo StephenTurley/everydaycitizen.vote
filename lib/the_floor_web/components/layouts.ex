@@ -32,7 +32,10 @@ defmodule TheFloorWeb.Layouts do
         aria-label="Main"
         class="mx-auto max-w-3xl lg:max-w-[1280px] px-5 lg:px-10 flex flex-wrap items-center justify-between gap-x-3 sm:gap-x-4"
       >
-        <a href={~p"/"} class="py-4 text-[17px] sm:text-[19px] font-bold tracking-tight whitespace-nowrap text-floor-ink">
+        <a
+          href={~p"/"}
+          class="py-4 text-[17px] sm:text-[19px] font-bold tracking-tight whitespace-nowrap text-floor-ink"
+        >
           Everyday Citizen
         </a>
         <div class="flex items-center gap-3 sm:gap-5 text-[13px] sm:text-sm font-medium whitespace-nowrap">
