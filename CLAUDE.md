@@ -47,12 +47,14 @@ Decision log: `docs/DECISIONS.md` (append; never rewrite history)
 
 ## Current milestone
 
-M3, the plain-language layer (`docs/superpowers/plans/2026-10-24-m3-plain-language-summaries.md`):
-a plain-English summary of each bill section, written by Claude the first time
-someone opens it and cached, labeled as AI-written beside the text, with the
-prompt published in `priv/prompts/`. M1 (schema + federal adapter) and M2 (your
-reps, bill pages, accounts with email link and passkeys, following, daily email)
-are done and in production.
+M3, the plain-language layer (`docs/superpowers/plans/2026-10-24-m3-plain-language-summaries.md`,
+then `docs/superpowers/plans/2026-10-24-m3b-bill-and-week-summaries.md`):
+plain-English summaries of bill sections, of each whole bill (above its text)
+and of a rep's week (on the reps page), written by Claude the first time someone
+views them and cached, labeled as AI-written beside their source, inside a
+$2-a-day budget, with the prompts published in `priv/prompts/`. M1 (schema +
+federal adapter) and M2 (your reps, bill pages, accounts with email link and
+passkeys, following, daily email) are done and in production.
 
 ## Working conventions
 
