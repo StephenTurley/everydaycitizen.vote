@@ -185,6 +185,8 @@ defmodule EverydayCitizen.Ingest.Records do
   defmodule Vote do
     @moduledoc """
     A recorded vote with its tallies and per-person positions; positions replace the stored set.
+    `description` is what was voted on in the source's words; `subject_ref` and `subject_url`
+    name it and its official page when it is not the bill (a nomination, an amendment).
     Each position is `%{person: {scheme, value} | nil, raw_label, option, raw_option}` where
     `option` is one of `yea nay present absent`.
     """
@@ -203,6 +205,9 @@ defmodule EverydayCitizen.Ingest.Records do
       :external_id,
       :identifier,
       :question,
+      :description,
+      :subject_ref,
+      :subject_url,
       :classification,
       :result,
       :passed,

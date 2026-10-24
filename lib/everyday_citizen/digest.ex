@@ -187,7 +187,7 @@ defmodule EverydayCitizen.Digest do
         kind: :rep_vote,
         key: {:rep_vote, v.id, p.person_id},
         date: vote_date(v),
-        title: if(v.bill, do: bill_title(v.bill), else: v.question),
+        title: if(v.bill, do: bill_title(v.bill), else: v.description || v.question),
         detail: "#{p.person.name} voted #{option(p.option)}: #{vote_line(v)}",
         url: if(v.bill, do: bill_path(v.bill), else: v.source && v.source.url)
       }

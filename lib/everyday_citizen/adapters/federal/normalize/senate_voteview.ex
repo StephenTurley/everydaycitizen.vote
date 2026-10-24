@@ -80,6 +80,10 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.SenateVoteview do
       external_id: "senate-#{congress}-#{session}-#{roll}",
       identifier: "Roll Call #{roll}",
       question: VoteSupport.blank_to_nil(row["vote_question"]),
+      description: VoteSupport.blank_to_nil(row["vote_desc"] || ""),
+      # Voteview runs a nomination's part number onto it (PN9991 is PN999, part 1),
+      # so it is kept as given and no page is linked from it
+      subject_ref: nomination_ref(row["bill_number"]),
       classification: VoteClassifier.classify(row["vote_question"]),
       result: result,
       passed: passed,
@@ -130,4 +134,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.SenateVoteview do
   end
 
   defp int(string), do: String.to_integer(string)
+
+  defp nomination_ref("PN" <> _ = ref), do: ref
+  defp nomination_ref(_bill_number), do: nil
 end

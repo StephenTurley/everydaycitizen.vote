@@ -206,6 +206,46 @@ defmodule EverydayCitizenWeb.RepsLiveTest do
     assert has_element?(view, "#week-summary", "Cached.")
   end
 
+  test "a vote with no bill shows what was voted on, and defines the procedure", %{
+    conn: conn,
+    ernst: e
+  } do
+    {:ok, _} =
+      EverydayCitizen.Ingest.write(
+        %EverydayCitizen.Ingest.Records.Vote{
+          jurisdiction: "federal",
+          body_external_id: "senate",
+          session_identifier: "119-2",
+          external_id: "senate-119-2-9",
+          identifier: "Roll Call 9",
+          question: "On the Cloture Motion",
+          classification: "cloture",
+          result: "Cloture Motion Agreed to",
+          passed: true,
+          voted_at: ~U[2026-01-21 17:00:00Z],
+          description: "Todd Blanche, of Florida, to be Attorney General",
+          subject_ref: "PN1078",
+          counts: %{yea: 52, nay: 47, present: 0, absent: 1},
+          positions: [
+            %{
+              person: {"bioguide", "E000295"},
+              raw_label: "Ernst",
+              option: "yea",
+              raw_option: "Yea"
+            }
+          ],
+          source: EverydayCitizen.Ingest.Records.SourceRef.new("https://x.test/v", "v")
+        },
+        nil
+      )
+
+    {:ok, view, _html} = live(conn, ~p"/reps/IA-1?rep=#{e.id}&week=2026-01-19")
+    assert render(view) =~ "Todd Blanche, of Florida, to be Attorney General"
+    assert render(view) =~ "On the Cloture Motion"
+    assert has_element?(view, "details summary", "What is cloture?")
+    assert has_element?(view, "details", "end debate")
+  end
+
   test "items link to their bill pages", %{conn: conn, grassley: g} do
     {:ok, view, _html} = live(conn, ~p"/reps/IA-1?rep=#{g.id}")
     assert has_element?(view, ~s(a[href="/bills/119-s-5"]))

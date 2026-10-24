@@ -64,6 +64,10 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.SenateVoteviewTest do
     assert vote.question == "On the Nomination"
     # a nomination (PN121) is not a bill
     assert vote.bill_external_id == nil
+    # what was voted on, and Voteview's nomination reference (its part number may be run on)
+    assert vote.description == "Keith Bass, of Texas, to be an Assistant Secretary of Defense"
+    assert vote.subject_ref == "PN121"
+    assert vote.subject_url == nil
     assert vote.counts == %{yea: 50, nay: 35, present: 0, absent: 15}
   end
 

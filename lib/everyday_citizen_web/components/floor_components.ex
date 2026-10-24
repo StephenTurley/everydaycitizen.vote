@@ -249,4 +249,64 @@ defmodule EverydayCitizenWeb.FloorComponents do
       end)
     end)
   end
+
+  @terms [
+    {~r/cloture/i, "What is cloture?",
+     "A cloture vote decides whether to end debate on a matter so it can move to a final vote."},
+    {~r/motion to proceed/i, "What is a motion to proceed?",
+     "A vote on whether to start debating a bill or other measure."},
+    {~r/motion to table/i, "What does it mean to table?",
+     "A vote to set a proposal aside, which usually ends it."},
+    {~r/motion to discharge/i, "What is a motion to discharge?",
+     "A vote to take a measure away from a committee and bring it to the full chamber."},
+    {~r/nomination/i, "What is a nomination vote?",
+     "A vote on whether to confirm a person nominated to a public office, such as a judge or an agency head."}
+  ]
+
+  attr :question, :string, default: nil
+
+  @doc """
+  A plain definition of the procedure a vote's question names (cloture, motion to
+  proceed, ...), folded under "What is ...?". What it is, never why it is used.
+  """
+  def term_note(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :term,
+        Enum.find(@terms, fn {pattern, _, _} ->
+          is_binary(assigns.question) and assigns.question =~ pattern
+        end)
+      )
+
+    ~H"""
+    <details :if={@term} class="text-[13px] text-floor-ink-2">
+      <summary class="cursor-pointer text-floor-muted">{elem(@term, 1)}</summary>
+      <p class="m-0 mt-1">{elem(@term, 2)}</p>
+    </details>
+    """
+  end
+
+  attr :vote, :map, required: true
+
+  @doc """
+  What a vote was on when it is not simply the bill (an amendment's purpose, a
+  nominee), with the official page for it when known.
+  """
+  def vote_subject(assigns) do
+    ~H"""
+    <p :if={subject?(@vote)} class="m-0 text-[14px] text-floor-ink-2">
+      {@vote.description}
+      <a :if={@vote.subject_url} href={@vote.subject_url} class="ml-1 font-semibold text-floor-accent">
+        Official page ›
+      </a>
+    </p>
+    """
+  end
+
+  # passage votes' descriptions repeat the bill's title
+  defp subject?(%{description: d, classification: c}),
+    do: is_binary(d) and d != "" and c != "passage"
+
+  defp subject?(_vote), do: false
 end

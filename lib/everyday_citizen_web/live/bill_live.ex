@@ -495,9 +495,11 @@ defmodule EverydayCitizenWeb.BillLive do
             </p>
             <.card :for={vote <- @page.votes} class="!p-3.5 flex flex-col gap-0.5">
               <span class="text-[15px] lg:text-[14px] font-semibold">{vote.question} · {vote.result}, {vote.yea_count}–{vote.nay_count}</span>
+              <.vote_subject vote={vote} />
               <span class="text-[13px] text-floor-muted">{vote.body.name} · {vote.identifier} · {vote_date(
                 vote
               )}</span>
+              <.term_note question={vote.question} />
             </.card>
           </section>
 

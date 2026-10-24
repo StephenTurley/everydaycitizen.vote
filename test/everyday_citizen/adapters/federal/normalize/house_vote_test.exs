@@ -57,9 +57,19 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.HouseVoteTest do
     assert vote.voted_at == ~U[2025-09-10 21:36:00Z]
     assert vote.passed == false
     assert vote.bill_external_id == "119-hr-3838"
+    # an amendment vote names the amendment and links its official page
+    assert vote.description == "Biggs of Arizona Part A Amendment No. 29"
+    assert vote.subject_ref == "HAMDT97"
+    assert vote.subject_url == "https://www.congress.gov/amendment/119/house-amendment/97"
     assert vote.counts.yea == 200
     options = Map.new(vote.positions, &{&1.raw_option, &1.option})
     assert %{"Aye" => "yea", "No" => "nay", "Not Voting" => "absent"} = options
+  end
+
+  test "a vote on a bill itself has no separate subject" do
+    vote = vote("house_vote_119_1_17")
+    assert vote.description == nil
+    assert vote.subject_url == nil
   end
 
   test "a July timestamp converts with the summer offset" do
