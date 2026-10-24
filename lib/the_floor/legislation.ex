@@ -73,4 +73,41 @@ defmodule TheFloor.Legislation do
     |> select([a], {a.date, a.description})
     |> Repo.all()
   end
+
+  @doc """
+  A page of the jurisdiction's actions after `after_id`, in id order, as
+  `%{id, description, raw_type, classification}`.
+  """
+  @spec actions_page(String.t(), integer(), pos_integer()) :: [map()]
+  def actions_page(jurisdiction_key, after_id, limit) do
+    BillAction
+    |> join(:inner, [a], b in Bill, on: b.id == a.bill_id)
+    |> join(:inner, [_a, b], j in Jurisdiction, on: j.id == b.jurisdiction_id)
+    |> where([a, _b, j], j.key == ^jurisdiction_key and a.id > ^after_id)
+    |> order_by([a], asc: a.id)
+    |> limit(^limit)
+    |> select([a], %{
+      id: a.id,
+      description: a.description,
+      raw_type: a.raw_type,
+      classification: a.classification
+    })
+    |> Repo.all()
+  end
+
+  @doc "Sets each action's classification (nil marks it unclassified)."
+  @spec update_action_classifications([{integer(), String.t() | nil}]) :: :ok
+  def update_action_classifications(changes) do
+    Repo.transaction(fn ->
+      for {id, classification} <- changes do
+        BillAction
+        |> where([a], a.id == ^id)
+        |> Repo.update_all(
+          set: [classification: classification, unclassified: is_nil(classification)]
+        )
+      end
+    end)
+
+    :ok
+  end
 end

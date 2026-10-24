@@ -7,7 +7,10 @@ defmodule TheFloor.Adapters.Federal.ActionClassifier do
   keeps the raw text flagged as unclassified.
   """
 
+  # `:skip` stops the search with no type: floor motions and cloture ("Motion to
+  # proceed ... agreed to in Senate") are steps toward a vote, not passage.
   @rules [
+    {~r/^(motion|cloture)\b/i, :skip},
     {~r/became public law|became private law/i, "became_law"},
     {~r/vetoed by president|pocket veto/i, "vetoed"},
     {~r/signed by president/i, "signed"},
@@ -30,7 +33,11 @@ defmodule TheFloor.Adapters.Federal.ActionClassifier do
   """
   @spec classify(%{optional(String.t()) => String.t() | nil}) :: String.t() | nil
   def classify(%{"text" => text}) when is_binary(text) do
-    Enum.find_value(@rules, fn {regex, type} -> if Regex.match?(regex, text), do: type end)
+    case Enum.find(@rules, fn {regex, _type} -> Regex.match?(regex, text) end) do
+      {_regex, :skip} -> nil
+      {_regex, type} -> type
+      nil -> nil
+    end
   end
 
   def classify(_action), do: nil

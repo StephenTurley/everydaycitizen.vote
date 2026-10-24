@@ -9,6 +9,7 @@ defmodule TheFloor.Adapters.Federal.Jobs do
   """
   alias TheFloor.Adapters.Federal.Jobs.{
     Coverage,
+    ReclassifyActions,
     Relink,
     SyncBills,
     SyncCommitteeMeetings,
@@ -19,6 +20,15 @@ defmodule TheFloor.Adapters.Federal.Jobs do
     SyncSenateFloor,
     SyncSenateVotes
   }
+
+  @doc """
+  Jobs run only by name (`mix the_floor.ingest <name>`, `TheFloor.Release.ingest/1`),
+  never by the full ingest: one-off backfills and reprocessing.
+  """
+  @spec on_demand() :: [{String.t(), module(), map()}]
+  def on_demand do
+    [{"reclassify_actions", ReclassifyActions, %{}}]
+  end
 
   @spec all() :: [{String.t(), module(), map()}]
   def all do

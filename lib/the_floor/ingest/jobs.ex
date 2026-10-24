@@ -9,6 +9,14 @@ defmodule TheFloor.Ingest.Jobs do
     :the_floor |> Application.get_env(:ingest_adapters, []) |> Enum.flat_map(& &1.all())
   end
 
+  @doc "Every configured adapter's jobs that run only by name."
+  def on_demand do
+    for adapter <- Application.get_env(:the_floor, :ingest_adapters, []),
+        Code.ensure_loaded?(adapter) and function_exported?(adapter, :on_demand, 0),
+        job <- adapter.on_demand(),
+        do: job
+  end
+
   @doc """
   The jobs to run for an optional job name: all of them for `nil`, otherwise the
   one with that name. Returns `{:error, message}` for an unknown name.
@@ -16,7 +24,7 @@ defmodule TheFloor.Ingest.Jobs do
   def select(nil), do: {:ok, all()}
 
   def select(name) do
-    jobs = all()
+    jobs = all() ++ on_demand()
 
     case Enum.filter(jobs, &(elem(&1, 0) == name)) do
       [] ->
