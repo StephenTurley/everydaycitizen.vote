@@ -34,7 +34,7 @@ defmodule TheFloorWeb.Layouts do
           The Floor
         </a>
         <div class="flex items-center gap-5 text-sm font-medium">
-          <a href="/this-week" class="py-3 text-floor-accent hover:text-floor-accent-dark">
+          <a href={~p"/this-week"} class="py-3 text-floor-accent hover:text-floor-accent-dark">
             This week
           </a>
           <a href={~p"/"} class="py-3 text-floor-accent hover:text-floor-accent-dark">

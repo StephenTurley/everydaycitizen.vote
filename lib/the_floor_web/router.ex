@@ -21,6 +21,7 @@ defmodule TheFloorWeb.Router do
     get "/district/:district", DistrictController, :show
     live "/reps/:district", RepsLive
     live "/bills/:id", BillLive
+    live "/this-week", ThisWeekLive
   end
 
   # Other scopes may use custom stacks.
