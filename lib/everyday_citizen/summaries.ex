@@ -7,8 +7,11 @@ defmodule EverydayCitizen.Summaries do
   """
   import Ecto.Query
 
+  alias EverydayCitizen.Jobs.SummarizeSection
   alias EverydayCitizen.Repo
-  alias EverydayCitizen.Summaries.SectionSummary
+  alias EverydayCitizen.Summaries.{Claude, SectionSummary}
+
+  @max_chars 40_000
 
   @zone "America/New_York"
 
@@ -76,6 +79,36 @@ defmodule EverydayCitizen.Summaries do
       returning: true
     )
   end
+
+  @doc """
+  A summary of a section someone opened: the cached one, or a queued job that
+  writes it (one per section at a time) and broadcasts it on `topic/2`. Not
+  queued when the section is over #{@max_chars} characters, when no credentials
+  are configured, or once today's `daily_limit` is reached.
+  """
+  @spec request(integer(), non_neg_integer(), String.t()) ::
+          {:cached, SectionSummary.t()} | :queued | :too_long | :paused | :disabled
+  def request(version_id, index, text) do
+    cond do
+      summary = get(version_id, index, text) -> {:cached, summary}
+      String.length(text) > @max_chars -> :too_long
+      not Claude.enabled?() -> :disabled
+      created_today() >= config(:daily_limit) -> :paused
+      true -> queue(version_id, index)
+    end
+  end
+
+  defp queue(version_id, index) do
+    %{"version_id" => version_id, "index" => index, "prompt_version" => prompt_version()}
+    |> SummarizeSection.new()
+    |> Oban.insert!()
+
+    :queued
+  end
+
+  @doc "The PubSub topic a section's new summary is broadcast on."
+  @spec topic(integer(), non_neg_integer()) :: String.t()
+  def topic(version_id, index), do: "section_summary:#{version_id}:#{index}"
 
   @doc "How many summaries were written today (America/New_York)."
   @spec created_today() :: non_neg_integer()

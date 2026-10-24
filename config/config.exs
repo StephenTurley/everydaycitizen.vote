@@ -72,7 +72,7 @@ config :everyday_citizen, Oban,
   shutdown_grace_period: :timer.seconds(25),
   repo: EverydayCitizen.Repo,
   # bulk: the first-run bulk load's chunk jobs (Federal.BulkBatch)
-  queues: [ingest: 4, text: 2, bulk: 4, mail: 2],
+  queues: [ingest: 4, text: 2, bulk: 4, mail: 2, summaries: 2],
   plugins: [
     # Rescue jobs left executing by a crashed node; prune finished jobs after a week.
     # rescue_after must exceed every worker's timeout (the bulk bill and text
