@@ -15,7 +15,7 @@ defmodule EverydayCitizen.Summaries.Claude do
   # kind => {prompt file stem, input tag, default reply cap}
   @kinds %{
     section: {"section_summary", "section", 300},
-    bill: {"bill_summary", "bill", 500},
+    bill: {"bill_summary", "bill", 800},
     bill_chunk: {"bill_chunk", "part", 600},
     rep_week: {"rep_week", "activity", 300}
   }

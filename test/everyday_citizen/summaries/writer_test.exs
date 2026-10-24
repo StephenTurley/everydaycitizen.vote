@@ -32,10 +32,10 @@ defmodule EverydayCitizen.Summaries.WriterTest do
   end
 
   test "the length band follows the bill's size" do
-    assert Writer.band(String.duplicate("a", 9_000)) == {"short", 300}
-    assert Writer.band(String.duplicate("a", 40_000)) == {"medium", 500}
-    assert Writer.band(String.duplicate("a", 200_000)) == {"long", 900}
-    assert Writer.band(String.duplicate("a", 300_000)) == {"very long", 1400}
+    assert Writer.band(String.duplicate("a", 9_000)) == {"short", 600}
+    assert Writer.band(String.duplicate("a", 40_000)) == {"medium", 800}
+    assert Writer.band(String.duplicate("a", 200_000)) == {"long", 1200}
+    assert Writer.band(String.duplicate("a", 300_000)) == {"very long", 1700}
   end
 
   test "a short bill is one request with its length band" do
@@ -45,7 +45,7 @@ defmodule EverydayCitizen.Summaries.WriterTest do
              Writer.write(:bill, "SEC. 1. Short text.")
 
     assert_received {:call, body}
-    assert body["max_tokens"] == 300
+    assert body["max_tokens"] == 600
 
     assert [%{"content" => "Length: short\n\n<bill>\nSEC. 1. Short text.\n</bill>"}] =
              body["messages"]
@@ -71,7 +71,7 @@ defmodule EverydayCitizen.Summaries.WriterTest do
       assert String.starts_with?(part, "SEC. 1.")
     end
 
-    assert final["max_tokens"] == 1400
+    assert final["max_tokens"] == 1700
     assert [%{"content" => "Length: very long\n\n<bill>\n" <> combined}] = final["messages"]
     assert combined =~ "<part>\n- part summary\n</part>"
   end
