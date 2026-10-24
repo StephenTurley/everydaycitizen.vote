@@ -43,6 +43,12 @@ defmodule EverydayCitizen.Jobs.SummarizeSectionTest do
     %{version: version, text: Summaries.section_text(Enum.at(@sections, 1))}
   end
 
+  # today's spend reaches the $2.00 budget (20M input tokens at $0.10/M)
+  defp spend_budget! do
+    for _ <- 1..200,
+        do: :ok = Summaries.record_usage(:section, %{input_tokens: 100_000, output_tokens: 0})
+  end
+
   defp stub_claude(status \\ 200) do
     Req.Test.stub(EverydayCitizen.Claude, fn conn ->
       body =
@@ -90,8 +96,7 @@ defmodule EverydayCitizen.Jobs.SummarizeSectionTest do
     version: v,
     text: text
   } do
-    for i <- 1..300,
-        do: {:ok, _} = Summaries.put(v.id, 100 + i, "t#{i}", %{summary: "s", model: "m"})
+    spend_budget!()
 
     assert :paused = Summaries.request(v.id, 1, text)
     assert [] = all_enqueued(worker: SummarizeSection)
@@ -133,8 +138,7 @@ defmodule EverydayCitizen.Jobs.SummarizeSectionTest do
   test "a queued job re-checks the day's budget and calls nothing once it is spent", %{
     version: v
   } do
-    for i <- 1..300,
-        do: {:ok, _} = Summaries.put(v.id, 100 + i, "t#{i}", %{summary: "s", model: "m"})
+    spend_budget!()
 
     Req.Test.stub(EverydayCitizen.Claude, fn _conn -> flunk("no call over budget") end)
     Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, Summaries.topic(v.id, 1))
