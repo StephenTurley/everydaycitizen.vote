@@ -12,6 +12,34 @@ defmodule EverydayCitizen.Votes do
     |> Repo.aggregate(:count)
   end
 
+  @doc """
+  A body's votes with no official page yet for what they were on, as
+  `%{external_id, session_identifier, question, description, subject_ref,
+  bill_external_id}` (the bill's external id, or the source's reference to an
+  unknown one).
+  """
+  @spec awaiting_subjects(String.t(), String.t()) :: [map()]
+  def awaiting_subjects(jurisdiction_key, body_external_id) do
+    from(v in Vote,
+      join: b in assoc(v, :body),
+      join: j in assoc(b, :jurisdiction),
+      join: s in assoc(v, :session),
+      left_join: bill in assoc(v, :bill),
+      where:
+        j.key == ^jurisdiction_key and b.external_id == ^body_external_id and
+          is_nil(v.subject_url),
+      select: %{
+        external_id: v.external_id,
+        session_identifier: s.identifier,
+        question: v.question,
+        description: v.description,
+        subject_ref: v.subject_ref,
+        bill_external_id: coalesce(bill.external_id, v.bill_ref)
+      }
+    )
+    |> Repo.all()
+  end
+
   @doc "The subset of `external_ids` that already have a stored vote."
   @spec existing_external_ids([String.t()]) :: MapSet.t(String.t())
   def existing_external_ids(external_ids) do

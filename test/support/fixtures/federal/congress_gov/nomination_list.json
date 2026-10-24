@@ -1,0 +1,56 @@
+{
+  "nominations": [
+    {
+      "citation": "PN999-1",
+      "number": 999,
+      "partNumber": "01",
+      "description": "Angela Veronica Colmenero, of Texas, to be United States District Judge for the Southern District of Texas, vice Lee H. Rosenthal, retired.",
+      "congress": 119
+    },
+    {
+      "citation": "PN1093-3",
+      "number": 1093,
+      "partNumber": "03",
+      "description": "Matthew R. Byrne, of Ohio, to be United States District Judge for the Southern District of Ohio, vice Michael H. Watson, retired.",
+      "congress": 119
+    },
+    {
+      "citation": "PN730-11",
+      "number": 730,
+      "partNumber": "11",
+      "description": "John Breslow, of Arizona, to be Ambassador Extraordinary and Plenipotentiary of the United States of America to the Republic of Cyprus.",
+      "congress": 119
+    },
+    {
+      "citation": "PN1078",
+      "number": 1078,
+      "partNumber": "00",
+      "description": "Todd Blanche, of Florida, to be Attorney General, vice Pamela Bondi.",
+      "congress": 119
+    },
+    {
+      "citation": "PN252",
+      "number": 252,
+      "partNumber": "00",
+      "description": null,
+      "congress": 119
+    },
+    {
+      "citation": "PN25-20",
+      "number": 25,
+      "partNumber": "20",
+      "description": "Mike Huckabee, of Arkansas, to be Ambassador Extraordinary and Plenipotentiary of the United States of America to the State of Israel.",
+      "congress": 119
+    },
+    {
+      "citation": "PN2",
+      "number": 2,
+      "partNumber": "00",
+      "description": null,
+      "congress": 119
+    }
+  ],
+  "pagination": {
+    "count": 7
+  }
+}

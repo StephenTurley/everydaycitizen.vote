@@ -72,6 +72,32 @@ defmodule EverydayCitizen.Ingest.Writer.Votes do
     end
   end
 
+  @doc "Sets a stored vote's subject reference and page; `{:ok, 0}` when the vote is not stored."
+  @spec write_subject(Records.VoteSubject.t()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def write_subject(%Records.VoteSubject{} = r) do
+    with {:ok, j} <- jurisdiction(r.jurisdiction),
+         {:ok, body} <- Support.body(j.id, r.body_external_id),
+         {:ok, session} <-
+           fetch(
+             Session,
+             [jurisdiction_id: j.id, identifier: r.session_identifier],
+             :unknown_session,
+             r.session_identifier
+           ) do
+      {count, _} =
+        Repo.update_all(
+          from(v in Vote,
+            where:
+              v.body_id == ^body.id and v.session_id == ^session.id and
+                v.external_id == ^r.external_id
+          ),
+          set: [subject_ref: r.subject_ref, subject_url: r.subject_url]
+        )
+
+      {:ok, count}
+    end
+  end
+
   defp bill_id(%{bill_external_id: nil}), do: nil
 
   defp bill_id(r) do

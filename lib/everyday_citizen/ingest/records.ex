@@ -219,6 +219,23 @@ defmodule EverydayCitizen.Ingest.Records do
     ]
   end
 
+  defmodule VoteSubject do
+    @moduledoc """
+    The official record a stored vote was on, found after the vote was written
+    (a nomination, an amendment): its reference and page. Only those two fields
+    of the vote change; a vote not stored is skipped.
+    """
+    @enforce_keys [:jurisdiction, :body_external_id, :session_identifier, :external_id]
+    defstruct [
+      :jurisdiction,
+      :body_external_id,
+      :session_identifier,
+      :external_id,
+      :subject_ref,
+      :subject_url
+    ]
+  end
+
   defmodule Event do
     @moduledoc """
     A calendar item (floor, hearing, markup). `bill_external_ids` are links to attempt;

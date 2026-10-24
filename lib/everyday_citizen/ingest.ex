@@ -22,6 +22,7 @@ defmodule EverydayCitizen.Ingest do
   def write(%Records.BillVersionText{} = r, run_id), do: Writer.Legislation.write(r, run_id)
 
   def write(%Records.Vote{} = r, run_id), do: Writer.Votes.write(r, run_id)
+  def write(%Records.VoteSubject{} = r, _run_id), do: Writer.Votes.write_subject(r)
   def write(%Records.Event{} = r, run_id), do: Writer.Calendar.write(r, run_id)
 
   @doc """
