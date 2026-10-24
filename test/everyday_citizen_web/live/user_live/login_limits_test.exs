@@ -27,8 +27,9 @@ defmodule EverydayCitizenWeb.UserLive.LoginLimitsTest do
     end
   end
 
-  defp request_link(conn, email, ip \\ "203.0.113.7") do
-    conn = put_req_header(conn, "x-forwarded-for", "#{ip}, 10.0.0.1")
+  defp request_link(conn, email, ip \\ "203.0.113.7", spoof \\ "10.9.9.9") do
+    # Fly appends the client's real address last; anything before it is the client's own
+    conn = put_req_header(conn, "x-forwarded-for", "#{spoof}, #{ip}")
     {:ok, view, _html} = live(conn, ~p"/users/log-in")
 
     view
@@ -97,5 +98,13 @@ defmodule EverydayCitizenWeb.UserLive.LoginLimitsTest do
     html = request_link(conn, unique_user_email())
     assert html =~ "couldn&#39;t send the email"
     assert_no_email_sent()
+  end
+
+  test "a made-up forwarded address does not get around the visitor limit", %{conn: conn} do
+    for i <- 1..10, do: request_link(conn, "p#{i}@example.com", "203.0.113.7", "1.1.1.#{i}")
+    assert emails_sent() == 10
+
+    request_link(conn, "p11@example.com", "203.0.113.7", "8.8.8.8")
+    assert emails_sent() == 0
   end
 end

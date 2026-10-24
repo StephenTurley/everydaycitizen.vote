@@ -16,7 +16,7 @@
 - The product never explains "why" in its own voice: the prompt forbids reasons, opinions, predictions and anything not in the text; the summary is labeled as AI-written with a link to the published prompt.
 - No UI or domain code may know it is federal (boundary test); the prompt names no legislature ("this bill", "this section", "the law").
 - Model `claude-haiku-5-5` by default (config `:summaries, :model`), `max_tokens: 400`, temperature 0; API version header `anthropic-version: 2023-06-01`.
-- Secret `ANTHROPIC_API_KEY` from env in `config/runtime.exs`, documented in `.env.example`; without it summaries are off (the page shows no summary box) and nothing calls the API.
+- Credentials, in order: Workload Identity Federation in production (no stored key; Task 2b), else `ANTHROPIC_API_KEY` (local development, and production until federation is set up). Both from env in `config/runtime.exs`, documented in `.env.example`. With neither, summaries are off (no summary box) and nothing calls the API.
 - Cost guards: a section is summarized only when opened by a single-section open (not "Expand all"); at most `daily_limit` new summaries per day across the site (default 300) and 30 requests an hour per visitor (`EverydayCitizen.RateLimit`); sections whose text exceeds 40,000 characters are not sent ("This section is too long to summarize").
 - The prompt lives at `priv/prompts/section_summary.v1.md`; `prompt_version` is `"v1"`. Changing the prompt means a new file and version, so old summaries are not reused under a new prompt.
 - Provenance for each summary: the source version id and section index, `source_hash` (sha256 of the exact text sent), model, prompt version, input/output tokens, `inserted_at`.
@@ -55,6 +55,19 @@
 
 - [ ] Tests first (Req.Test stub): the request carries the key, version header, model, `temperature: 0` and the text inside `<section>` tags, and the system prompt is the file's content; a 200 response returns the text and token counts; 429/500 return `{:error, {:http_status, _}}`; no key returns `{:error, :disabled}` without a request. Implement; commit `feat: plain-English section summaries from Claude`.
 
+### Task 2b: Federated credentials (no API key to rotate)
+
+The owner's Anthropic API keys expire every 30 days. Production instead proves its identity with a Fly OIDC token and exchanges it for a short-lived Claude access token (Anthropic Workload Identity Federation).
+
+**Files:** create `lib/everyday_citizen/summaries/credentials.ex`; modify `claude.ex` (auth header from `Credentials.auth_header/0`), `config/runtime.exs` (`:summaries, :federation` from `ANTHROPIC_FEDERATION_RULE_ID`, `ANTHROPIC_ORGANIZATION_ID`, `ANTHROPIC_SERVICE_ACCOUNT_ID`, `ANTHROPIC_WORKSPACE_ID`; identifiers, not secrets), `config/test.exs` (`:fly_oidc_req_options`, a Req.Test stub), `.env.example`, `lib/everyday_citizen/application.ex` (start `Credentials`); test `test/everyday_citizen/summaries/credentials_test.exs`.
+
+**Interfaces:**
+- `Credentials.auth_header() :: {:ok, {String.t(), String.t()}} | {:error, term()}` — `{"authorization", "Bearer sk-ant-oat01-…"}` when federation is configured, else `{"x-api-key", key}` when `ANTHROPIC_API_KEY` is set, else `{:error, :disabled}`. `Claude.enabled?/0` is true when either is configured.
+- Federation flow: get a fresh JWT from the machine (`POST http://localhost/v1/tokens/oidc` over the unix socket `/.fly/api`, body `{"aud": "https://api.anthropic.com"}`; a fresh one every exchange, since tokens with a `jti` are single-use), then `POST https://api.anthropic.com/v1/oauth/token` with `grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer"`, `assertion`, `federation_rule_id`, `organization_id`, `service_account_id`, `workspace_id`; cache `access_token` until `expires_in − 120 s` (a GenServer holding the token, refreshing on demand, one exchange at a time).
+- Owner setup (Claude Console → Workload identity → Connect workload → Custom OIDC): issuer `https://oidc.fly.io/personal`, subject prefix `personal:thefloor-vote:*`, audience `https://api.anthropic.com`, lifetime 600 s; then set the four IDs on Fly and unset `ANTHROPIC_API_KEY` (a set key is used only when federation is not configured, but remove it anyway once federation works).
+
+- [ ] Tests first (stubs for both endpoints): with federation config, `auth_header/0` returns the bearer token from the exchange, sending the JWT and the four IDs; a second call within the lifetime makes no new exchange; after expiry (injected clock) it exchanges again with a new JWT; a failed exchange returns `{:error, _}` (the summary shows as unavailable); without federation it returns the API key header; with neither, `{:error, :disabled}`. Implement; commit `feat: federated Claude credentials, no stored key`.
+
 ### Task 3: Summarize a section once, inside the budget
 
 **Files:** create `lib/everyday_citizen/jobs/summarize_section.ex`; modify `config/config.exs` (queue `summaries: 2`); test `test/everyday_citizen/jobs/summarize_section_test.exs`.
@@ -80,4 +93,4 @@
 
 - [ ] Append DECISIONS: M3 as built (one model, on-view and cached, budget and limits, prompt published and versioned, summaries on any bill a person opens rather than only bills with movement, since generation is driven by views), and amend the CLAUDE.md non-negotiable "Expensive layers … run only on bills that meet the movement filter" to "… run only when someone views the section, inside a daily budget" — **the owner confirms this rule change before merge.**
 - [ ] `mix precommit`, `mix credo --strict`, final whole-branch review on the most capable model.
-- [ ] Owner: create an Anthropic API key and set `ANTHROPIC_API_KEY` on Fly (dashboard, not the chat). Then merge, deploy, open a section on production and confirm a summary appears and is cached on reload.
+- [ ] Owner: set up federation (Task 2b) and set the four IDs on Fly; the staged `ANTHROPIC_API_KEY` covers summaries until then. Then merge, deploy, open a section on production and confirm a summary appears and is cached on reload; once federation is confirmed, unset `ANTHROPIC_API_KEY`.

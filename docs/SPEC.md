@@ -89,6 +89,10 @@ jurisdiction-specific code.
 
 ## 6. Movement filter
 
+_2026-10-24: plain-language summaries (7.6) no longer use this filter; they are
+written when someone opens a section, cached and inside a daily budget (see
+DECISIONS). Redline (7.7) and the why-panel (7.8) still use it._
+
 A bill "has movement" when any of these occur: reported out of committee;
 scheduled on a floor or committee calendar; roll call vote taken; passed a
 chamber; enrolled or signed. Only bills with movement get sections 7.6–7.8.

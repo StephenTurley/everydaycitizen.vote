@@ -53,6 +53,13 @@ config :phoenix_live_view,
 config :everyday_citizen, EverydayCitizen.Mailer, adapter: Swoosh.Adapters.Local
 config :everyday_citizen, :mail_from, {"Everyday Citizen", "hello@everydaycitizen.vote"}
 
+# Plain-English section summaries (EverydayCitizen.Summaries): written on first
+# view and cached; the prompt is priv/prompts/section_summary.<prompt_version>.md.
+config :everyday_citizen, :summaries,
+  model: "claude-haiku-5-5",
+  prompt_version: "v1",
+  daily_limit: 300
+
 # WebAuthn relying party (passkeys). Dev values; test.exs and runtime.exs (prod)
 # override. The origin must match the browser's address bar exactly.
 config :everyday_citizen, :webauthn,
@@ -65,7 +72,7 @@ config :everyday_citizen, Oban,
   shutdown_grace_period: :timer.seconds(25),
   repo: EverydayCitizen.Repo,
   # bulk: the first-run bulk load's chunk jobs (Federal.BulkBatch)
-  queues: [ingest: 4, text: 2, bulk: 4, mail: 2],
+  queues: [ingest: 4, text: 2, bulk: 4, mail: 2, summaries: 2],
   plugins: [
     # Rescue jobs left executing by a crashed node; prune finished jobs after a week.
     # rescue_after must exceed every worker's timeout (the bulk bill and text

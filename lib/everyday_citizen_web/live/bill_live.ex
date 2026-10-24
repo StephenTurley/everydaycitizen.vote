@@ -3,10 +3,19 @@ defmodule EverydayCitizenWeb.BillLive do
   The bill page (mockup "Bill page (M2)"): the bill and its sponsor, where it
   stands, the visitor's reps' part in it, the official summary labeled with its
   author, the text by section with a version picker, and its roll calls.
+
+  Opening one section asks for its plain-English summary (`Summaries.request/3`):
+  shown from the cache, or written by a job and pushed here over PubSub. "Expand
+  all" shows cached summaries only, so it never sets off a whole bill's worth.
   """
   use EverydayCitizenWeb, :live_view
 
-  alias EverydayCitizen.{BillPage, Follows, Reps}
+  alias EverydayCitizen.{BillPage, Follows, RateLimit, Reps, Summaries}
+  alias EverydayCitizen.Summaries.Claude
+
+  @prompt_url "https://github.com/StephenTurley/everydaycitizen.vote/blob/main/priv/prompts/section_summary.v1.md"
+  @visitor_limit 30
+  @hour :timer.hours(1)
 
   @impl true
   def mount(%{"id" => id}, session, socket) do
@@ -20,7 +29,10 @@ defmodule EverydayCitizenWeb.BillLive do
            page: page,
            district: district,
            page_title: page.bill.identifier,
-           following: Follows.following?(socket.assigns.current_scope, {:bill, page.bill.id})
+           following: Follows.following?(socket.assigns.current_scope, {:bill, page.bill.id}),
+           remote_ip: EverydayCitizenWeb.RemoteIp.from_socket(socket),
+           summaries: %{},
+           summary_topics: []
          )}
 
       :not_found ->
@@ -46,8 +58,100 @@ defmodule EverydayCitizenWeb.BillLive do
       end
 
     sections = BillPage.sections(socket.assigns.page.bill, version && version.code)
-    {:noreply, assign(socket, version: version, sections: Enum.with_index(sections), open: open)}
+
+    socket =
+      socket
+      |> assign(version: version, sections: Enum.with_index(sections), open: open)
+      |> load_summaries()
+
+    {:noreply, socket}
   end
+
+  @impl true
+  def handle_info({:section_summary, index, {:ok, text}}, socket),
+    do: {:noreply, update(socket, :summaries, &Map.put(&1, index, {:ok, text}))}
+
+  def handle_info({:section_summary, index, {:error, :paused}}, socket),
+    do: {:noreply, update(socket, :summaries, &Map.put(&1, index, :paused))}
+
+  def handle_info({:section_summary, index, {:error, _}}, socket),
+    do: {:noreply, update(socket, :summaries, &Map.put(&1, index, :unavailable))}
+
+  # The summaries to show for the open section(s). Pages stop listening for the
+  # sections they showed before (another version or section).
+  defp load_summaries(socket) do
+    for topic <- socket.assigns.summary_topics,
+        do: Phoenix.PubSub.unsubscribe(EverydayCitizen.PubSub, topic)
+
+    socket = assign(socket, summaries: %{}, summary_topics: [])
+
+    if socket.assigns.version && Claude.enabled?(),
+      do: summaries_for(socket, socket.assigns.open),
+      else: socket
+  end
+
+  defp summaries_for(socket, :all) do
+    sections =
+      for {%{"kind" => "section"} = entry, i} <- socket.assigns.sections,
+          do: {i, Summaries.section_text(entry)}
+
+    cached =
+      socket.assigns.version.id
+      |> Summaries.get_many(sections)
+      |> Map.new(fn {i, summary} -> {i, {:ok, summary.summary}} end)
+
+    assign(socket, :summaries, cached)
+  end
+
+  defp summaries_for(socket, i) when is_integer(i) do
+    case Enum.find(socket.assigns.sections, fn {_entry, n} -> n == i end) do
+      {%{"kind" => "section"} = entry, _} -> request_summary(socket, i, entry)
+      _ -> socket
+    end
+  end
+
+  defp summaries_for(socket, _closed), do: socket
+
+  # Listens for the section's summary before asking for it, so one finished in
+  # between is not missed; stops listening if no job will answer.
+  defp request_summary(socket, i, entry) do
+    version_id = socket.assigns.version.id
+    topic = Summaries.topic(version_id, i)
+    live? = connected?(socket)
+    if live?, do: Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, topic)
+
+    state = summary_state(socket, version_id, i, Summaries.section_text(entry), live?)
+    socket = keep_listening(socket, topic, live? and state == :loading)
+
+    if state == :disabled, do: socket, else: update(socket, :summaries, &Map.put(&1, i, state))
+  end
+
+  defp summary_state(socket, version_id, i, text, live?) do
+    cond do
+      summary = Summaries.get(version_id, i, text) ->
+        {:ok, summary.summary}
+
+      not live? ->
+        :loading
+
+      RateLimit.hit({:summaries, socket.assigns.remote_ip}, @visitor_limit, @hour) == :limited ->
+        :limited
+
+      true ->
+        requested(Summaries.request(version_id, i, text))
+    end
+  end
+
+  defp keep_listening(socket, topic, true), do: assign(socket, :summary_topics, [topic])
+
+  defp keep_listening(socket, topic, false) do
+    Phoenix.PubSub.unsubscribe(EverydayCitizen.PubSub, topic)
+    socket
+  end
+
+  defp requested({:cached, summary}), do: {:ok, summary.summary}
+  defp requested(:queued), do: :loading
+  defp requested(other), do: other
 
   @impl true
   def handle_event("toggle_follow", _params, socket) do
@@ -128,8 +232,72 @@ defmodule EverydayCitizenWeb.BillLive do
     """
   end
 
+  attr :index, :integer, required: true
+  attr :state, :any, required: true
+  attr :prompt_url, :string, required: true
+
+  # The plain-English summary above a section's text (labeled as AI-written).
+  defp section_summary(assigns) do
+    ~H"""
+    <div
+      id={"summary-#{@index}"}
+      class="mx-4 lg:mx-7 mb-3 px-4 py-3 rounded-xl bg-floor-ground flex flex-col gap-1.5"
+    >
+      <p class="m-0 text-[12px] font-semibold uppercase tracking-wide text-floor-muted">
+        In plain English
+      </p>
+      <%= case @state do %>
+        <% {:ok, text} -> %>
+          <div class="text-[15px] leading-relaxed text-floor-ink flex flex-col gap-1.5">
+            <%= for part <- summary_parts(text) do %>
+              <ul :if={match?({:list, _}, part)} class="m-0 pl-5 list-disc flex flex-col gap-1">
+                <li :for={item <- elem(part, 1)}>{item}</li>
+              </ul>
+              <p :if={match?({:para, _}, part)} class="m-0">{elem(part, 1)}</p>
+            <% end %>
+          </div>
+          <p class="m-0 text-[12px] text-floor-muted">
+            Written by AI from the text below; it can be wrong.
+            <a href={@prompt_url} class="underline">How it's written</a>
+          </p>
+        <% :loading -> %>
+          <p class="m-0 text-[14px] text-floor-muted">Writing a plain-English summary…</p>
+        <% :paused -> %>
+          <p class="m-0 text-[14px] text-floor-muted">
+            Plain-English summaries are paused for today.
+          </p>
+        <% :limited -> %>
+          <p class="m-0 text-[14px] text-floor-muted">
+            You've opened many sections; summaries will be back within the hour.
+          </p>
+        <% :too_long -> %>
+          <p class="m-0 text-[14px] text-floor-muted">This section is too long to summarize.</p>
+        <% _unavailable -> %>
+          <p class="m-0 text-[14px] text-floor-muted">A summary isn't available right now.</p>
+      <% end %>
+    </div>
+    """
+  end
+
+  # Paragraphs on blank lines; consecutive lines starting "- " become one list.
+  defp summary_parts(text) do
+    text
+    |> String.split(~r/\n\s*\n/)
+    |> Enum.flat_map(fn chunk ->
+      chunk
+      |> String.split("\n", trim: true)
+      |> Enum.chunk_by(&String.starts_with?(&1, "- "))
+      |> Enum.map(fn
+        ["- " <> _ | _] = items -> {:list, Enum.map(items, &String.trim_leading(&1, "- "))}
+        lines -> {:para, Enum.join(lines, " ")}
+      end)
+    end)
+  end
+
   @impl true
   def render(assigns) do
+    assigns = assign(assigns, :prompt_url, @prompt_url)
+
     ~H"""
     <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>
       <%!-- From lg the band's white runs edge to edge (the ::before), past the
@@ -390,7 +558,12 @@ defmodule EverydayCitizenWeb.BillLive do
                     </span>
                     <span aria-hidden="true" class="text-floor-muted">{toggle(open?(@open, i))}</span>
                   </.link>
-                  <%!-- M3 puts each section's plain-language summary above its text --%>
+                  <.section_summary
+                    :if={open?(@open, i) and Map.has_key?(@summaries, i)}
+                    index={i}
+                    state={@summaries[i]}
+                    prompt_url={@prompt_url}
+                  />
                   <div
                     :if={open?(@open, i)}
                     class="section-text px-4 lg:px-7 pb-4 lg:pb-7 font-serif text-[16px] leading-[1.6] lg:text-[17px] lg:leading-[1.65] flex flex-col gap-2.5"

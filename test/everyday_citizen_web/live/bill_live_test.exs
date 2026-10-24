@@ -1,6 +1,8 @@
 defmodule EverydayCitizenWeb.BillLiveTest do
   use EverydayCitizenWeb.ConnCase, async: true
 
+  use Oban.Testing, repo: EverydayCitizen.Repo
+
   import Phoenix.LiveViewTest
   import EverydayCitizen.AccountsFixtures
 
@@ -313,6 +315,109 @@ defmodule EverydayCitizenWeb.BillLiveTest do
       html = view |> element("#follow-bill") |> render_click()
       assert html =~ "Your daily email is off"
       assert has_element?(view, ~s(a[href="/users/settings"]))
+    end
+  end
+
+  describe "plain-English summaries" do
+    setup do
+      add_versions!()
+      bill = EverydayCitizen.Legislation.get_bill("federal", "119-s-5")
+      version = EverydayCitizen.Legislation.get_version(bill, "es")
+      section = Enum.at(EverydayCitizen.BillPage.sections(bill, "es"), 1)
+      %{version: version, text: EverydayCitizen.Summaries.section_text(section)}
+    end
+
+    defp cache!(version, text, summary) do
+      {:ok, _} =
+        EverydayCitizen.Summaries.put(version.id, 1, text, %{
+          summary: summary,
+          model: "claude-haiku-5-5"
+        })
+    end
+
+    test "an opened section shows its cached summary above the text, labeled as AI-written", %{
+      conn: conn,
+      version: v,
+      text: text
+    } do
+      cache!(v, text, "This section is about detention.")
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es&section=1")
+
+      assert has_element?(view, "#summary-1", "This section is about detention.")
+      assert has_element?(view, "#summary-1", "Written by AI")
+
+      assert has_element?(
+               view,
+               ~s(#summary-1 a[href="https://github.com/StephenTurley/everydaycitizen.vote/blob/main/priv/prompts/section_summary.v1.md"])
+             )
+
+      assert render(view) =~ ~r/id="summary-1".*Deeper\./s
+    end
+
+    test "an uncached section shows it is being written, then the summary when it lands", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es&section=1")
+
+      assert has_element?(view, "#summary-1", "Writing a plain-English summary")
+      assert [_job] = all_enqueued(worker: EverydayCitizen.Jobs.SummarizeSection)
+
+      send(view.pid, {:section_summary, 1, {:ok, "Now it is explained."}})
+      assert has_element?(view, "#summary-1", "Now it is explained.")
+    end
+
+    test "a summary paused by the day's budget says so", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es&section=1")
+      send(view.pid, {:section_summary, 1, {:error, :paused}})
+      assert has_element?(view, "#summary-1", "paused for today")
+    end
+
+    test "the page listens before asking, so a summary finished in between is not missed", %{
+      conn: conn,
+      version: v
+    } do
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es&section=1")
+      # the page is subscribed to the section's topic by the time it renders
+      Phoenix.PubSub.broadcast(
+        EverydayCitizen.PubSub,
+        EverydayCitizen.Summaries.topic(v.id, 1),
+        {:section_summary, 1, {:ok, "Arrived."}}
+      )
+
+      assert has_element?(view, "#summary-1", "Arrived.")
+    end
+
+    test "a summary that couldn't be written says so", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es&section=1")
+      send(view.pid, {:section_summary, 1, {:error, :unavailable}})
+      assert has_element?(view, "#summary-1", "A summary isn't available right now.")
+    end
+
+    test "Expand all shows cached summaries but asks for no new ones", %{
+      conn: conn,
+      version: v,
+      text: text
+    } do
+      cache!(v, text, "Cached already.")
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es&section=all")
+
+      assert has_element?(view, "#summary-1", "Cached already.")
+      refute has_element?(view, "#summary-0")
+      assert [] = all_enqueued(worker: EverydayCitizen.Jobs.SummarizeSection)
+    end
+
+    test "summary text is shown as text, never as HTML", %{conn: conn, version: v, text: text} do
+      cache!(v, text, "<script>alert(1)</script> and more")
+      {:ok, _view, html} = live(conn, ~p"/bills/119-s-5?version=es&section=1")
+
+      assert html =~ "&lt;script&gt;alert(1)&lt;/script&gt;"
+      refute html =~ "<script>alert(1)</script>"
+    end
+
+    test "a summary in short points shows as a list", %{conn: conn, version: v, text: text} do
+      cache!(v, text, "- First point.\n- Second point.")
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es&section=1")
+      assert has_element?(view, "#summary-1 li", "Second point.")
     end
   end
 end

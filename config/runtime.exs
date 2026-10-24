@@ -23,6 +23,25 @@ config :sentry,
     oban: [should_report_error_callback: &EverydayCitizen.SentryJobs.report_error?/2]
   ]
 
+# Claude for plain-English section summaries: an API key in development (and in
+# production until Workload Identity Federation is set up). Without credentials
+# summaries are off.
+if config_env() != :test do
+  config :everyday_citizen, :anthropic_api_key, System.get_env("ANTHROPIC_API_KEY")
+
+  # Workload Identity Federation (production): set these four IDs from the
+  # Claude Console's federation rule and no API key is needed. Identifiers, not
+  # secrets. Fly signs the machine's identity token (issuer
+  # https://oidc.fly.io/<org>).
+  config :everyday_citizen, :anthropic_federation, %{
+    rule_id: System.get_env("ANTHROPIC_FEDERATION_RULE_ID"),
+    organization_id: System.get_env("ANTHROPIC_ORGANIZATION_ID"),
+    service_account_id: System.get_env("ANTHROPIC_SERVICE_ACCOUNT_ID"),
+    workspace_id: System.get_env("ANTHROPIC_WORKSPACE_ID"),
+    audience: "https://api.anthropic.com"
+  }
+end
+
 if System.get_env("PHX_SERVER") do
   config :everyday_citizen, EverydayCitizenWeb.Endpoint, server: true
 end

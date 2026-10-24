@@ -1,0 +1,57 @@
+defmodule EverydayCitizen.Summaries.ClaudeTest do
+  use ExUnit.Case, async: true
+
+  alias EverydayCitizen.Summaries.Claude
+
+  defp reply(conn, status, body) do
+    conn
+    |> Plug.Conn.put_resp_content_type("application/json")
+    |> Plug.Conn.send_resp(status, Jason.encode!(body))
+  end
+
+  test "sends the published prompt and the section as data, and returns the summary" do
+    test = self()
+
+    Req.Test.stub(EverydayCitizen.Claude, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      send(test, {:request, conn.request_path, Map.new(conn.req_headers), Jason.decode!(body)})
+
+      reply(conn, 200, %{
+        "model" => "claude-haiku-5-5",
+        "content" => [%{"type" => "text", "text" => "This section names the bill."}],
+        "usage" => %{"input_tokens" => 210, "output_tokens" => 12}
+      })
+    end)
+
+    assert {:ok,
+            %{
+              summary: "This section names the bill.",
+              model: "claude-haiku-5-5",
+              input_tokens: 210,
+              output_tokens: 12
+            }} = Claude.summarize("Sec. 1. Short title\nThis Act may be cited as the Sample Act.")
+
+    assert_received {:request, "/v1/messages", headers, body}
+    assert headers["x-api-key"] == "test-anthropic-key"
+    assert headers["anthropic-version"] == "2023-06-01"
+    assert body["model"] == "claude-haiku-5-5"
+    assert body["temperature"] == 0
+    assert body["max_tokens"] == 400
+
+    assert body["system"] ==
+             File.read!(
+               Application.app_dir(:everyday_citizen, "priv/prompts/section_summary.v1.md")
+             )
+
+    assert [%{"role" => "user", "content" => content}] = body["messages"]
+    assert content =~ "<section>\nSec. 1. Short title"
+    assert content =~ "</section>"
+  end
+
+  test "an error status is returned, not raised" do
+    for status <- [429, 500, 401] do
+      Req.Test.stub(EverydayCitizen.Claude, &reply(&1, status, %{"type" => "error"}))
+      assert {:error, {:http_status, ^status}} = Claude.summarize("text")
+    end
+  end
+end
