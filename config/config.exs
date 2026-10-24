@@ -41,7 +41,8 @@ config :the_floor, TheFloor.Mailer, adapter: Swoosh.Adapters.Local
 
 config :the_floor, Oban,
   repo: TheFloor.Repo,
-  queues: [ingest: 4, text: 2],
+  # bulk: the first-run bulk load's chunk jobs (Federal.BulkBatch)
+  queues: [ingest: 4, text: 2, bulk: 4],
   plugins: [
     # Rescue jobs left executing by a crashed node; prune finished jobs after a week.
     # rescue_after must exceed every worker's timeout (the bulk bill and text

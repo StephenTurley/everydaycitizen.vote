@@ -27,12 +27,16 @@ defmodule TheFloor.Adapters.Federal.BillWriter do
   def write(%{detail: {detail, detail_src}, subjects: subjects} = parts, run_id) do
     id = Normalize.external_id(detail)
 
-    with {:ok, _} <- Ingest.write(Normalize.bill(detail, subjects, detail_src), run_id),
-         :ok <- write_actions(parts.actions, id, run_id),
-         :ok <- write_sponsorships(detail, detail_src, parts.cosponsors, id, run_id),
-         :ok <- write_versions(parts.text, id, run_id) do
-      {:ok, id}
-    end
+    # One transaction, so a bill is never stored without its actions and sponsors
+    # (the bulk load skips bills already stored).
+    Ingest.atomically(fn ->
+      with {:ok, _} <- Ingest.write(Normalize.bill(detail, subjects, detail_src), run_id),
+           :ok <- write_actions(parts.actions, id, run_id),
+           :ok <- write_sponsorships(detail, detail_src, parts.cosponsors, id, run_id),
+           :ok <- write_versions(parts.text, id, run_id) do
+        {:ok, id}
+      end
+    end)
   end
 
   defp write_actions({[], _}, _id, _run_id), do: :ok

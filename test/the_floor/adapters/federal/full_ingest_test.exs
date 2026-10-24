@@ -84,9 +84,10 @@ defmodule TheFloor.Adapters.Federal.FullIngestTest do
 
   defp drain!(pass) do
     ingest = Oban.drain_queue(queue: :ingest, with_scheduled: true)
+    bulk = Oban.drain_queue(queue: :bulk, with_scheduled: true)
     text = Oban.drain_queue(queue: :text, with_scheduled: true)
 
-    if Enum.all?([ingest, text], &(Map.values(&1) |> Enum.sum() == 0)),
+    if Enum.all?([ingest, bulk, text], &(Map.values(&1) |> Enum.sum() == 0)),
       do: :ok,
       else: drain!(pass + 1)
   end

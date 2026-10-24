@@ -36,6 +36,19 @@ defmodule TheFloor.Adapters.Federal.BulkTest do
     assert %DateTime{} = a.fetched_at
   end
 
+  test "count_entries counts xml entries; reduce_entries can take a slice of them" do
+    stub(200, zip_bytes())
+
+    assert {:ok, {2, names}} =
+             Bulk.with_zip(@url, fn zip ->
+               slice = Bulk.reduce_entries(zip, [], &[elem(&1, 0) | &2], range: {1, 5})
+               {Bulk.count_entries(zip), slice}
+             end)
+
+    # offset 1 skips A.xml; a limit past the end just stops
+    assert names == ["B.xml"]
+  end
+
   test "with_zip deletes the temp file even when fun raises" do
     stub(200, zip_bytes())
     parent = self()

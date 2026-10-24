@@ -28,6 +28,9 @@ config :swoosh, :api_client, false
 
 config :the_floor, Oban, testing: :manual
 
+# One bulk entry per chunk job, so tests exercise splitting
+config :the_floor, :bulk_chunk_size, 1
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 

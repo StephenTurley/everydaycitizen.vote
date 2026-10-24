@@ -21,4 +21,19 @@ defmodule TheFloor.Ingest do
 
   def write(%Records.Vote{} = r, run_id), do: Writer.Votes.write(r, run_id)
   def write(%Records.Event{} = r, run_id), do: Writer.Calendar.write(r, run_id)
+
+  @doc """
+  Runs `fun` in one database transaction: its writes are kept when it returns
+  `{:ok, value}` and all undone when it returns `{:error, reason}`, so a record
+  written in several parts is never left half-written.
+  """
+  @spec atomically((-> {:ok, term()} | {:error, term()})) :: {:ok, term()} | {:error, term()}
+  def atomically(fun) do
+    TheFloor.Repo.transaction(fn ->
+      case fun.() do
+        {:ok, value} -> value
+        {:error, reason} -> TheFloor.Repo.rollback(reason)
+      end
+    end)
+  end
 end

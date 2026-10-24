@@ -5,13 +5,16 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBills do
   detail job was discarded, or that offset paging skipped while update dates
   shifted, is listed again; re-syncing a bill is idempotent.
 
-  The first run (no cursor) loads every bill from GovInfo's BILLSTATUS bulk zips
-  instead of ~6 API requests per bill, then enqueues one `BackfillBillText`. An
-  entry that fails to parse or write falls back to a `SyncBill` job. A missing
-  zip (404, or GovInfo's HTML error page) is skipped, since a bill type may have
-  no bills yet; a run that writes no bills at all fails, so the cursor stays unset
-  and the next run tries the bulk path again. Bulk files lag the API by hours;
-  the next run's 2-day overlap picks up what changed since.
+  The first run (no succeeded `sync_bills` yet) loads every bill from GovInfo's
+  BILLSTATUS bulk zips instead of ~6 API requests per bill: it counts each type's
+  zip and queues `BulkBillsChunk` jobs of `BulkBatch.chunk_size/0` bills, then
+  waits (snoozes) until they finish (`Federal.BulkBatch`). Chunks skip bills
+  already stored unchanged and fall back to `SyncBill` for unreadable entries. A
+  missing zip is skipped (a bill type may have no bills yet). When every chunk is
+  done it records `sync_bills` and enqueues `BackfillBillText`; a load that wrote
+  no bills, or one whose chunk was discarded, fails, so the cursor stays unset and
+  the next run loads again (cheaply: unchanged bills are skipped). Bulk files lag
+  the API by hours; the next run's 2-day overlap picks up what changed since.
 
   Snoozes until the congress session is stored and a members sync has succeeded
   (sponsorships need people).
@@ -20,16 +23,15 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBills do
 
   require Logger
 
-  alias TheFloor.Adapters.Federal.{BillWriter, Bulk, CongressGov, Job, Prerequisites}
-  alias TheFloor.Adapters.Federal.Jobs.{BackfillBillText, SyncBill}
-  alias TheFloor.Adapters.Federal.Normalize.BillStatus
+  alias TheFloor.Adapters.Federal.{Bulk, BulkBatch, CongressGov, Job, Prerequisites}
+  alias TheFloor.Adapters.Federal.Jobs.{BackfillBillText, BulkBillsChunk, SyncBill}
+  alias TheFloor.Provenance
 
   @overlap_seconds 2 * 86_400
-  @bulk "https://www.govinfo.gov/bulkdata/BILLSTATUS"
   @types ~w(hr s hjres sjres hconres sconres hres sres)
 
-  # The bulk load runs for minutes; it must end before Lifeline (2 h) would
-  # treat it as orphaned and start it again.
+  # Counting the zips takes minutes; it must end before Lifeline (2 h) would
+  # treat the job as orphaned and start it again.
   @impl Oban.Worker
   def timeout(_job), do: :timer.minutes(90)
 
@@ -47,10 +49,10 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBills do
   end
 
   defp sync(congress) do
-    Job.run("sync_bills", fn
-      run_id, nil -> bulk(congress, run_id)
-      run_id, cursor -> list(congress, run_id, cursor)
-    end)
+    case Provenance.last_succeeded_run("federal", "sync_bills") do
+      nil -> bulk(congress)
+      _ -> Job.run("sync_bills", fn run_id, cursor -> list(congress, run_id, cursor) end)
+    end
   end
 
   defp list(congress, run_id, cursor) do
@@ -67,90 +69,53 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBills do
     {:ok, %{enqueued: count}}
   end
 
-  defp bulk(congress, run_id) do
-    stats =
-      Enum.reduce(@types, %{source: "bulk", written: 0, fallback: 0, missing_zips: []}, fn type,
-                                                                                           acc ->
-        bulk_zip(congress, type, run_id, acc)
-      end)
-
-    case stats do
-      {:error, _} = error ->
-        error
-
-      %{written: 0} ->
-        {:error, :no_bulk_bills}
-
-      stats ->
-        Oban.insert!(BackfillBillText.new(%{"congress" => congress}))
-        {:ok, stats}
-    end
+  # First run: the bulk load, as chunk jobs (`BulkBatch`). `sync_bills` is recorded
+  # only once every chunk has finished, so the cursor is set only after a complete
+  # load; until then each run of this job just waits for the chunks.
+  defp bulk(congress) do
+    BulkBatch.run(
+      %{batch_job: "bulk_bills", chunk_job: "bulk_bills_chunk", chunk_worker: BulkBillsChunk},
+      fn _batch -> fan_out(congress) end,
+      &finalize(congress, &1)
+    )
   end
 
-  defp bulk_zip(_congress, _type, _run_id, {:error, _} = error), do: error
+  # One chunk per `BulkBatch.chunk_size/0` entries of each type's zip.
+  defp fan_out(congress) do
+    Enum.reduce_while(@types, {:ok, []}, fn type, {:ok, chunks} ->
+      case type_chunks(congress, type) do
+        {:ok, more} -> {:cont, {:ok, chunks ++ more}}
+        error -> {:halt, error}
+      end
+    end)
+  end
 
-  defp bulk_zip(congress, type, run_id, acc) do
-    url = "#{@bulk}/#{congress}/#{type}/BILLSTATUS-#{congress}-#{type}.zip"
-
-    case Bulk.with_zip(
-           url,
-           &Bulk.reduce_entries(&1, acc, fn e, a -> entry(e, a, congress, run_id) end)
-         ) do
-      {:ok, acc} ->
-        acc
+  defp type_chunks(congress, type) do
+    case Bulk.with_zip(BulkBillsChunk.zip_url(congress, type), &Bulk.count_entries/1) do
+      {:ok, count} ->
+        {:ok,
+         Enum.map(
+           BulkBatch.slices(count),
+           &Map.merge(&1, %{"congress" => congress, "type" => type})
+         )}
 
       {:error, reason} when reason in [:not_a_zip, {:http_status, 404}] ->
-        Logger.warning("sync_bills: no bulk zip at #{url}: #{inspect(reason)}")
-        %{acc | missing_zips: [Path.basename(url) | acc.missing_zips]}
+        Logger.warning("sync_bills: no bulk zip for #{congress} #{type}: #{inspect(reason)}")
+        {:ok, []}
 
       {:error, reason} ->
-        {:error, {:bulk_zip, Path.basename(url), reason}}
+        {:error, {:bulk_zip, type, reason}}
     end
   end
 
-  # Any failure on one entry, raised or returned, falls back to the API for that
-  # bill, so a single bad file never blocks the backfill.
-  defp entry({name, xml, source}, acc, congress, run_id) do
-    case write_entry(xml, source, run_id) do
-      :ok ->
-        %{acc | written: acc.written + 1}
-
-      error ->
-        Logger.warning("sync_bills: bulk entry #{name} failed (#{inspect(error)}); using the API")
-        fallback(name, congress, run_id, acc)
-    end
-  end
-
-  defp write_entry({:error, _} = error, _source, _run_id), do: error
-
-  defp write_entry(xml, source, run_id) do
-    with {:ok, parts} <- BillStatus.parse(xml),
-         {:ok, _id} <- BillWriter.write(bulk_parts(parts, source), run_id) do
-      :ok
-    end
-  rescue
-    e -> {:exception, Exception.message(e)}
-  end
-
-  defp bulk_parts(parts, source) do
-    %{
-      detail: {parts.detail, source},
-      subjects: parts.subjects,
-      actions: {parts.actions, source},
-      cosponsors: {parts.cosponsors, source},
-      text: {parts.text, source}
-    }
-  end
-
-  # `BILLSTATUS-119hr152.xml` names the bill when its contents cannot be read.
-  defp fallback(name, congress, run_id, acc) do
-    case Regex.run(~r/^BILLSTATUS-\d+([a-z]+)(\d+)\.xml$/, name) do
-      [_, type, number] ->
-        enqueue(congress, %{"type" => type, "number" => number}, run_id)
-        %{acc | fallback: acc.fallback + 1}
-
-      _ ->
-        acc
+  defp finalize(congress, stats) do
+    if Map.get(stats, "written", 0) + Map.get(stats, "unchanged", 0) == 0 do
+      {:error, :no_bulk_bills}
+    else
+      Job.run("sync_bills", fn _run_id, _cursor ->
+        Oban.insert!(BackfillBillText.new(%{"congress" => congress}))
+        {:ok, Map.put(stats, "source", "bulk")}
+      end)
     end
   end
 

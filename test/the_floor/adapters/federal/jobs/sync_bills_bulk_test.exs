@@ -4,7 +4,14 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillsBulkTest do
 
   import Ecto.Query
 
-  alias TheFloor.Adapters.Federal.Jobs.{BackfillBillText, SyncBill, SyncBills, SyncBillText}
+  alias TheFloor.Adapters.Federal.Jobs.{
+    BackfillBillText,
+    BulkBillsChunk,
+    SyncBill,
+    SyncBills,
+    SyncBillText
+  }
+
   alias TheFloor.Adapters.Federal.Jobs.SyncCongress
   alias TheFloor.Ingest
   alias TheFloor.Ingest.Records.{Person, SourceRef}
@@ -74,7 +81,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillsBulkTest do
         ])
     })
 
-    assert :ok = perform_job(SyncBills, %{"congress" => 119})
+    assert :ok = run_bulk(SyncBills, %{"congress" => 119})
     refute_received :api_listing
 
     bill = Bill |> Repo.get_by!(external_id: "119-hr-22") |> Repo.preload(:source)
@@ -117,18 +124,87 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillsBulkTest do
         ])
     })
 
-    assert :ok = perform_job(SyncBills, %{"congress" => 119})
+    assert :ok = run_bulk(SyncBills, %{"congress" => 119})
     assert Repo.get_by(Bill, external_id: "119-hr-22")
 
     assert [%{args: %{"type" => "hr", "number" => "8"}}] = all_enqueued(worker: SyncBill)
     assert Provenance.last_succeeded_run("federal", "sync_bills").stats["fallback"] == 1
   end
 
+  test "the load is split into chunk jobs; a coordinator run meanwhile only waits" do
+    stub(%{
+      @hr_zip =>
+        zip([
+          {"BILLSTATUS-119hr22.xml", File.read!(@bulk_fixture)},
+          {"BILLSTATUS-119hr7.xml", "<billStatus><bill><unclosed>"}
+        ])
+    })
+
+    assert {:snooze, _} = perform_job(SyncBills, %{"congress" => 119})
+    assert {:snooze, _} = perform_job(SyncBills, %{"congress" => 119})
+
+    # chunk size 1 in test: one chunk per entry of the hr zip, queued once
+    assert [%{args: %{"type" => "hr", "offset" => 0}}, %{args: %{"type" => "hr", "offset" => 1}}] =
+             all_enqueued(worker: BulkBillsChunk) |> Enum.sort_by(& &1.args["offset"])
+
+    refute Provenance.last_succeeded_run("federal", "sync_bills")
+  end
+
+  test "a chunk run again skips bills already stored unchanged" do
+    stub(%{@hr_zip => zip([{"BILLSTATUS-119hr22.xml", File.read!(@bulk_fixture)}])})
+    args = %{"congress" => 119, "type" => "hr", "offset" => 0, "limit" => 1, "batch" => 1}
+
+    assert :ok = perform_job(BulkBillsChunk, args)
+    assert :ok = perform_job(BulkBillsChunk, args)
+
+    assert [first, second] =
+             Repo.all(
+               from r in Provenance.IngestRun,
+                 where: r.job == "bulk_bills_chunk",
+                 order_by: r.id,
+                 select: r.stats
+             )
+
+    assert {first["written"], first["unchanged"]} == {1, 0}
+    assert {second["written"], second["unchanged"]} == {0, 1}
+  end
+
+  test "a chunk that keeps failing fails the load, and the next run starts a new one" do
+    bytes = zip([{"BILLSTATUS-119hr22.xml", File.read!(@bulk_fixture)}])
+    counted = :counters.new(1, [])
+
+    # The first download (counting) works; every chunk download then fails.
+    Req.Test.stub(TheFloor.Federal, fn conn ->
+      cond do
+        conn.host == "api.congress.gov" ->
+          Plug.Conn.send_resp(conn, 200, File.read!("#{@congress_gov}/congress_119.json"))
+
+        conn.request_path == @hr_zip and :counters.get(counted, 1) == 0 ->
+          :counters.add(counted, 1, 1)
+          Plug.Conn.send_resp(conn, 200, bytes)
+
+        conn.request_path == @hr_zip ->
+          Plug.Conn.send_resp(conn, 503, "busy")
+
+        true ->
+          Plug.Conn.send_resp(conn, 404, "nope")
+      end
+    end)
+
+    assert {:error, {:bulk_chunks_failed, 1}} = run_bulk(SyncBills, %{"congress" => 119})
+    refute Provenance.last_succeeded_run("federal", "sync_bills")
+
+    # once GovInfo answers again, a new batch is started (and the chunk queued again)
+    stub(%{@hr_zip => bytes})
+    assert {:snooze, _} = perform_job(SyncBills, %{"congress" => 119})
+    assert length(all_enqueued(worker: BulkBillsChunk)) == 1
+  end
+
   test "a later run uses the API listing with the cursor" do
     {:ok, run} = Provenance.start_run("federal", "sync_bills")
     {:ok, _} = Provenance.finish_run(run, :succeeded, %{}, nil)
 
-    assert :ok = perform_job(SyncBills, %{"congress" => 119})
+    assert :ok = run_bulk(SyncBills, %{"congress" => 119})
     assert_received :api_listing
     refute_received {:bulk, _}
   end
@@ -142,5 +218,18 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillsBulkTest do
     Repo.delete_all(where(Provenance.IngestRun, job: "sync_members"))
     assert {:snooze, 300} = perform_job(SyncBills, %{"congress" => 119})
     refute_received {:bulk, _}
+  end
+
+  # Runs a bulk coordinator to the end: while it waits (snoozes) for its chunk
+  # jobs, run them, then run it again.
+  defp run_bulk(worker, args, passes \\ 6) do
+    case perform_job(worker, args) do
+      {:snooze, _} when passes > 0 ->
+        Oban.drain_queue(queue: :bulk, with_scheduled: true)
+        run_bulk(worker, args, passes - 1)
+
+      other ->
+        other
+    end
   end
 end

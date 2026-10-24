@@ -86,7 +86,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.BackfillBillTextTest do
   test "stores text for versions in the zip and falls back for the rest" do
     stub(zip([{"BILLS-119hr22ih.xml", File.read!(@fixture)}, {"BILLS-119hr999ih.xml", "<x/>"}]))
 
-    assert :ok = perform_job(BackfillBillText, %{"congress" => 119})
+    assert :ok = run_bulk(BackfillBillText, %{"congress" => 119})
 
     ih = Repo.preload(version("ih"), :text_source)
     assert ih.plain_text =~ "Short title"
@@ -112,7 +112,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.BackfillBillTextTest do
       ])
     )
 
-    assert :ok = perform_job(BackfillBillText, %{"congress" => 119})
+    assert :ok = run_bulk(BackfillBillText, %{"congress" => 119})
 
     assert is_nil(version("ih").text_source_id)
     assert is_nil(version("eh").text_source_id)
@@ -128,8 +128,21 @@ defmodule TheFloor.Adapters.Federal.Jobs.BackfillBillTextTest do
       ])
     )
 
-    assert :ok = perform_job(BackfillBillText, %{"congress" => 119})
+    assert :ok = run_bulk(BackfillBillText, %{"congress" => 119})
     assert version("ih").text_source_id
     assert [%{args: %{"code" => "eh"}}] = all_enqueued(worker: SyncBillText)
+  end
+
+  # Runs a bulk coordinator to the end: while it waits (snoozes) for its chunk
+  # jobs, run them, then run it again.
+  defp run_bulk(worker, args, passes \\ 6) do
+    case perform_job(worker, args) do
+      {:snooze, _} when passes > 0 ->
+        Oban.drain_queue(queue: :bulk, with_scheduled: true)
+        run_bulk(worker, args, passes - 1)
+
+      other ->
+        other
+    end
   end
 end

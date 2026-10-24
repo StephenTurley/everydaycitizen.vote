@@ -56,33 +56,48 @@ defmodule TheFloor.Adapters.Federal.Bulk do
   # GovInfo answers a missing file with HTTP 200 and an HTML page.
   defp ensure_not_html(raw), do: if(HTTP.html?(raw), do: {:error, :not_a_zip}, else: :ok)
 
+  @doc "Number of `.xml` entries in the zip."
+  @spec count_entries(Zip.t()) :: non_neg_integer()
+  def count_entries(%Zip{} = zip), do: zip |> xml_names() |> length()
+
   @doc """
   Folds `fun.({name, bytes, source}, acc)` over the zip's `.xml` entries, in
   archive order, reading one entry into memory at a time. An entry that cannot be
-  read is passed as `{name, {:error, reason}, nil}`.
+  read is passed as `{name, {:error, reason}, nil}`. With `range: {offset, limit}`
+  only that slice of the entries is read, so a large zip can be split across jobs.
   """
   @spec reduce_entries(
           Zip.t(),
           acc,
-          ({String.t(), binary() | {:error, term()}, SourceRef.t() | nil}, acc -> acc)
+          ({String.t(), binary() | {:error, term()}, SourceRef.t() | nil}, acc -> acc),
+          keyword()
         ) :: acc
         when acc: term()
-  def reduce_entries(%Zip{handle: handle} = zip, acc, fun) do
+  def reduce_entries(%Zip{handle: handle} = zip, acc, fun, opts \\ []) do
+    names =
+      case opts[:range] do
+        nil -> xml_names(zip)
+        {offset, limit} -> zip |> xml_names() |> Enum.slice(offset, limit)
+      end
+
+    Enum.reduce(names, acc, fn name, acc ->
+      case :zip.zip_get(String.to_charlist(name), handle) do
+        {:ok, {_, bytes}} ->
+          source = SourceRef.new(zip.base_url <> Path.basename(name), bytes, zip.fetched_at)
+          fun.({Path.basename(name), bytes, source}, acc)
+
+        {:error, reason} ->
+          fun.({Path.basename(name), {:error, reason}, nil}, acc)
+      end
+    end)
+  end
+
+  defp xml_names(%Zip{handle: handle}) do
     {:ok, listing} = :zip.zip_list_dir(handle)
 
     for {:zip_file, name, _info, _comment, _offset, _size} <- listing,
         name = List.to_string(name),
         String.ends_with?(name, ".xml"),
-        reduce: acc do
-      acc ->
-        case :zip.zip_get(String.to_charlist(name), handle) do
-          {:ok, {_, bytes}} ->
-            source = SourceRef.new(zip.base_url <> Path.basename(name), bytes, zip.fetched_at)
-            fun.({Path.basename(name), bytes, source}, acc)
-
-          {:error, reason} ->
-            fun.({Path.basename(name), {:error, reason}, nil}, acc)
-        end
-    end
+        do: name
   end
 end
