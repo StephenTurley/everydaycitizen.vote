@@ -18,7 +18,7 @@ defmodule TheFloor.Adapters.Federal.Normalize.SenateVoteview do
     passed was broken by the VP voting yea, so the yea total gets one more (no
     position: the VP is not a senator). A tie that failed is left as counted.
   """
-  alias TheFloor.Adapters.Federal.{BillId, VoteSupport}
+  alias TheFloor.Adapters.Federal.{BillId, VoteClassifier, VoteSupport}
   alias TheFloor.Ingest.Records.{SourceRef, Vote}
 
   NimbleCSV.define(__MODULE__.CSV, separator: ",", escape: "\"")
@@ -80,6 +80,7 @@ defmodule TheFloor.Adapters.Federal.Normalize.SenateVoteview do
       external_id: "senate-#{congress}-#{session}-#{roll}",
       identifier: "Roll Call #{roll}",
       question: VoteSupport.blank_to_nil(row["vote_question"]),
+      classification: VoteClassifier.classify(row["vote_question"]),
       result: result,
       passed: passed,
       voted_at: midnight_eastern(row["date"]),

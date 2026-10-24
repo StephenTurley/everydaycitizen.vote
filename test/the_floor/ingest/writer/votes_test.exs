@@ -65,6 +65,7 @@ defmodule TheFloor.Ingest.Writer.VotesTest do
         external_id: "lower-119-1-5",
         identifier: "Roll 5",
         question: "On Passage",
+        classification: "passage",
         result: "Passed",
         passed: true,
         voted_at: ~U[2026-02-01 15:00:00Z],
@@ -82,6 +83,11 @@ defmodule TheFloor.Ingest.Writer.VotesTest do
     assert v.bill_id
     assert v.yea_count == 2
     assert Repo.aggregate(VotePosition, :count) == 2
+  end
+
+  test "stores the vote's type" do
+    write!(vote())
+    assert Repo.one!(Vote).classification == "passage"
   end
 
   test "keeps positions for unknown people" do

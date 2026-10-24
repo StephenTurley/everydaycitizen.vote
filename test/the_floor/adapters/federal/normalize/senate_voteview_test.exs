@@ -36,6 +36,7 @@ defmodule TheFloor.Adapters.Federal.Normalize.SenateVoteviewTest do
     assert vote.result == "Cloture Motion Agreed to"
     assert vote.passed == true
     assert vote.bill_external_id == "119-s-5"
+    assert vote.classification == "cloture"
     assert vote.source == @src
   end
 

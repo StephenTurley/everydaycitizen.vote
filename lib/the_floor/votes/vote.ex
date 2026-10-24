@@ -5,12 +5,18 @@ defmodule TheFloor.Votes.Vote do
 
   @type t :: %__MODULE__{}
 
+  @classifications ~w(passage cloture amendment nomination procedural other)
+
+  @doc "The normalized vote types."
+  def classifications, do: @classifications
+
   schema "votes" do
     field :external_id, :string
     # The source's bill reference (bill external id), kept when the bill is unknown.
     field :bill_ref, :string
     field :identifier, :string
     field :question, :string
+    field :classification, :string, default: "other"
     field :result, :string
     field :passed, :boolean
     field :voted_at, :utc_datetime_usec
@@ -36,6 +42,7 @@ defmodule TheFloor.Votes.Vote do
       :external_id,
       :identifier,
       :question,
+      :classification,
       :result,
       :passed,
       :voted_at,
@@ -46,5 +53,6 @@ defmodule TheFloor.Votes.Vote do
       :source_id
     ])
     |> validate_required([:body_id, :session_id, :external_id, :voted_at, :source_id])
+    |> validate_inclusion(:classification, @classifications)
   end
 end

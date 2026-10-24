@@ -11,6 +11,7 @@ defmodule TheFloor.Adapters.Federal.Jobs do
     BackfillBillSummaries,
     Coverage,
     ReclassifyActions,
+    ReclassifyVotes,
     Relink,
     SyncBills,
     SyncCommitteeMeetings,
@@ -30,7 +31,8 @@ defmodule TheFloor.Adapters.Federal.Jobs do
   def on_demand do
     [
       {"reclassify_actions", ReclassifyActions, %{}},
-      {"bill_summaries", BackfillBillSummaries, %{}}
+      {"bill_summaries", BackfillBillSummaries, %{}},
+      {"reclassify_votes", ReclassifyVotes, %{}}
     ]
   end
 

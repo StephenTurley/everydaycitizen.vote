@@ -52,6 +52,7 @@ defmodule TheFloor.Ingest.Writer.Votes do
                external_id: r.external_id,
                identifier: r.identifier,
                question: r.question,
+               classification: r.classification || "other",
                result: r.result,
                passed: r.passed,
                voted_at: r.voted_at,

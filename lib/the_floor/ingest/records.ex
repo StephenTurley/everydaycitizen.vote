@@ -174,6 +174,7 @@ defmodule TheFloor.Ingest.Records do
       :external_id,
       :identifier,
       :question,
+      :classification,
       :result,
       :passed,
       :voted_at,

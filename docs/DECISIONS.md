@@ -135,3 +135,6 @@ The app machine is 1 GB (512 MB was killed decoding `legislators-historical.json
 
 ## 2026-10-24 — Official bill summaries stored, attributed and sanitized
 `bill_summaries` holds each bill's official summaries (one row per version code and action date), with an `author` the adapter sets ("Congressional Research Service" for federal), so the UI labels a summary by its author without knowing the jurisdiction. Summary HTML is reduced on write to `p ul ol li strong em b i br` without attributes (`TheFloor.Ingest.SafeHtml`), so it can be rendered as HTML safely. The API path fetches `/summaries` per bill; the bulk path reads them from BILLSTATUS. Bills stored before this are filled by the on-demand `bill_summaries` job (bulk chunks in summaries-only mode). On-demand jobs (`Jobs.on_demand/0`) run only by name, never in the full ingest.
+
+## 2026-10-24 — Votes carry a normalized type
+`votes.classification` is one of `passage cloture amendment nomination procedural other`, set by the adapter from the roll call's question (`Federal.VoteClassifier`; procedural motions are matched before amendments, so tabling an amendment is procedural). Pages use it to pick a bill's main vote per chamber (passage there, else the latest roll call). Stored votes are retyped by the on-demand `reclassify_votes` job.

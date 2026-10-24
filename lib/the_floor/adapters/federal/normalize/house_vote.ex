@@ -14,7 +14,7 @@ defmodule TheFloor.Adapters.Federal.Normalize.HouseVote do
   `voteCast`; those map to `present` (a vote was cast, but not yea/nay), the raw
   name is kept in `raw_option`, and the candidate totals are counted as `present`.
   """
-  alias TheFloor.Adapters.Federal.{BillId, VoteSupport}
+  alias TheFloor.Adapters.Federal.{BillId, VoteClassifier, VoteSupport}
   alias TheFloor.Ingest.Records.{SourceRef, Vote}
 
   @options %{
@@ -49,6 +49,7 @@ defmodule TheFloor.Adapters.Federal.Normalize.HouseVote do
       external_id: external_id(congress, session, roll),
       identifier: "Roll Call #{roll}",
       question: detail["voteQuestion"],
+      classification: VoteClassifier.classify(detail["voteQuestion"]),
       result: detail["result"],
       passed: VoteSupport.passed(detail["result"]),
       voted_at: parse_datetime(detail["startDate"]),
