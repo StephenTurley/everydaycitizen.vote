@@ -51,6 +51,18 @@ if config_env() == :dev do
 end
 
 if config_env() == :prod do
+  # Oban's node names the machine and the deploy's image, so a deploy's jobs are
+  # told apart from the previous deploy's, which TheFloor.ObanRescue releases at
+  # boot. (The release node name stays the machine id, for `rpc` and ssh.)
+  image_tag =
+    case String.split(System.get_env("FLY_IMAGE_REF", ""), ":") do
+      [_, tag] -> tag
+      _ -> "local"
+    end
+
+  config :the_floor, Oban, node: "#{System.get_env("FLY_MACHINE_ID", "machine")}-#{image_tag}"
+  config :the_floor, :rescue_orphaned_jobs, true
+
   # The deploy labels the image with the commit (`--image-label git-<sha>`), so
   # each Sentry event names the release that produced it.
   release_sha =
