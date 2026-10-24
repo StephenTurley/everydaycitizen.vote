@@ -96,7 +96,7 @@ defmodule EverydayCitizenWeb.UserLive.Login do
   @impl true
   def mount(_params, _session, socket) do
     socket =
-      assign(socket, :remote_ip, if(connected?(socket), do: remote_ip(socket), else: "unknown"))
+      assign(socket, :remote_ip, EverydayCitizenWeb.RemoteIp.from_socket(socket))
 
     email =
       Phoenix.Flash.get(socket.assigns.flash, :email) ||
@@ -172,20 +172,6 @@ defmodule EverydayCitizenWeb.UserLive.Login do
      socket
      |> put_flash(:info, "Check your email for a link to sign in.")
      |> push_navigate(to: ~p"/users/log-in")}
-  end
-
-  # The visitor's address for the request limit: Fly's X-Forwarded-For (first
-  # entry), else the socket peer.
-  defp remote_ip(socket) do
-    forwarded =
-      for {"x-forwarded-for", value} <- get_connect_info(socket, :x_headers) || [],
-          do: value |> String.split(",") |> hd() |> String.trim()
-
-    case {forwarded, get_connect_info(socket, :peer_data)} do
-      {[ip | _], _} -> ip
-      {[], %{address: address}} -> address |> :inet.ntoa() |> to_string()
-      _ -> "unknown"
-    end
   end
 
   # No challenge held: the socket reconnected mid-prompt, or a stray event.
