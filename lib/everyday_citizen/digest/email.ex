@@ -16,7 +16,7 @@ defmodule EverydayCitizen.Digest.Email do
 
     new()
     |> to(user.email)
-    |> from(Application.fetch_env!(:everyday_citizen, :mail_from))
+    |> EverydayCitizen.Mailer.sender()
     |> subject(subject(items))
     |> header("List-Unsubscribe", "<#{unsubscribe}>")
     |> header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click")
