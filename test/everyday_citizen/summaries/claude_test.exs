@@ -35,7 +35,7 @@ defmodule EverydayCitizen.Summaries.ClaudeTest do
     assert headers["x-api-key"] == "test-anthropic-key"
     assert headers["anthropic-version"] == "2023-06-01"
     assert body["model"] == "claude-haiku-5-5"
-    assert body["temperature"] == 0
+    refute Map.has_key?(body, "temperature")
     assert body["max_tokens"] == 400
 
     assert body["system"] ==
