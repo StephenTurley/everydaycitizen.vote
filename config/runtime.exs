@@ -23,6 +23,13 @@ config :sentry,
     oban: [should_report_error_callback: &EverydayCitizen.SentryJobs.report_error?/2]
   ]
 
+# Claude for plain-English section summaries: an API key in development (and in
+# production until Workload Identity Federation is set up). Without credentials
+# summaries are off.
+if config_env() != :test do
+  config :everyday_citizen, :anthropic_api_key, System.get_env("ANTHROPIC_API_KEY")
+end
+
 if System.get_env("PHX_SERVER") do
   config :everyday_citizen, EverydayCitizenWeb.Endpoint, server: true
 end

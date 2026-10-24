@@ -62,6 +62,12 @@ config :everyday_citizen, :federal_rate_limits,
 
 config :everyday_citizen, :congress_gov_api_key, "test-key"
 
+config :everyday_citizen, :anthropic_req_options,
+  plug: {Req.Test, EverydayCitizen.Claude},
+  retry: false
+
+config :everyday_citizen, :anthropic_api_key, "test-anthropic-key"
+
 config :everyday_citizen, :federal_req_options,
   plug: {Req.Test, EverydayCitizen.Federal},
   retry_delay: 0,
