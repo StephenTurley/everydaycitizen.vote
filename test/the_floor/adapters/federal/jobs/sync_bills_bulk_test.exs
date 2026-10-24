@@ -87,6 +87,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillsBulkTest do
     bill = Bill |> Repo.get_by!(external_id: "119-hr-22") |> Repo.preload(:source)
     assert bill.source.url == @entry_url
     assert Repo.aggregate(where(BillAction, bill_id: ^bill.id), :count) == 19
+    assert %{author: "Congressional Research Service"} = TheFloor.Legislation.latest_summary(bill)
 
     # sponsor + the 5 cosponsors stored as people; the other 105 are skipped
     assert Repo.aggregate(where(Sponsorship, bill_id: ^bill.id), :count) == 6

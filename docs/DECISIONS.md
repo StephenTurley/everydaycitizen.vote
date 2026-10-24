@@ -132,3 +132,6 @@ On Fly the first bill load wrote ~200 bills a minute (shared CPUs), so one job f
 
 ## 2026-10-24 — Production sizing for the first backfill
 The app machine is 1 GB (512 MB was killed decoding `legislators-historical.json`). The Postgres machine runs on `performance-1x` / 2 GB only for the first backfill (a trivial query took 36 ms on throttled `shared-cpu-1x`), then returns to `shared-cpu-1x` / 1 GB.
+
+## 2026-10-24 — Official bill summaries stored, attributed and sanitized
+`bill_summaries` holds each bill's official summaries (one row per version code and action date), with an `author` the adapter sets ("Congressional Research Service" for federal), so the UI labels a summary by its author without knowing the jurisdiction. Summary HTML is reduced on write to `p ul ol li strong em b i br` without attributes (`TheFloor.Ingest.SafeHtml`), so it can be rendered as HTML safely. The API path fetches `/summaries` per bill; the bulk path reads them from BILLSTATUS. Bills stored before this are filled by the on-demand `bill_summaries` job (bulk chunks in summaries-only mode). On-demand jobs (`Jobs.on_demand/0`) run only by name, never in the full ingest.

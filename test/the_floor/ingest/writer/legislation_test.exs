@@ -276,4 +276,46 @@ defmodule TheFloor.Ingest.Writer.LegislationTest do
     assert {count(Bill), count(BillAction), count(Sponsorship)} == before
     assert before == {1, 2, 1}
   end
+
+  defp summaries(list) do
+    %Records.BillSummaries{
+      jurisdiction: @jur,
+      bill_external_id: "119-hr-1",
+      author: "Research office",
+      summaries: list,
+      source: source_ref()
+    }
+  end
+
+  defp summary(code, date, html) do
+    %{
+      version_code: code,
+      action_date: date,
+      action_description: "Introduced",
+      html: html,
+      updated_at_source: nil
+    }
+  end
+
+  test "summaries replace the bill's set; the latest is the newest action date" do
+    write!(bill())
+
+    write!(
+      summaries([
+        summary("00", ~D[2025-01-03], "<p>old</p>"),
+        summary("36", ~D[2025-04-10], "<p>new</p>")
+      ])
+    )
+
+    write!(summaries([summary("36", ~D[2025-04-10], "<p>newer</p>")]))
+
+    bill = Legislation.get_bill(@jur, "119-hr-1")
+    assert Repo.aggregate(TheFloor.Legislation.BillSummary, :count) == 1
+    assert %{html: "<p>newer</p>", author: "Research office"} = Legislation.latest_summary(bill)
+  end
+
+  test "a bill with no summaries has no latest summary" do
+    write!(bill())
+    assert Legislation.latest_summary(Legislation.get_bill(@jur, "119-hr-1")) == nil
+  end
 end

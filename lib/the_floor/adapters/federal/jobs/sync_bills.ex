@@ -21,14 +21,11 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBills do
   """
   use Oban.Worker, queue: :ingest, max_attempts: 3
 
-  require Logger
-
-  alias TheFloor.Adapters.Federal.{Bulk, BulkBatch, CongressGov, Job, Prerequisites}
+  alias TheFloor.Adapters.Federal.{BulkBatch, CongressGov, Job, Prerequisites}
   alias TheFloor.Adapters.Federal.Jobs.{BackfillBillText, BulkBillsChunk, SyncBill}
   alias TheFloor.Provenance
 
   @overlap_seconds 2 * 86_400
-  @types ~w(hr s hjres sjres hconres sconres hres sres)
 
   # Counting the zips takes minutes; it must end before Lifeline (2 h) would
   # treat the job as orphaned and start it again.
@@ -75,37 +72,9 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBills do
   defp bulk(congress) do
     BulkBatch.run(
       %{batch_job: "bulk_bills", chunk_job: "bulk_bills_chunk", chunk_worker: BulkBillsChunk},
-      fn _batch -> fan_out(congress) end,
+      fn _batch -> BulkBillsChunk.chunks(congress) end,
       &finalize(congress, &1)
     )
-  end
-
-  # One chunk per `BulkBatch.chunk_size/0` entries of each type's zip.
-  defp fan_out(congress) do
-    Enum.reduce_while(@types, {:ok, []}, fn type, {:ok, chunks} ->
-      case type_chunks(congress, type) do
-        {:ok, more} -> {:cont, {:ok, chunks ++ more}}
-        error -> {:halt, error}
-      end
-    end)
-  end
-
-  defp type_chunks(congress, type) do
-    case Bulk.with_zip(BulkBillsChunk.zip_url(congress, type), &Bulk.count_entries/1) do
-      {:ok, count} ->
-        {:ok,
-         Enum.map(
-           BulkBatch.slices(count),
-           &Map.merge(&1, %{"congress" => congress, "type" => type})
-         )}
-
-      {:error, reason} when reason in [:not_a_zip, {:http_status, 404}] ->
-        Logger.warning("sync_bills: no bulk zip for #{congress} #{type}: #{inspect(reason)}")
-        {:ok, []}
-
-      {:error, reason} ->
-        {:error, {:bulk_zip, type, reason}}
-    end
   end
 
   defp finalize(congress, stats) do

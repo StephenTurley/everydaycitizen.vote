@@ -15,6 +15,7 @@ defmodule TheFloor.Ingest do
 
   def write(%Records.Bill{} = r, run_id), do: Writer.Legislation.write(r, run_id)
   def write(%Records.BillActions{} = r, run_id), do: Writer.Legislation.write(r, run_id)
+  def write(%Records.BillSummaries{} = r, run_id), do: Writer.Legislation.write(r, run_id)
   def write(%Records.Sponsorships{} = r, run_id), do: Writer.Legislation.write(r, run_id)
   def write(%Records.BillVersion{} = r, run_id), do: Writer.Legislation.write(r, run_id)
   def write(%Records.BillVersionText{} = r, run_id), do: Writer.Legislation.write(r, run_id)

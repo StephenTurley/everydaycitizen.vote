@@ -2,7 +2,7 @@ defmodule TheFloor.Legislation do
   @moduledoc "Queries over bills, actions, sponsorships and text versions."
   import Ecto.Query
 
-  alias TheFloor.Legislation.{Bill, BillAction, BillVersion}
+  alias TheFloor.Legislation.{Bill, BillAction, BillSummary, BillVersion}
   alias TheFloor.Legislature.Jurisdiction
   alias TheFloor.Repo
 
@@ -109,5 +109,28 @@ defmodule TheFloor.Legislation do
     end)
 
     :ok
+  end
+
+  @doc "The bill's most recent official summary (latest action date), or nil."
+  @spec latest_summary(Bill.t()) :: BillSummary.t() | nil
+  def latest_summary(%Bill{id: bill_id}) do
+    BillSummary
+    |> where([s], s.bill_id == ^bill_id)
+    |> order_by([s], desc_nulls_last: s.action_date, desc: s.id)
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  @doc "Ids of the given bills that have no summary stored."
+  @spec bill_ids_without_summary([integer()]) :: MapSet.t(integer())
+  def bill_ids_without_summary(bill_ids) do
+    with_summary =
+      BillSummary
+      |> where([s], s.bill_id in ^bill_ids)
+      |> select([s], s.bill_id)
+      |> distinct(true)
+      |> Repo.all()
+
+    MapSet.difference(MapSet.new(bill_ids), MapSet.new(with_summary))
   end
 end

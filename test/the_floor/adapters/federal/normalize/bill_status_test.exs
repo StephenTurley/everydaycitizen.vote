@@ -93,6 +93,15 @@ defmodule TheFloor.Adapters.Federal.Normalize.BillStatusTest do
     assert length(bulk().summaries) == 1
   end
 
+  test "summaries normalize to the bill's summary set, sanitized and attributed" do
+    b = bulk()
+    record = Bill.summaries(b.summaries, "119-hr-22", @src)
+
+    assert record.author == "Congressional Research Service"
+    assert [%{version_code: "00", action_date: ~D[2025-01-03], html: html}] = record.summaries
+    assert html =~ "<strong>"
+  end
+
   test "a bill without summaries has none" do
     assert {:ok, %{summaries: []}} =
              BillStatus.parse(

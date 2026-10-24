@@ -15,11 +15,12 @@ defmodule TheFloor.Adapters.Federal.BillWriter do
 
   @type part(t) :: {t, TheFloor.Ingest.Records.SourceRef.t() | nil}
   @type parts :: %{
-          detail: part(map()),
-          subjects: map(),
-          actions: part([map()]),
-          cosponsors: part([map()]),
-          text: part(map())
+          required(:detail) => part(map()),
+          required(:subjects) => map(),
+          required(:actions) => part([map()]),
+          required(:cosponsors) => part([map()]),
+          required(:text) => part(map()),
+          optional(:summaries) => part([map()])
         }
 
   @doc "Writes the bill and its parts; returns its external id."
@@ -33,7 +34,8 @@ defmodule TheFloor.Adapters.Federal.BillWriter do
       with {:ok, _} <- Ingest.write(Normalize.bill(detail, subjects, detail_src), run_id),
            :ok <- write_actions(parts.actions, id, run_id),
            :ok <- write_sponsorships(detail, detail_src, parts.cosponsors, id, run_id),
-           :ok <- write_versions(parts.text, id, run_id) do
+           :ok <- write_versions(parts.text, id, run_id),
+           :ok <- write_summaries(Map.get(parts, :summaries, {[], nil}), id, run_id) do
         {:ok, id}
       end
     end)
@@ -62,6 +64,12 @@ defmodule TheFloor.Adapters.Federal.BillWriter do
         {:error, reason}
     end
   end
+
+  # Like actions: an empty list writes nothing rather than deleting stored rows.
+  defp write_summaries({[], _}, _id, _run_id), do: :ok
+
+  defp write_summaries({items, source}, id, run_id),
+    do: write_record(Normalize.summaries(items, id, source), run_id)
 
   defp write_versions({text, source}, id, run_id) do
     text["textVersions"]

@@ -19,7 +19,8 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillTest do
     "/v3/bill/119/hr/22/actions" => "bill_119_hr_22/actions.json",
     "/v3/bill/119/hr/22/cosponsors" => "bill_119_hr_22/cosponsors.json",
     "/v3/bill/119/hr/22/subjects" => "bill_119_hr_22/subjects.json",
-    "/v3/bill/119/hr/22/text" => "bill_119_hr_22/text.json"
+    "/v3/bill/119/hr/22/text" => "bill_119_hr_22/text.json",
+    "/v3/bill/119/hr/22/summaries" => "bill_119_hr_22/summaries.json"
   }
 
   defp stub(failing \\ %{}) do
@@ -93,6 +94,10 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillTest do
     source_url = fn id -> Repo.preload(Repo.get!(BillAction, id), :source).source.url end
     action = Repo.one!(from a in BillAction, where: a.position == 0)
     assert source_url.(action.id) =~ "/bill/119/hr/22/actions"
+
+    summary = TheFloor.Legislation.latest_summary(bill) |> Repo.preload(:source)
+    assert summary.author == "Congressional Research Service"
+    assert summary.source.url =~ "/bill/119/hr/22/summaries"
 
     assert :ok = perform_job(SyncBill, args)
     assert counts() == %{bills: 1, actions: 19, sponsorships: 6, versions: 2}

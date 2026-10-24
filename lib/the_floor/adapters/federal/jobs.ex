@@ -8,6 +8,7 @@ defmodule TheFloor.Adapters.Federal.Jobs do
   ingest jobs. Generic tooling reads it through the `:ingest_adapters` config.
   """
   alias TheFloor.Adapters.Federal.Jobs.{
+    BackfillBillSummaries,
     Coverage,
     ReclassifyActions,
     Relink,
@@ -27,7 +28,10 @@ defmodule TheFloor.Adapters.Federal.Jobs do
   """
   @spec on_demand() :: [{String.t(), module(), map()}]
   def on_demand do
-    [{"reclassify_actions", ReclassifyActions, %{}}]
+    [
+      {"reclassify_actions", ReclassifyActions, %{}},
+      {"bill_summaries", BackfillBillSummaries, %{}}
+    ]
   end
 
   @spec all() :: [{String.t(), module(), map()}]
