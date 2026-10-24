@@ -110,6 +110,11 @@ defmodule EverydayCitizen.DigestTest do
     assert Digest.items(user, ~U[2025-01-01 00:00:00Z], DateTime.utc_now()) == []
   end
 
+  test "replies to the daily email reach a person", %{user: user} do
+    email = EverydayCitizen.Digest.Email.build(user, [])
+    assert email.reply_to == {"", "replies@example.com"}
+  end
+
   test "unsubscribe tokens name the user and cannot be forged", %{user: user} do
     token = Digest.unsubscribe_token(user)
     assert {:ok, id} = Digest.verify_unsubscribe(token)

@@ -16,9 +16,14 @@ defmodule EverydayCitizen.Feedback.Email do
     new()
     |> to(to)
     |> from(Application.fetch_env!(:everyday_citizen, :mail_from))
+    |> reply_to_reporter(report)
     |> subject("Feedback: #{report.reason} (#{@labels[report.kind]})")
     |> text_body(body(report))
   end
+
+  # replying reaches a signed-in reporter
+  defp reply_to_reporter(email, %Report{user: %{email: address}}), do: reply_to(email, address)
+  defp reply_to_reporter(email, _report), do: email
 
   defp body(report) do
     [

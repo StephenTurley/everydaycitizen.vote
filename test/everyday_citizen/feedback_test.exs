@@ -61,6 +61,8 @@ defmodule EverydayCitizen.FeedbackTest do
       assert email.text_body =~ EverydayCitizenWeb.Endpoint.url() <> "/bills/119-hr-10813"
       assert email.text_body =~ user.email
       assert email.text_body =~ "prompt v3"
+      # replying reaches the reporter
+      assert email.reply_to == {"", user.email}
     end)
   end
 

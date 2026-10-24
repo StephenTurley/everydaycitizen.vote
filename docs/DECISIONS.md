@@ -207,3 +207,6 @@ The first v2 summary in production ran into its 800-token cap before reaching "F
 
 ## 2026-10-24 — Feedback: report a problem, one email per report
 Every AI summary (section, bill, week) has "Report a problem" (a reason — inaccurate, unclear, missing something, one-sided, other — and an optional note up to 1,000 characters), and every page's footer links to a site feedback form. No login; a signed-in reporter's account is linked. Each report is stored in `feedback_reports` with what the reader was shown (summary text, subject, prompt version, page) and emailed to `FEEDBACK_EMAIL`, one email per report; there is no resolve workflow or status for reporters (owner, 2026-10-24). No IP or address is stored; five reports an hour per visitor, and a hidden field drops bots.
+
+## 2026-10-24 — Emails carry a formatted version and a Reply-To
+Sign-in, confirmation and email-change emails now send a formatted (HTML) version beside the plain text, as the daily email already did; filters treat multipart mail as more legitimate. Every email to readers carries a Reply-To (`MAIL_REPLY_TO`), since hello@ only forwards; feedback emails reply to the reporter when signed in. Authentication (DKIM, SPF on the sending subdomain, DMARC p=none) was checked and is in place; junk placement at iCloud is otherwise a new-domain reputation matter.

@@ -71,6 +71,11 @@ if config_env() == :dev do
     ]
 end
 
+# Replies to the site's emails go here (the From mailbox only forwards).
+if reply_to = System.get_env("MAIL_REPLY_TO") do
+  config :everyday_citizen, :mail_reply_to, reply_to
+end
+
 # Feedback reports are emailed here, one per report (unset: stored, not sent).
 if feedback_to = System.get_env("FEEDBACK_EMAIL") do
   config :everyday_citizen, :feedback_to, feedback_to
