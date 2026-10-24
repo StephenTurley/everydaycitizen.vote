@@ -186,3 +186,6 @@ At the owner's direction the plain-language layer is one LLM summary per bill se
 
 ## 2026-10-24 — Claude credentials by Workload Identity Federation
 The owner's Anthropic API keys expire every 30 days, so production does not depend on a stored key: the machine gets a signed OIDC token from Fly (issuer `https://oidc.fly.io/personal`, subject `personal:thefloor-vote:<machine>`) and exchanges it at Anthropic's `/v1/oauth/token` for a short-lived access token, cached and renewed two minutes before expiry (`EverydayCitizen.Summaries.Credentials`). The federation rule, service account, organization and workspace IDs are configuration, not secrets. `ANTHROPIC_API_KEY` remains for development, and in production only until federation is set up.
+
+## 2026-10-24 — Correction: no temperature on summary requests
+Claude Haiku 5.5 rejects `temperature` (deprecated for the model), so summary requests send none; the entry above that says "temperature 0" is superseded. Steadiness comes from the published prompt.

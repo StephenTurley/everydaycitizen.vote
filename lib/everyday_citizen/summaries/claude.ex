@@ -3,7 +3,7 @@ defmodule EverydayCitizen.Summaries.Claude do
   Writes a plain-English summary of a section with the Claude Messages API.
   The system prompt is the published file `priv/prompts/section_summary.<v>.md`;
   the section goes in the user message between `<section>` tags, as data.
-  Temperature 0 and a short reply cap keep it steady and cheap.
+  A short reply cap keeps it cheap (this model does not take a temperature).
   """
 
   alias EverydayCitizen.Summaries.Credentials
@@ -28,7 +28,6 @@ defmodule EverydayCitizen.Summaries.Claude do
       body = %{
         model: config(:model),
         max_tokens: @max_tokens,
-        temperature: 0,
         system: prompt(),
         messages: [%{role: "user", content: "<section>\n#{text}\n</section>"}]
       }
