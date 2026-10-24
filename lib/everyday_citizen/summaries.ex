@@ -29,8 +29,12 @@ defmodule EverydayCitizen.Summaries do
     heading =
       Enum.join(Enum.reject(["Sec. #{section["enum"]}", section["heading"]], &blank?/1), " ")
 
-    Enum.join([heading | Enum.flat_map(blocks, &block_lines/1)], "\n")
+    Enum.join([heading | section_paragraphs(section)], "\n")
   end
+
+  @doc "A section's paragraphs, one per block (quoted law bracketed), without its heading."
+  @spec section_paragraphs(map()) :: [String.t()]
+  def section_paragraphs(%{"blocks" => blocks}), do: Enum.flat_map(blocks, &block_lines/1)
 
   defp block_lines(%{"quote" => quote}),
     do: ["[Inserted into the law:"] ++ Enum.flat_map(quote, &block_lines/1) ++ ["]"]
