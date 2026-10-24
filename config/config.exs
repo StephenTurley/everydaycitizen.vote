@@ -75,7 +75,15 @@ config :sentry,
 
 config :the_floor, :ingest_adapters, [TheFloor.Adapters.Federal.Jobs]
 
-config :the_floor, :federal, congress: 119
+config :the_floor, :federal,
+  congress: 119,
+  # Census Geocoder geography vintage holding each congress's districts (the
+  # current vintage already has the next congress's)
+  census_vintages: %{119 => "ACS2025_Current"}
+
+# The jurisdiction public pages show, and how each finds an address's seats.
+config :the_floor, :default_jurisdiction, "federal"
+config :the_floor, :locators, %{"federal" => TheFloor.Adapters.Federal.Geocoder}
 
 # Configure esbuild (the version is required)
 config :esbuild,

@@ -83,4 +83,39 @@ defmodule TheFloor.Legislature do
     |> order_by([m], asc: m.id)
     |> Repo.all()
   end
+
+  @doc """
+  Members of each `{body_external_id, district}` seat current on `on`, in seat
+  order, then by name, as `%{person, membership, body}`.
+  """
+  @spec current_members(String.t(), [{String.t(), String.t()}], Date.t()) :: [map()]
+  def current_members(_jurisdiction_key, [], _on), do: []
+
+  def current_members(jurisdiction_key, seats, %Date{} = on) do
+    rows =
+      Membership
+      |> join(:inner, [m], b in Body, on: b.id == m.body_id)
+      |> join(:inner, [_m, b], j in Jurisdiction, on: j.id == b.jurisdiction_id)
+      |> join(:inner, [m], p in Person, on: p.id == m.person_id)
+      |> where([_m, _b, j], j.key == ^jurisdiction_key)
+      |> where(^seat_condition(seats))
+      |> where([m], is_nil(m.start_date) or m.start_date <= ^on)
+      |> where([m], is_nil(m.end_date) or m.end_date >= ^on)
+      |> select([m, b, _j, p], %{person: p, membership: m, body: b})
+      |> Repo.all()
+
+    rank = seats |> Enum.with_index() |> Map.new()
+
+    rows
+    |> Enum.uniq_by(& &1.person.id)
+    |> Enum.sort_by(
+      &{Map.fetch!(rank, {&1.body.external_id, &1.membership.district}), &1.person.name}
+    )
+  end
+
+  defp seat_condition(seats) do
+    Enum.reduce(seats, dynamic(false), fn {body, district}, acc ->
+      dynamic([m, b], ^acc or (b.external_id == ^body and m.district == ^district))
+    end)
+  end
 end
