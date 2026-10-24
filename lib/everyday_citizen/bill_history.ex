@@ -15,9 +15,15 @@ defmodule EverydayCitizen.BillHistory do
   """
   import Ecto.Query
 
-  alias EverydayCitizen.Legislation.BillVersion
+  alias EverydayCitizen.Legislation
+  alias EverydayCitizen.Legislation.{BillAction, BillVersion}
+  alias EverydayCitizen.Legislature.Membership
   alias EverydayCitizen.Repo
   alias EverydayCitizen.Summaries
+  alias EverydayCitizen.Votes.{Vote, VotePosition}
+
+  # dates of record are kept in the legislature's local time
+  @zone "America/New_York"
 
   @type origin :: %{
           status: :original | :changed | :added,
@@ -62,6 +68,117 @@ defmodule EverydayCitizen.BillHistory do
       _ -> nil
     end
   end
+
+  @doc """
+  What happened between each version and the one before it, oldest first: the
+  version, the window `(from_date, date]` and, inside it, the bill's actions,
+  committee steps, amendments (by latest action), roll calls on the bill, and
+  roll calls on its procedural measures (such as the rule it was taken up
+  under) as `%{ref, vote}`.
+  """
+  @spec steps(map()) :: [map()]
+  def steps(bill) do
+    versions = versions(bill)
+
+    actions =
+      Repo.all(from a in BillAction, where: a.bill_id == ^bill.id, order_by: [a.date, a.position])
+
+    committees = Legislation.committee_activities(bill.id)
+    amendments = Legislation.amendments(bill.id)
+    votes = bill_votes(bill)
+    related = related_votes(bill)
+
+    versions
+    |> Enum.with_index()
+    |> Enum.map(fn {version, i} ->
+      from = if i > 0, do: Enum.at(versions, i - 1).date
+      inside = &in_window?(&1, from, version.date)
+
+      Map.merge(version, %{
+        from_date: from,
+        actions: Enum.filter(actions, &inside.(&1.date)),
+        committees: Enum.filter(committees, &inside.(&1.date)),
+        amendments: Enum.filter(amendments, &inside.(&1.latest_action_date)),
+        votes: Enum.filter(votes, &inside.(local_date(&1.voted_at))),
+        related_votes: Enum.filter(related, &inside.(local_date(&1.vote.voted_at)))
+      })
+    end)
+  end
+
+  @doc """
+  Each person's part in a step: their positions on its roll calls (procedural
+  ones first, by date) as `{vote, option}`, and the step's committees they are
+  members of. People in the order given; nothing found gives empty lists.
+  """
+  @spec involvement(map(), [map()]) :: [
+          %{person: map(), votes: [{Vote.t(), String.t()}], committees: [map()]}
+        ]
+  def involvement(step, people) do
+    person_ids = Enum.map(people, & &1.id)
+
+    votes =
+      (Enum.map(step.related_votes, & &1.vote) ++ step.votes)
+      |> Enum.sort_by(& &1.voted_at, DateTime)
+
+    positions =
+      from(p in VotePosition,
+        where: p.vote_id in ^Enum.map(votes, & &1.id) and p.person_id in ^person_ids,
+        select: {{p.person_id, p.vote_id}, p.option}
+      )
+      |> Repo.all()
+      |> Map.new()
+
+    bodies = for a <- step.committees, a.body, uniq: true, do: a.body
+
+    member_of =
+      from(m in Membership,
+        where: m.person_id in ^person_ids and m.body_id in ^Enum.map(bodies, & &1.id),
+        select: {m.person_id, m.body_id}
+      )
+      |> Repo.all()
+      |> MapSet.new()
+
+    for person <- people do
+      %{
+        person: person,
+        votes: for(v <- votes, option = positions[{person.id, v.id}], do: {v, option}),
+        committees: Enum.filter(bodies, &MapSet.member?(member_of, {person.id, &1.id}))
+      }
+    end
+  end
+
+  defp bill_votes(bill) do
+    from(v in Vote, where: v.bill_id == ^bill.id, order_by: [v.voted_at, v.id], preload: :body)
+    |> Repo.all()
+  end
+
+  # votes on the bill's procedural measures, stored as bills or only by reference
+  defp related_votes(bill) do
+    case Legislation.related_refs(bill.id, "procedural") do
+      [] ->
+        []
+
+      refs ->
+        from(v in Vote,
+          left_join: b in assoc(v, :bill),
+          where: b.external_id in ^refs or v.bill_ref in ^refs,
+          order_by: [v.voted_at, v.id],
+          preload: [:body, :bill]
+        )
+        |> Repo.all()
+        |> Enum.map(&%{ref: (&1.bill && &1.bill.external_id) || &1.bill_ref, vote: &1})
+    end
+  end
+
+  defp in_window?(nil, _from, _to), do: false
+
+  defp in_window?(date, from, to),
+    do: (is_nil(from) or Date.after?(date, from)) and (is_nil(to) or not Date.after?(date, to))
+
+  defp local_date(%NaiveDateTime{} = at),
+    do: at |> DateTime.from_naive!("Etc/UTC") |> DateTime.shift_zone!(@zone) |> DateTime.to_date()
+
+  defp local_date(%DateTime{} = at), do: at |> DateTime.shift_zone!(@zone) |> DateTime.to_date()
 
   # [{code, %{key => paragraphs}}] for versions up to `code`, and `code`'s own
   # [{key, paragraphs}] in order
