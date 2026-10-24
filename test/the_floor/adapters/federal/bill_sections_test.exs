@@ -133,6 +133,13 @@ defmodule TheFloor.Adapters.Federal.BillSectionsTest do
              BillSections.parse(xml)
   end
 
+  test "NUL characters (which the database cannot store) are dropped from text" do
+    xml =
+      "<bill><section><enum>1.</enum><header>A&#0;</header><text>a&#0;b</text></section></bill>"
+
+    assert {:ok, [%{"heading" => "A", "blocks" => [%{"text" => "ab"}]}]} = BillSections.parse(xml)
+  end
+
   test "the format number marks the splitter's output shape" do
     assert BillSections.format() == 2
   end

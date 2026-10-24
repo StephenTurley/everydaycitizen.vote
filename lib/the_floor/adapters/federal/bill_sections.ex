@@ -177,7 +177,8 @@ defmodule TheFloor.Adapters.Federal.BillSections do
 
   defp local(name), do: name |> String.split(":") |> List.last()
 
-  defp collapse(text), do: text |> String.replace(~r/\s+/u, " ") |> String.trim()
+  defp collapse(text),
+    do: text |> String.replace("\0", "") |> String.replace(~r/\s+/u, " ") |> String.trim()
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(text), do: text

@@ -158,12 +158,10 @@ defmodule TheFloorWeb.BillLive do
             >
               {contents_label(entry)}
             </p>
-            <a
+            <.link
               :if={entry["kind"] == "section"}
-              href={section_path(@page.bill, @version, i)}
-              phx-click={
-                JS.patch(section_path(@page.bill, @version, i)) |> JS.focus(to: "#section-#{i}")
-              }
+              patch={section_path(@page.bill, @version, i)}
+              phx-click={JS.focus(to: "#section-#{i}")}
               aria-current={if @open == i, do: "location"}
               class={[
                 "px-2.5 py-1.5 rounded-lg text-[14px] leading-snug",
@@ -174,7 +172,7 @@ defmodule TheFloorWeb.BillLive do
               ]}
             >
               {contents_label(entry)}
-            </a>
+            </.link>
           <% end %>
         </nav>
 

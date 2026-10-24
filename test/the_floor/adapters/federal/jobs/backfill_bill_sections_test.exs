@@ -94,6 +94,18 @@ defmodule TheFloor.Adapters.Federal.Jobs.BackfillBillSectionsTest do
     assert by_code["rh"].sections == old
   end
 
+  test "a version that fails to store does not stop the others" do
+    Repo.update_all(from(v in BillVersion, where: v.code == "eh"),
+      set: [xml: "<bill><section><enum>1.</enum><text>a&#0;b</text></section></bill>"]
+    )
+
+    assert :ok = perform_job(BackfillBillSections, %{"batch_size" => 5})
+
+    by_code = Repo.all(BillVersion) |> Map.new(&{&1.code, &1})
+    assert [%{"enum" => "1."} | _] = by_code["ih"].sections
+    assert Enum.all?(Map.values(by_code), &(&1.sections_version == BillSections.format()))
+  end
+
   test "it runs by name only" do
     assert {:ok, [{"bill_sections", BackfillBillSections, _}]} =
              TheFloor.Ingest.Jobs.select("bill_sections")

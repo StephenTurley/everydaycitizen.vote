@@ -188,6 +188,11 @@ defmodule TheFloorWeb.BillLiveTest do
 
     refute has_element?(view, ~s(nav[aria-label="Sections"] a[href*="section=0"][aria-current]))
     assert has_element?(view, "#section-1")
+    # a live patch (no full page load), with an href for before the socket connects
+    assert has_element?(
+             view,
+             ~s(nav[aria-label="Sections"] a[data-phx-link="patch"][href*="section=0"])
+           )
   end
 
   test "a step passed over shows Skipped", %{conn: conn} do
