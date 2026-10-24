@@ -1,4 +1,4 @@
-# The Floor — thefloor.vote
+# Everyday Citizen — everydaycitizen.vote
 
 Read-only tool that shows constituents what Congress is voting on, who is voting,
 what a bill actually changes in current law (redline against the statute), and why
@@ -14,12 +14,16 @@ Decision log: `docs/DECISIONS.md` (append; never rewrite history)
 
 ## Project facts
 
-- Name: **The Floor**. Domain `thefloor.vote`, registered at Namecheap
-  (2026-10-23), served by the Fly.io app `thefloor-vote` (iad); `www.` and
-  `thefloor-vote.fly.dev` redirect to it. Errors go to Sentry
-  (`thefloorvote/the-floor`).
+- Name: **Everyday Citizen** (renamed from The Floor on 2026-10-24, before
+  launch). Domain `everydaycitizen.vote`, registered at Namecheap, served by the
+  Fly.io app `thefloor-vote` (iad); every other host (`www.`, the old
+  `thefloor.vote`, `thefloor-vote.fly.dev`) redirects to it. Errors go to Sentry
+  (`thefloorvote/the-floor`). Infrastructure names keep the old name.
 - Elixir app name `the_floor`; modules `TheFloor` (domain) and `TheFloorWeb`
-  (LiveView). Generated with `mix phx.new the_floor`.
+  (LiveView). Generated with `mix phx.new the_floor`. Code names are not
+  user-facing and stay as they are.
+- Product direction: plain-language understanding of what your reps do now;
+  later, proposals that citizens second and send to their own reps (SPEC §9).
 
 ## Non-negotiables
 

@@ -33,7 +33,7 @@ defmodule TheFloorWeb.Layouts do
         class="mx-auto max-w-3xl lg:max-w-[1280px] px-5 lg:px-10 flex items-center justify-between gap-4"
       >
         <a href={~p"/"} class="py-4 text-[19px] font-bold tracking-tight text-floor-ink">
-          The Floor
+          Everyday Citizen
         </a>
         <div class="flex items-center gap-5 text-sm font-medium">
           <a href={~p"/this-week"} class="py-3 text-floor-accent hover:text-floor-accent-dark">

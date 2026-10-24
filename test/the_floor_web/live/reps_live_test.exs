@@ -116,6 +116,13 @@ defmodule TheFloorWeb.RepsLiveTest do
     assert has_element?(view, ~s(a[href="/this-week"]), "See what's scheduled this week")
   end
 
+  test "pages carry the site's name in the header and the title", %{conn: conn} do
+    {:ok, view, html} = live(conn, ~p"/")
+    assert has_element?(view, ~s(header a[href="/"]), "Everyday Citizen")
+    assert html =~ "Find your representatives · Everyday Citizen"
+    refute html =~ "The Floor"
+  end
+
   test "home offers your saved district", %{conn: conn} do
     conn = conn |> init_test_session(%{district: "IA-1"})
     {:ok, _view, html} = live(conn, ~p"/")

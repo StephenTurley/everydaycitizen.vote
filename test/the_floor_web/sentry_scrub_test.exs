@@ -4,8 +4,8 @@ defmodule TheFloorWeb.SentryScrubTest do
   alias TheFloorWeb.SentryScrub
 
   test "url drops the query string, which may hold a visitor's address" do
-    conn = Plug.Test.conn(:get, "https://thefloor.vote/reps?address=1+Main+St")
-    assert SentryScrub.url(conn) == "https://thefloor.vote/reps"
+    conn = Plug.Test.conn(:get, "https://everydaycitizen.vote/reps?address=1+Main+St")
+    assert SentryScrub.url(conn) == "https://everydaycitizen.vote/reps"
   end
 
   test "bodies and cookies are never sent" do

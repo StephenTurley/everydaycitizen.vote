@@ -10,7 +10,7 @@ defmodule TheFloor.Adapters.Federal.CongressGovTest do
       assert conn.query_string =~ "api_key=test-key"
 
       assert Plug.Conn.get_req_header(conn, "user-agent") == [
-               "TheFloor/0.1 (+https://thefloor.vote)"
+               "EverydayCitizen/0.1 (+https://everydaycitizen.vote)"
              ]
 
       Plug.Conn.send_resp(conn, 200, body)

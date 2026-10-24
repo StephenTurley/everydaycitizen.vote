@@ -10,23 +10,23 @@ defmodule TheFloorWeb.CanonicalHostTest do
   end
 
   test "another host redirects permanently to the canonical one, keeping path and query" do
-    conn = call("https://thefloor-vote.fly.dev/bills/119-hr-22?tab=votes", "thefloor.vote")
+    conn = call("https://thefloor-vote.fly.dev/bills/119-hr-22?tab=votes", "everydaycitizen.vote")
 
     assert conn.halted
     assert conn.status == 301
 
     assert Plug.Conn.get_resp_header(conn, "location") == [
-             "https://thefloor.vote/bills/119-hr-22?tab=votes"
+             "https://everydaycitizen.vote/bills/119-hr-22?tab=votes"
            ]
   end
 
   test "www redirects to the bare domain" do
-    conn = call("https://www.thefloor.vote/", "thefloor.vote")
-    assert Plug.Conn.get_resp_header(conn, "location") == ["https://thefloor.vote/"]
+    conn = call("https://www.everydaycitizen.vote/", "everydaycitizen.vote")
+    assert Plug.Conn.get_resp_header(conn, "location") == ["https://everydaycitizen.vote/"]
   end
 
   test "the canonical host passes through" do
-    refute call("https://thefloor.vote/", "thefloor.vote").halted
+    refute call("https://everydaycitizen.vote/", "everydaycitizen.vote").halted
   end
 
   test "no canonical host configured passes everything through" do
