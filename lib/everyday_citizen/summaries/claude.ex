@@ -41,6 +41,9 @@ defmodule EverydayCitizen.Summaries.Claude do
       body = %{
         model: config(:model),
         max_tokens: Keyword.get(opts, :max_tokens, cap),
+        # on by default for this model, thinking can use the whole reply cap and
+        # leave no text
+        thinking: %{type: "disabled"},
         system: prompt(stem, kind),
         messages: [
           %{role: "user", content: if(note = opts[:note], do: "#{note}\n\n#{input}", else: input)}
