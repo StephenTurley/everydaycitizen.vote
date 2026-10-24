@@ -420,4 +420,47 @@ defmodule EverydayCitizenWeb.BillLiveTest do
       assert has_element?(view, "#summary-1 li", "Second point.")
     end
   end
+
+  describe "executive summary" do
+    setup do
+      add_versions!()
+      bill = EverydayCitizen.Legislation.get_bill("federal", "119-s-5")
+
+      EverydayCitizen.Repo.update_all(EverydayCitizen.Legislation.BillVersion,
+        set: [plain_text: "SEC. 1. The text."]
+      )
+
+      %{bill: bill}
+    end
+
+    test "a cached executive summary sits above the bill's text", %{conn: conn, bill: bill} do
+      {subject, input} = EverydayCitizen.Summaries.Inputs.bill(bill)
+
+      {:ok, _} =
+        EverydayCitizen.Summaries.put_ai(:bill, subject, input, %{
+          summary: "It does one thing.",
+          model: "m"
+        })
+
+      {:ok, view, html} = live(conn, ~p"/bills/119-s-5")
+      assert has_element?(view, "#bill-summary", "It does one thing.")
+      assert has_element?(view, "#bill-summary", "Written by AI from the bill")
+      assert html =~ ~r/id="bill-summary".*Text of the bill/s
+    end
+
+    test "without one, the page asks for it and shows it when it lands", %{conn: conn, bill: bill} do
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+      assert has_element?(view, "#bill-summary", "Writing a plain-English summary")
+      assert [_] = all_enqueued(worker: EverydayCitizen.Jobs.SummarizeSubject)
+
+      {subject, _} = EverydayCitizen.Summaries.Inputs.bill(bill)
+      send(view.pid, {:ai_summary, "bill", subject, {:ok, "Now summarized."}})
+      assert has_element?(view, "#bill-summary", "Now summarized.")
+    end
+  end
+
+  test "a bill with no text shows no executive summary", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+    refute has_element?(view, "#bill-summary")
+  end
 end

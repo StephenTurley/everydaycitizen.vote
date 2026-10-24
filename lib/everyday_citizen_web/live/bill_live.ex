@@ -11,7 +11,7 @@ defmodule EverydayCitizenWeb.BillLive do
   use EverydayCitizenWeb, :live_view
 
   alias EverydayCitizen.{BillPage, Follows, RateLimit, Reps, Summaries}
-  alias EverydayCitizen.Summaries.Claude
+  alias EverydayCitizen.Summaries.{Claude, Inputs}
 
   @repo_url "https://github.com/StephenTurley/everydaycitizen.vote/blob/main/"
   @visitor_limit 30
@@ -33,7 +33,8 @@ defmodule EverydayCitizenWeb.BillLive do
            remote_ip: EverydayCitizenWeb.RemoteIp.from_socket(socket),
            summaries: %{},
            summary_topics: []
-         )}
+         )
+         |> load_bill_summary()}
 
       :not_found ->
         raise EverydayCitizenWeb.NotFoundError
@@ -71,11 +72,51 @@ defmodule EverydayCitizenWeb.BillLive do
   def handle_info({:section_summary, index, {:ok, text}}, socket),
     do: {:noreply, update(socket, :summaries, &Map.put(&1, index, {:ok, text}))}
 
+  def handle_info({:ai_summary, "bill", subject, result}, socket) do
+    case socket.assigns.bill_summary do
+      {^subject, _state} -> {:noreply, assign(socket, :bill_summary, {subject, ai_state(result)})}
+      _other -> {:noreply, socket}
+    end
+  end
+
   def handle_info({:section_summary, index, {:error, :paused}}, socket),
     do: {:noreply, update(socket, :summaries, &Map.put(&1, index, :paused))}
 
   def handle_info({:section_summary, index, {:error, _}}, socket),
     do: {:noreply, update(socket, :summaries, &Map.put(&1, index, :unavailable))}
+
+  # The bill's executive summary: cached, or asked for once the page is live
+  # (listening first, so one finished in between is not missed).
+  defp load_bill_summary(socket) do
+    with true <- Claude.enabled?(),
+         {subject, input} <- Inputs.bill(socket.assigns.page.bill) do
+      assign(socket, :bill_summary, {subject, bill_summary_state(socket, subject, input)})
+    else
+      _ -> assign(socket, :bill_summary, nil)
+    end
+  end
+
+  defp bill_summary_state(socket, subject, input) do
+    cond do
+      summary = Summaries.get_ai(:bill, subject, input) ->
+        {:ok, summary.summary}
+
+      not connected?(socket) ->
+        :loading
+
+      true ->
+        Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, Summaries.ai_topic(:bill, subject))
+
+        if RateLimit.hit({:summaries, socket.assigns.remote_ip}, @visitor_limit, @hour) ==
+             :limited,
+           do: :limited,
+           else: requested(Summaries.request_ai(:bill, subject, input))
+    end
+  end
+
+  defp ai_state({:ok, text}), do: {:ok, text}
+  defp ai_state({:error, :paused}), do: :paused
+  defp ai_state({:error, _}), do: :unavailable
 
   # The summaries to show for the open section(s). Pages stop listening for the
   # sections they showed before (another version or section).
@@ -239,12 +280,32 @@ defmodule EverydayCitizenWeb.BillLive do
   # The plain-English summary above a section's text (labeled as AI-written).
   defp section_summary(assigns) do
     ~H"""
-    <div
+    <.ai_box
       id={"summary-#{@index}"}
-      class="mx-4 lg:mx-7 mb-3 px-4 py-3 rounded-xl bg-floor-ground flex flex-col gap-1.5"
+      class="mx-4 lg:mx-7 mb-3"
+      title="In plain English"
+      source="the text below"
+      state={@state}
+      prompt_url={@prompt_url}
+    />
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :class, :string, default: nil
+  attr :title, :string, required: true
+  attr :source, :string, required: true
+  attr :state, :any, required: true
+  attr :prompt_url, :string, required: true
+
+  defp ai_box(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class={["px-4 py-3 rounded-xl bg-floor-ground flex flex-col gap-1.5", @class]}
     >
       <p class="m-0 text-[12px] font-semibold uppercase tracking-wide text-floor-muted">
-        In plain English
+        {@title}
       </p>
       <%= case @state do %>
         <% {:ok, text} -> %>
@@ -257,7 +318,7 @@ defmodule EverydayCitizenWeb.BillLive do
             <% end %>
           </div>
           <p class="m-0 text-[12px] text-floor-muted">
-            Written by AI from the text below; it can be wrong.
+            Written by AI from {@source}; it can be wrong.
             <a href={@prompt_url} class="underline">How it's written</a>
           </p>
         <% :loading -> %>
@@ -296,7 +357,8 @@ defmodule EverydayCitizenWeb.BillLive do
 
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, :prompt_url, @repo_url <> Claude.prompt_path(:section))
+    assigns =
+      assign(assigns, prompt_url: @repo_url <> Claude.prompt_path(:section), repo_url: @repo_url)
 
     ~H"""
     <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>
@@ -492,6 +554,16 @@ defmodule EverydayCitizenWeb.BillLive do
             aria-label="Text of the bill"
             class="order-4 lg:order-1 pb-5 flex flex-col gap-3 lg:gap-4"
           >
+            <%= if match?({_, _}, @bill_summary) do %>
+              <.ai_box
+                id="bill-summary"
+                class="bg-floor-card border border-floor-line"
+                title="In plain English: what this bill does"
+                source="the bill's text below"
+                state={elem(@bill_summary, 1)}
+                prompt_url={@repo_url <> Claude.prompt_path(:bill)}
+              />
+            <% end %>
             <h2 class="m-0 text-[18px] lg:text-[22px] font-bold">Text of the bill</h2>
             <p :if={@page.versions == []} class="m-0 text-[15px] text-floor-muted">
               No text published yet.

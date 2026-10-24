@@ -187,6 +187,41 @@ defmodule EverydayCitizen.Summaries do
     )
   end
 
+  @doc """
+  A bill or week summary someone is viewing: the cached one, or one queued job
+  per subject that writes it and broadcasts on `ai_topic/2`. Not queued without
+  credentials or once today's budget is spent.
+  """
+  @spec request_ai(atom(), String.t(), String.t()) ::
+          {:cached, AiSummary.t()} | :queued | :paused | :disabled
+  def request_ai(kind, subject, input) do
+    cond do
+      summary = get_ai(kind, subject, input) ->
+        {:cached, summary}
+
+      not Claude.enabled?() ->
+        :disabled
+
+      over_budget?() ->
+        :paused
+
+      true ->
+        %{
+          "kind" => to_string(kind),
+          "subject" => subject,
+          "prompt_version" => prompt_version(kind)
+        }
+        |> EverydayCitizen.Jobs.SummarizeSubject.new()
+        |> Oban.insert!()
+
+        :queued
+    end
+  end
+
+  @doc "The PubSub topic a bill or week summary is broadcast on."
+  @spec ai_topic(atom() | String.t(), String.t()) :: String.t()
+  def ai_topic(kind, subject), do: "ai_summary:#{kind}:#{subject}"
+
   @doc "Stores (or replaces) a bill or week summary."
   @spec put_ai(atom(), String.t(), String.t(), map()) :: {:ok, AiSummary.t()}
   def put_ai(kind, subject, input, attrs) do
