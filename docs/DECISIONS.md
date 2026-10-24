@@ -204,3 +204,6 @@ At the owner's direction (a summary that stated a deduction cap without making i
 
 ## 2026-10-24 — Bill summaries are never kept cut off
 The first v2 summary in production ran into its 800-token cap before reaching "For example", and the cut-off reply was stored. Now a bill summary that stops at its cap is asked for once more with twice the room; if that is cut off too, nothing is stored and the page says a summary is unavailable (the job does not retry, since another attempt would pay for the same). Caps rise to 900/1,200/1,600/2,000 by length band, and prompt v3 says the length band limits only the first part, strictly, and that all four parts are always written.
+
+## 2026-10-24 — Feedback: report a problem, one email per report
+Every AI summary (section, bill, week) has "Report a problem" (a reason — inaccurate, unclear, missing something, one-sided, other — and an optional note up to 1,000 characters), and every page's footer links to a site feedback form. No login; a signed-in reporter's account is linked. Each report is stored in `feedback_reports` with what the reader was shown (summary text, subject, prompt version, page) and emailed to `FEEDBACK_EMAIL`, one email per report; there is no resolve workflow or status for reporters (owner, 2026-10-24). No IP or address is stored; five reports an hour per visitor, and a hidden field drops bots.

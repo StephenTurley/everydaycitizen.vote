@@ -71,6 +71,11 @@ if config_env() == :dev do
     ]
 end
 
+# Feedback reports are emailed here, one per report (unset: stored, not sent).
+if feedback_to = System.get_env("FEEDBACK_EMAIL") do
+  config :everyday_citizen, :feedback_to, feedback_to
+end
+
 if config_env() == :prod do
   # Oban's node names the machine and the deploy's image, so each deploy's jobs
   # are told apart; EverydayCitizen.NodeHeartbeat releases jobs of nodes that

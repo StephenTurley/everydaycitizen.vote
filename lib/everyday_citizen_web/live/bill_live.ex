@@ -43,7 +43,8 @@ defmodule EverydayCitizenWeb.BillLive do
   end
 
   @impl true
-  def handle_params(params, _uri, socket) do
+  def handle_params(params, uri, socket) do
+    socket = assign(socket, :path, URI.parse(uri).path)
     versions = socket.assigns.page.versions
     version = Enum.find(versions, &(&1.code == params["version"])) || List.first(versions)
 
@@ -299,6 +300,7 @@ defmodule EverydayCitizenWeb.BillLive do
   attr :index, :integer, required: true
   attr :state, :any, required: true
   attr :prompt_url, :string, required: true
+  attr :report, :map, required: true
 
   # The plain-English summary above a section's text (labeled as AI-written).
   defp section_summary(assigns) do
@@ -310,8 +312,21 @@ defmodule EverydayCitizenWeb.BillLive do
       source="the text below"
       state={@state}
       prompt_url={@prompt_url}
+      report={@report}
     />
     """
+  end
+
+  # What a "Report a problem" form under a summary sends with the report.
+  defp report(assigns, kind, subject) do
+    %{
+      kind: to_string(kind),
+      subject: subject,
+      prompt_version: Summaries.prompt_version(kind),
+      page: assigns.path,
+      user: assigns.current_scope && assigns.current_scope.user,
+      remote_ip: assigns.remote_ip
+    }
   end
 
   @impl true
@@ -521,6 +536,7 @@ defmodule EverydayCitizenWeb.BillLive do
                 source={bill_summary_source(elem(@bill_summary, 0), @version, @page.versions)}
                 state={elem(@bill_summary, 1)}
                 prompt_url={@repo_url <> Claude.prompt_path(:bill)}
+                report={report(assigns, :bill, elem(@bill_summary, 0))}
               />
             <% end %>
             <h2 class="m-0 text-[18px] lg:text-[22px] font-bold">Text of the bill</h2>
@@ -594,6 +610,7 @@ defmodule EverydayCitizenWeb.BillLive do
                     index={i}
                     state={@summaries[i]}
                     prompt_url={@prompt_url}
+                    report={report(assigns, :section, "section:#{@version.id}:#{i}")}
                   />
                   <div
                     :if={open?(@open, i)}

@@ -144,6 +144,11 @@ defmodule EverydayCitizenWeb.FloorComponents do
   attr :state, :any, required: true
   attr :prompt_url, :string, required: true
 
+  attr :report, :map,
+    default: nil,
+    doc:
+      "what a \"Report a problem\" form sends (kind, subject, prompt_version, page, user, remote_ip)"
+
   @doc """
   A plain-English AI summary box: `title`, the summary (paragraphs; lines
   starting "- " as a list; lines starting "## " head a part, and the
@@ -187,6 +192,12 @@ defmodule EverydayCitizenWeb.FloorComponents do
             Written by AI from {@source}; it can be wrong.
             <a href={@prompt_url} class="underline">How it's written</a>
           </p>
+          <.live_component
+            :if={@report}
+            module={EverydayCitizenWeb.FeedbackForm}
+            id={"#{@id}-report"}
+            report={Map.put(@report, :summary, text)}
+          />
         <% :loading -> %>
           <p class="m-0 text-[14px] text-floor-muted">Writing a plain-English summary…</p>
         <% :paused -> %>
