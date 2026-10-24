@@ -120,7 +120,7 @@ defmodule TheFloorWeb.BillLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} width={:full}>
+    <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>
       <%!-- From lg the band's white runs edge to edge (the ::before), past the
            1280px column --%>
       <section class="relative z-0 -mx-5 px-5 lg:-mx-10 lg:px-10 pt-4 pb-5 lg:pt-5 lg:pb-7 bg-floor-card border-b border-floor-line lg:bg-transparent lg:border-b-0 lg:before:absolute lg:before:inset-y-0 lg:before:left-1/2 lg:before:w-screen lg:before:-translate-x-1/2 lg:before:-z-10 lg:before:bg-floor-card lg:before:border-b lg:before:border-floor-line flex flex-col gap-2.5">

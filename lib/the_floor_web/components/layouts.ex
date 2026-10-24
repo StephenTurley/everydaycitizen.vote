@@ -12,7 +12,7 @@ defmodule TheFloorWeb.Layouts do
   embed_templates "layouts/*"
 
   @doc """
-  The app shell: the header (name, "This week", "Change address") over a
+  The app shell: the header (name, "This week", "Sign in" or "Account") over a
   phone-width column, or with `width={:full}` a column that widens to 1280px on
   large screens for a page's desktop columns. The header always spans 1280px
   there, so every page lines up.
@@ -23,6 +23,7 @@ defmodule TheFloorWeb.Layouts do
   """
   attr :flash, :map, required: true, doc: "the map of flash messages"
   attr :width, :atom, values: [:narrow, :full], default: :narrow
+  attr :current_scope, :map, default: nil, doc: "the signed-in scope, if any"
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -42,9 +43,20 @@ defmodule TheFloorWeb.Layouts do
           <a href={~p"/this-week"} class="py-3 text-floor-accent hover:text-floor-accent-dark">
             This week
           </a>
-          <a href={~p"/"} class="py-3 text-floor-accent hover:text-floor-accent-dark">
-            Change address
-          </a>
+          <.link
+            :if={@current_scope && @current_scope.user}
+            navigate={~p"/users/settings"}
+            class="py-3 text-floor-accent hover:text-floor-accent-dark"
+          >
+            Account
+          </.link>
+          <.link
+            :if={!(@current_scope && @current_scope.user)}
+            navigate={~p"/users/log-in"}
+            class="py-3 text-floor-accent hover:text-floor-accent-dark"
+          >
+            Sign in
+          </.link>
         </div>
       </nav>
     </header>

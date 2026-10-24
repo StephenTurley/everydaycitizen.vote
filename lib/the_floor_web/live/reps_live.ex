@@ -97,11 +97,16 @@ defmodule TheFloorWeb.RepsLive do
     assigns = assign(assigns, :filters, @filters)
 
     ~H"""
-    <Layouts.app flash={@flash} width={:full}>
+    <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>
       <%!-- Large screens: reps down a left column beside a 720px feed --%>
       <div class="lg:grid lg:grid-cols-[300px_minmax(0,720px)] lg:justify-center lg:gap-10 lg:pt-8 lg:items-start">
         <section class="pt-5 pb-2 lg:p-0 flex flex-col gap-3 lg:sticky lg:top-4">
-          <.eyebrow>Your representatives · {@district}</.eyebrow>
+          <div class="flex items-baseline justify-between gap-3">
+            <.eyebrow>Your representatives · {@district}</.eyebrow>
+            <.link navigate={~p"/"} class="py-1 text-[13px] font-medium text-floor-accent">
+              Change address
+            </.link>
+          </div>
           <p :if={@reps == []} class="m-0 text-[15px]">No current members found for {@district}.</p>
           <nav
             :if={@reps != []}

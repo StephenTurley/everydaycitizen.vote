@@ -102,7 +102,7 @@ defmodule TheFloorWeb.HomeLive do
     assigns = assign(assigns, :features, @features)
 
     ~H"""
-    <Layouts.app flash={@flash} width={:full}>
+    <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>
       <%!-- Large screens: the finder on the left, what you will find on the right --%>
       <div class="lg:max-w-[1000px] lg:mx-auto lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:gap-16 lg:pt-20 lg:items-start">
         <div class="lg:max-w-[540px]">

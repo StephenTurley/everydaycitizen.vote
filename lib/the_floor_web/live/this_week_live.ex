@@ -44,7 +44,7 @@ defmodule TheFloorWeb.ThisWeekLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} width={:full}>
+    <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>
       <%!-- Phones: title, then the week and filter, then the days. Large screens:
            title and days in a 720px column, week and filter in a sidebar. --%>
       <div class="flex flex-col lg:grid lg:grid-cols-[minmax(0,720px)_300px] lg:justify-center lg:gap-x-10 lg:pt-8 lg:items-start">

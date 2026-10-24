@@ -7,6 +7,19 @@
 # General application configuration
 import Config
 
+config :the_floor, :scopes,
+  user: [
+    default: true,
+    module: TheFloor.Accounts.Scope,
+    assign_key: :current_scope,
+    access_path: [:user, :id],
+    schema_key: :user_id,
+    schema_type: :id,
+    schema_table: :users,
+    test_data_fixture: TheFloor.AccountsFixtures,
+    test_setup_helper: :register_and_log_in_user
+  ]
+
 config :the_floor,
   ecto_repos: [TheFloor.Repo],
   generators: [timestamp_type: :utc_datetime]
@@ -38,6 +51,7 @@ config :phoenix_live_view,
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
 config :the_floor, TheFloor.Mailer, adapter: Swoosh.Adapters.Local
+config :the_floor, :mail_from, {"Everyday Citizen", "hello@everydaycitizen.vote"}
 
 config :the_floor, Oban,
   repo: TheFloor.Repo,
