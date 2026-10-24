@@ -43,6 +43,24 @@ defmodule TheFloor.Legislature do
     |> Repo.one()
   end
 
+  @doc "Person ids for `{scheme, value}` identifiers, keyed by identifier; unknown ones are absent."
+  @spec person_ids_by_identifiers([{String.t(), String.t()}]) :: %{
+          {String.t(), String.t()} => integer()
+        }
+  def person_ids_by_identifiers([]), do: %{}
+
+  def person_ids_by_identifiers(identifiers) do
+    {schemes, values} = Enum.unzip(identifiers)
+    wanted = MapSet.new(identifiers)
+
+    PersonIdentifier
+    |> where([i], i.value in ^Enum.uniq(values) and i.scheme in ^Enum.uniq(schemes))
+    |> select([i], {{i.scheme, i.value}, i.person_id})
+    |> Repo.all()
+    |> Enum.filter(fn {key, _id} -> MapSet.member?(wanted, key) end)
+    |> Map.new()
+  end
+
   @spec any_person?() :: boolean()
   def any_person?, do: Repo.exists?(Person)
 

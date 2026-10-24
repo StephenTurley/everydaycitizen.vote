@@ -148,6 +148,52 @@ defmodule TheFloor.Ingest.Writer.VotesTest do
     assert {:error, {:unknown_session, "1"}} = Ingest.write(vote(session_identifier: "1"), nil)
   end
 
+  # A large chamber's vote has ~430 positions; one query per position (plus a lookup
+  # each) ran past the 15 s transaction timeout on a loaded database.
+  test "positions are written in a fixed number of queries, however many there are" do
+    positions =
+      for i <- 1..60 do
+        person = Enum.at([{"id", "P1"}, {"id", "P2"}, {"id", "NOBODY#{i}"}], rem(i, 3))
+        pos(person, "yea", "Member #{i}")
+      end
+
+    test_pid = self()
+    handler = "count-queries-#{inspect(test_pid)}"
+
+    :telemetry.attach(
+      handler,
+      [:the_floor, :repo, :query],
+      fn _, _, _, _ ->
+        if self() == test_pid, do: send(test_pid, :query)
+      end,
+      nil
+    )
+
+    write!(vote(positions: positions, counts: %{yea: 60, nay: 0, present: 0, absent: 0}))
+    :telemetry.detach(handler)
+
+    queries =
+      Stream.repeatedly(fn ->
+        receive do
+          :query -> 1
+        after
+          0 -> nil
+        end
+      end)
+      |> Enum.take_while(& &1)
+      |> length()
+
+    assert queries <= 15, "wrote 60 positions in #{queries} queries"
+    assert Repo.aggregate(VotePosition, :count) == 60
+    assert Repo.aggregate(from(p in VotePosition, where: not is_nil(p.person_id)), :count) == 40
+  end
+
+  test "a position with an invalid option fails the write and stores none of its positions" do
+    bad = vote(positions: [pos({"id", "P1"}, "yea", "Pat"), pos({"id", "P2"}, "maybe", "Sam")])
+    assert {:error, _} = Ingest.write(bad, nil)
+    assert Repo.aggregate(VotePosition, :count) == 0
+  end
+
   test "option outside yea/nay/present/absent is rejected by changeset" do
     cs =
       VotePosition.changeset(%VotePosition{}, %{

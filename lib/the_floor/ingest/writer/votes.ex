@@ -77,36 +77,49 @@ defmodule TheFloor.Ingest.Writer.Votes do
     end
   end
 
+  # One person lookup and one insert for the whole set: a large chamber's vote has ~430
+  # positions, and a query per position ran past the transaction timeout.
   defp replace_positions(vote, positions, source_id) do
-    Repo.delete_all(from p in VotePosition, where: p.vote_id == ^vote.id)
+    people =
+      positions
+      |> Enum.map(& &1.person)
+      |> Enum.reject(&is_nil/1)
+      |> Legislature.person_ids_by_identifiers()
 
-    Enum.reduce_while(positions, :ok, fn p, :ok ->
-      {scheme, value} = p.person || {nil, nil}
+    now = DateTime.utc_now()
 
-      attrs = %{
-        vote_id: vote.id,
-        person_id: person_id(p.person),
-        person_scheme: scheme,
-        person_value: value,
-        raw_label: p.raw_label,
-        option: p.option,
-        raw_option: p.raw_option,
-        source_id: source_id
-      }
+    changesets =
+      Enum.map(positions, fn p ->
+        {scheme, value} = p.person || {nil, nil}
 
-      case Repo.insert(VotePosition.changeset(%VotePosition{}, attrs)) do
-        {:ok, _} -> {:cont, :ok}
-        {:error, _} = error -> {:halt, error}
-      end
-    end)
+        VotePosition.changeset(%VotePosition{}, %{
+          vote_id: vote.id,
+          person_id: p.person && Map.get(people, p.person),
+          person_scheme: scheme,
+          person_value: value,
+          raw_label: p.raw_label,
+          option: p.option,
+          raw_option: p.raw_option,
+          source_id: source_id
+        })
+      end)
+
+    case Enum.find(changesets, &(not &1.valid?)) do
+      nil ->
+        Repo.delete_all(from p in VotePosition, where: p.vote_id == ^vote.id)
+        rows = Enum.map(changesets, &row(&1, now))
+        rows |> Enum.chunk_every(1000) |> Enum.each(&Repo.insert_all(VotePosition, &1))
+        :ok
+
+      invalid ->
+        {:error, invalid}
+    end
   end
 
-  defp person_id(nil), do: nil
-
-  defp person_id({scheme, value}) do
-    case Legislature.get_person_by_identifier(scheme, value) do
-      nil -> nil
-      person -> person.id
-    end
+  defp row(changeset, now) do
+    changeset
+    |> Ecto.Changeset.apply_changes()
+    |> Map.take(VotePosition.__schema__(:fields) -- [:id])
+    |> Map.merge(%{inserted_at: now, updated_at: now})
   end
 end
