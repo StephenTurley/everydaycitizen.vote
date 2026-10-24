@@ -204,4 +204,20 @@ defmodule TheFloorWeb.UserLive.SettingsTest do
       assert render(view) =~ "You don&#39;t follow anything yet"
     end
   end
+
+  describe "daily email" do
+    test "can be turned off and back on", %{conn: conn} do
+      user = user_fixture()
+      {:ok, view, html} = conn |> log_in_user(user) |> live(~p"/users/settings")
+      assert html =~ "Daily email"
+      assert has_element?(view, "#digest-toggle", "Turn off")
+
+      view |> element("#digest-toggle") |> render_click()
+      refute TheFloor.Repo.reload!(user).digest_enabled
+      assert has_element?(view, "#digest-toggle", "Turn on")
+
+      view |> element("#digest-toggle") |> render_click()
+      assert TheFloor.Repo.reload!(user).digest_enabled
+    end
+  end
 end

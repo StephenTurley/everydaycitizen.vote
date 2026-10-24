@@ -1,6 +1,7 @@
 defmodule TheFloorWeb.UserLive.Settings do
   @moduledoc """
-  The account page: what you follow (with Unfollow), passkeys (add one on this
+  The account page: what you follow (with Unfollow), the daily email on or
+  off, passkeys (add one on this
   device, remove any), the email, and signing out. Changing the email needs a recent sign-in (sudo mode); the
   rest of the page does not.
   """
@@ -52,6 +53,23 @@ defmodule TheFloorWeb.UserLive.Settings do
             </button>
           </li>
         </ul>
+      </section>
+
+      <section aria-label="Daily email" class="pb-6 flex flex-col gap-2">
+        <h2 class="m-0 text-[18px] font-bold">Daily email</h2>
+        <p class="m-0 text-[14px] leading-relaxed text-floor-ink-2">
+          {if @digest_enabled,
+            do: "On. Each morning, when something you follow has changed, we email you what changed.",
+            else: "Off. You won't get emails about what you follow."}
+        </p>
+        <button
+          type="button"
+          id="digest-toggle"
+          phx-click="toggle_digest"
+          class="self-start px-4 py-2.5 rounded-xl bg-floor-card border border-floor-line text-[15px] font-semibold text-floor-ink"
+        >
+          {if @digest_enabled, do: "Turn off", else: "Turn on"}
+        </button>
       </section>
 
       <section aria-label="Passkeys" class="pb-6 flex flex-col gap-2.5">
@@ -176,6 +194,7 @@ defmodule TheFloorWeb.UserLive.Settings do
        sudo: Accounts.sudo_mode?(user, -10),
        passkeys: Passkeys.list_keys(socket.assigns.current_scope),
        follows: Follows.list(socket.assigns.current_scope),
+       digest_enabled: user.digest_enabled,
        passkeys_supported: true,
        passkey_challenge: nil,
        email_form: to_form(Accounts.change_user_email(user, %{}, validate_unique: false))
@@ -203,6 +222,12 @@ defmodule TheFloorWeb.UserLive.Settings do
 
   def handle_event("passkey:unsupported", _params, socket),
     do: {:noreply, assign(socket, :passkeys_supported, false)}
+
+  def handle_event("toggle_digest", _params, socket) do
+    user = Accounts.get_user(socket.assigns.current_scope.user.id)
+    {:ok, user} = Accounts.set_digest(user, !user.digest_enabled)
+    {:noreply, assign(socket, :digest_enabled, user.digest_enabled)}
+  end
 
   def handle_event("unfollow", %{"kind" => kind, "id" => id}, socket)
       when kind in ["bill", "person"] do

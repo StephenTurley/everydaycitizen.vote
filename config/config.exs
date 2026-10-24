@@ -63,7 +63,7 @@ config :the_floor, :webauthn,
 config :the_floor, Oban,
   repo: TheFloor.Repo,
   # bulk: the first-run bulk load's chunk jobs (Federal.BulkBatch)
-  queues: [ingest: 4, text: 2, bulk: 4],
+  queues: [ingest: 4, text: 2, bulk: 4, mail: 2],
   plugins: [
     # Rescue jobs left executing by a crashed node; prune finished jobs after a week.
     # rescue_after must exceed every worker's timeout (the bulk bill and text
@@ -82,7 +82,8 @@ config :the_floor, Oban,
        {"0 3 * * *", TheFloor.Adapters.Federal.Jobs.SyncHouseFloor},
        {"0 3 * * *", TheFloor.Adapters.Federal.Jobs.SyncSenateFloor},
        {"30 5 * * *", TheFloor.Adapters.Federal.Jobs.Relink},
-       {"0 6 * * *", TheFloor.Adapters.Federal.Jobs.Coverage}
+       {"0 6 * * *", TheFloor.Adapters.Federal.Jobs.Coverage},
+       {"0 7 * * *", TheFloor.Jobs.DigestScheduler}
      ]}
   ]
 

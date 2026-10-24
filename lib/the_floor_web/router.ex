@@ -13,6 +13,16 @@ defmodule TheFloorWeb.Router do
     plug :fetch_current_scope_for_user
   end
 
+  # The daily email's unsubscribe link: the signed token is the credential, and
+  # a mail program's one-click POST carries no CSRF token.
+  pipeline :mail_link do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, html: {TheFloorWeb.Layouts, :root}
+    plug :put_secure_browser_headers
+  end
+
   pipeline :api do
     plug :accepts, ["json"]
   end
@@ -24,6 +34,13 @@ defmodule TheFloorWeb.Router do
     post "/district", DistrictController, :create
     # "Follow" while signed out: remember the page, then sign in
     get "/users/sign-in-to", UserSessionController, :sign_in_to
+  end
+
+  scope "/", TheFloorWeb do
+    pipe_through :mail_link
+
+    get "/unsubscribe/:token", UnsubscribeController, :show
+    post "/unsubscribe/:token", UnsubscribeController, :delete
   end
 
   # Other scopes may use custom stacks.

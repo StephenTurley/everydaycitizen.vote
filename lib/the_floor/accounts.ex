@@ -142,6 +142,29 @@ defmodule TheFloor.Accounts do
 
   def login_user_by_passkey_token(_token), do: {:error, :invalid}
 
+  @doc "Gets a user by id, or nil."
+  def get_user(id), do: Repo.get(User, id)
+
+  @doc "Turns the daily email on or off."
+  @spec set_digest(User.t(), boolean()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def set_digest(%User{} = user, enabled?) when is_boolean(enabled?),
+    do: user |> User.digest_changeset(enabled?) |> Repo.update()
+
+  @doc "Records the cutoff the last daily email covered."
+  def put_digest_sent_at(%User{} = user, %DateTime{} = cutoff),
+    do: user |> Ecto.Changeset.change(digest_sent_at: cutoff) |> Repo.update()
+
+  @doc "Ids of people with the daily email on who follow something."
+  @spec digest_recipient_ids() :: [integer()]
+  def digest_recipient_ids do
+    Repo.all(
+      from u in User,
+        where: u.digest_enabled and not is_nil(u.confirmed_at),
+        where: u.id in subquery(from f in TheFloor.Follows.Follow, select: f.user_id),
+        select: u.id
+    )
+  end
+
   @doc "Saves a district key (never an address) on the account."
   @spec put_district(User.t(), String.t()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
   def put_district(%User{} = user, district) when is_binary(district) do
