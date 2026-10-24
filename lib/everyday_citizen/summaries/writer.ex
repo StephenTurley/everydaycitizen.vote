@@ -15,7 +15,7 @@ defmodule EverydayCitizen.Summaries.Writer do
 
   @max_part 250_000
   # reply caps leave room for the who-it-affects, words and example parts
-  @bands [{10_000, "short", 600}, {60_000, "medium", 800}, {250_000, "long", 1200}]
+  @bands [{10_000, "short", 900}, {60_000, "medium", 1200}, {250_000, "long", 1600}]
   # a line that starts a section or a larger part: where a long bill is split
   @break ~r/^\s*(SEC\.|Sec\.|SECTION|Section|TITLE|Title|DIVISION|Division|SUBTITLE|Subtitle)\b/
 
@@ -31,7 +31,7 @@ defmodule EverydayCitizen.Summaries.Writer do
   def band(text) do
     size = String.length(text)
 
-    Enum.find_value(@bands, {"very long", 1700}, fn {max, name, cap} ->
+    Enum.find_value(@bands, {"very long", 2000}, fn {max, name, cap} ->
       if size <= max, do: {name, cap}
     end)
   end
@@ -94,15 +94,28 @@ defmodule EverydayCitizen.Summaries.Writer do
 
   defp total(parts, final, key), do: Enum.sum(Enum.map([final | parts], &(Map.get(&1, key) || 0)))
 
-  # One call, if the budget allows it; its cost is recorded.
-  defp call(kind, input, opts) do
+  # One call, if the budget allows it; its cost is recorded. A bill summary cut
+  # off at its cap is asked for once more with twice the room, and never kept
+  # cut off.
+  defp call(kind, input, opts, retry? \\ true) do
     if Summaries.over_budget?() do
       {:error, :paused}
     else
       with {:ok, result} <- Claude.summarize(input, kind, opts) do
         :ok = Summaries.record_usage(kind, result)
-        {:ok, result}
+        complete(result, kind, input, opts, retry?)
       end
+    end
+  end
+
+  # only a bill summary (asked for with its band's cap) is retried or refused
+  defp complete(result, kind, input, opts, retry?) do
+    cap = opts[:max_tokens]
+
+    cond do
+      !result[:truncated] or is_nil(cap) -> {:ok, result}
+      retry? -> call(kind, input, Keyword.put(opts, :max_tokens, cap * 2), false)
+      true -> {:error, :truncated}
     end
   end
 

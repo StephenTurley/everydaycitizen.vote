@@ -44,6 +44,11 @@ defmodule EverydayCitizen.Jobs.SummarizeSubject do
         broadcast(kind, subject, {:error, :paused})
         {:cancel, :paused}
 
+      # cut off even with twice the room: another attempt would pay for the same
+      {:error, :truncated} ->
+        broadcast(kind, subject, {:error, :unavailable})
+        {:cancel, :truncated}
+
       {:error, reason} ->
         if job.attempt >= job.max_attempts, do: broadcast(kind, subject, {:error, :unavailable})
         {:error, reason}

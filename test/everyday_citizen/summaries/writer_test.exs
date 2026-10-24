@@ -32,10 +32,10 @@ defmodule EverydayCitizen.Summaries.WriterTest do
   end
 
   test "the length band follows the bill's size" do
-    assert Writer.band(String.duplicate("a", 9_000)) == {"short", 600}
-    assert Writer.band(String.duplicate("a", 40_000)) == {"medium", 800}
-    assert Writer.band(String.duplicate("a", 200_000)) == {"long", 1200}
-    assert Writer.band(String.duplicate("a", 300_000)) == {"very long", 1700}
+    assert Writer.band(String.duplicate("a", 9_000)) == {"short", 900}
+    assert Writer.band(String.duplicate("a", 40_000)) == {"medium", 1200}
+    assert Writer.band(String.duplicate("a", 200_000)) == {"long", 1600}
+    assert Writer.band(String.duplicate("a", 300_000)) == {"very long", 2000}
   end
 
   test "a short bill is one request with its length band" do
@@ -45,7 +45,7 @@ defmodule EverydayCitizen.Summaries.WriterTest do
              Writer.write(:bill, "SEC. 1. Short text.")
 
     assert_received {:call, body}
-    assert body["max_tokens"] == 600
+    assert body["max_tokens"] == 900
 
     assert [%{"content" => "Length: short\n\n<bill>\nSEC. 1. Short text.\n</bill>"}] =
              body["messages"]
@@ -71,7 +71,7 @@ defmodule EverydayCitizen.Summaries.WriterTest do
       assert String.starts_with?(part, "SEC. 1.")
     end
 
-    assert final["max_tokens"] == 1700
+    assert final["max_tokens"] == 2000
     assert [%{"content" => "Length: very long\n\n<bill>\n" <> combined}] = final["messages"]
     assert combined =~ "<part>\n- part summary\n</part>"
   end
@@ -113,6 +113,41 @@ defmodule EverydayCitizen.Summaries.WriterTest do
     assert {:ok, %{summary: "- summary"}} = Writer.write(:bill, text)
     assert_received {:call, :final}
     refute_received {:call, _}
+  end
+
+  defp stub_stops(stops) do
+    test = self()
+    {:ok, left} = Agent.start_link(fn -> stops end)
+
+    Req.Test.stub(EverydayCitizen.Claude, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      send(test, {:call, Jason.decode!(body)})
+      stop = Agent.get_and_update(left, fn [s | rest] -> {s, rest} end)
+
+      conn
+      |> Plug.Conn.put_resp_content_type("application/json")
+      |> Plug.Conn.send_resp(
+        200,
+        Jason.encode!(%{
+          "model" => "claude-haiku-5-5",
+          "stop_reason" => stop,
+          "content" => [%{"type" => "text", "text" => "Summary (#{stop})."}],
+          "usage" => %{"input_tokens" => 1_000, "output_tokens" => 50}
+        })
+      )
+    end)
+  end
+
+  test "a reply cut off at its cap is retried once with twice the room, and never kept cut off" do
+    stub_stops(["max_tokens", "end_turn"])
+    assert {:ok, %{summary: "Summary (end_turn)."}} = Writer.write(:bill, "SEC. 1. Short text.")
+    assert_received {:call, %{"max_tokens" => 900}}
+    assert_received {:call, %{"max_tokens" => 1800}}
+    # both calls are paid for
+    assert_in_delta Summaries.spent_today_usd(), 0.00025, 0.000001
+
+    stub_stops(["max_tokens", "max_tokens"])
+    assert {:error, :truncated} = Writer.write(:bill, "SEC. 1. Short text.")
   end
 
   test "once the budget is spent, a long bill stops before its next call" do
