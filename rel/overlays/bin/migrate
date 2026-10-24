@@ -2,4 +2,4 @@
 set -eu
 
 cd -P -- "$(dirname -- "$0")"
-exec ./the_floor eval TheFloor.Release.migrate
+exec ./everyday_citizen eval EverydayCitizen.Release.migrate

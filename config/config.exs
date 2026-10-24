@@ -7,35 +7,35 @@
 # General application configuration
 import Config
 
-config :the_floor, :scopes,
+config :everyday_citizen, :scopes,
   user: [
     default: true,
-    module: TheFloor.Accounts.Scope,
+    module: EverydayCitizen.Accounts.Scope,
     assign_key: :current_scope,
     access_path: [:user, :id],
     schema_key: :user_id,
     schema_type: :id,
     schema_table: :users,
-    test_data_fixture: TheFloor.AccountsFixtures,
+    test_data_fixture: EverydayCitizen.AccountsFixtures,
     test_setup_helper: :register_and_log_in_user
   ]
 
-config :the_floor,
-  ecto_repos: [TheFloor.Repo],
+config :everyday_citizen,
+  ecto_repos: [EverydayCitizen.Repo],
   generators: [timestamp_type: :utc_datetime]
 
 # Time zone database (Senate vote times are America/New_York)
 config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 
 # Configure the endpoint
-config :the_floor, TheFloorWeb.Endpoint,
+config :everyday_citizen, EverydayCitizenWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
-    formats: [html: TheFloorWeb.ErrorHTML, json: TheFloorWeb.ErrorJSON],
+    formats: [html: EverydayCitizenWeb.ErrorHTML, json: EverydayCitizenWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: TheFloor.PubSub,
+  pubsub_server: EverydayCitizen.PubSub,
   live_view: [signing_salt: "baKeoOiE"]
 
 # Configure LiveView
@@ -50,18 +50,18 @@ config :phoenix_live_view,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :the_floor, TheFloor.Mailer, adapter: Swoosh.Adapters.Local
-config :the_floor, :mail_from, {"Everyday Citizen", "hello@everydaycitizen.vote"}
+config :everyday_citizen, EverydayCitizen.Mailer, adapter: Swoosh.Adapters.Local
+config :everyday_citizen, :mail_from, {"Everyday Citizen", "hello@everydaycitizen.vote"}
 
 # WebAuthn relying party (passkeys). Dev values; test.exs and runtime.exs (prod)
 # override. The origin must match the browser's address bar exactly.
-config :the_floor, :webauthn,
+config :everyday_citizen, :webauthn,
   origin: "http://localhost:4000",
   rp_id: "localhost",
   rp_name: "Everyday Citizen"
 
-config :the_floor, Oban,
-  repo: TheFloor.Repo,
+config :everyday_citizen, Oban,
+  repo: EverydayCitizen.Repo,
   # bulk: the first-run bulk load's chunk jobs (Federal.BulkBatch)
   queues: [ingest: 4, text: 2, bulk: 4, mail: 2],
   plugins: [
@@ -73,44 +73,44 @@ config :the_floor, Oban,
     {Oban.Plugins.Cron,
      timezone: "America/New_York",
      crontab: [
-       {"0 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncCongress},
-       {"10 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncMembers},
-       {"30 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncBills},
-       {"40 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncHouseVotes},
-       {"40 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncSenateVotes},
-       {"50 2 * * *", TheFloor.Adapters.Federal.Jobs.SyncCommitteeMeetings},
-       {"0 3 * * *", TheFloor.Adapters.Federal.Jobs.SyncHouseFloor},
-       {"0 3 * * *", TheFloor.Adapters.Federal.Jobs.SyncSenateFloor},
-       {"30 5 * * *", TheFloor.Adapters.Federal.Jobs.Relink},
-       {"0 6 * * *", TheFloor.Adapters.Federal.Jobs.Coverage},
-       {"0 7 * * *", TheFloor.Jobs.DigestScheduler}
+       {"0 2 * * *", EverydayCitizen.Adapters.Federal.Jobs.SyncCongress},
+       {"10 2 * * *", EverydayCitizen.Adapters.Federal.Jobs.SyncMembers},
+       {"30 2 * * *", EverydayCitizen.Adapters.Federal.Jobs.SyncBills},
+       {"40 2 * * *", EverydayCitizen.Adapters.Federal.Jobs.SyncHouseVotes},
+       {"40 2 * * *", EverydayCitizen.Adapters.Federal.Jobs.SyncSenateVotes},
+       {"50 2 * * *", EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeetings},
+       {"0 3 * * *", EverydayCitizen.Adapters.Federal.Jobs.SyncHouseFloor},
+       {"0 3 * * *", EverydayCitizen.Adapters.Federal.Jobs.SyncSenateFloor},
+       {"30 5 * * *", EverydayCitizen.Adapters.Federal.Jobs.Relink},
+       {"0 6 * * *", EverydayCitizen.Adapters.Federal.Jobs.Coverage},
+       {"0 7 * * *", EverydayCitizen.Jobs.DigestScheduler}
      ]}
   ]
 
 # Adapters whose `all/0` lists their list-level ingest jobs as {name, worker, args}.
 # Errors, crashes and failed jobs go to Sentry (inert without SENTRY_DSN).
 # Oban: failed jobs become issues. Only the coverage job reports its runs to
-# Sentry's Crons page (TheFloor.SentryCrons); the plan allows one monitor.
+# Sentry's Crons page (EverydayCitizen.SentryCrons); the plan allows one monitor.
 config :sentry,
   integrations: [oban: [capture_errors: true, cron: [enabled: false]]],
-  in_app_otp_apps: [:the_floor]
+  in_app_otp_apps: [:everyday_citizen]
 
-config :the_floor, :ingest_adapters, [TheFloor.Adapters.Federal.Jobs]
+config :everyday_citizen, :ingest_adapters, [EverydayCitizen.Adapters.Federal.Jobs]
 
-config :the_floor, :federal,
+config :everyday_citizen, :federal,
   congress: 119,
   # Census Geocoder geography vintage holding each congress's districts (the
   # current vintage already has the next congress's)
   census_vintages: %{119 => "ACS2025_Current"}
 
 # The jurisdiction public pages show, and how each finds an address's seats.
-config :the_floor, :default_jurisdiction, "federal"
-config :the_floor, :locators, %{"federal" => TheFloor.Adapters.Federal.Geocoder}
+config :everyday_citizen, :default_jurisdiction, "federal"
+config :everyday_citizen, :locators, %{"federal" => EverydayCitizen.Adapters.Federal.Geocoder}
 
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.25.4",
-  the_floor: [
+  everyday_citizen: [
     args:
       ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
     cd: Path.expand("../assets", __DIR__),
@@ -120,7 +120,7 @@ config :esbuild,
 # Configure tailwind (the version is required)
 config :tailwind,
   version: "4.3.3",
-  the_floor: [
+  everyday_citizen: [
     args: ~w(
       --input=assets/css/app.css
       --output=priv/static/assets/css/app.css

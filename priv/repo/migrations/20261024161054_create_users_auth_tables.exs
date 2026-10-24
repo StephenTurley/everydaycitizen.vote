@@ -1,4 +1,4 @@
-defmodule TheFloor.Repo.Migrations.CreateUsersAuthTables do
+defmodule EverydayCitizen.Repo.Migrations.CreateUsersAuthTables do
   use Ecto.Migration
 
   def change do

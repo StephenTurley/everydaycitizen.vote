@@ -1,4 +1,4 @@
-defmodule TheFloor.Repo.Migrations.AddBillsWebUrl do
+defmodule EverydayCitizen.Repo.Migrations.AddBillsWebUrl do
   use Ecto.Migration
 
   # The bill's official page for people (the source URL may be an API).

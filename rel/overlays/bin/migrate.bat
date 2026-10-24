@@ -1,1 +1,1 @@
-call "%~dp0\the_floor" eval TheFloor.Release.migrate
+call "%~dp0\everyday_citizen" eval EverydayCitizen.Release.migrate

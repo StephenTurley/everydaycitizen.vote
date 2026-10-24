@@ -1,4 +1,4 @@
-defmodule TheFloor.Repo.Migrations.CreateUserKeys do
+defmodule EverydayCitizen.Repo.Migrations.CreateUserKeys do
   use Ecto.Migration
 
   # Passkeys. A session started with a passkey names it, so revoking the

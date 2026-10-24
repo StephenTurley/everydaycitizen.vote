@@ -1,4 +1,4 @@
-defmodule TheFloor.Repo.Migrations.AddVoteClassification do
+defmodule EverydayCitizen.Repo.Migrations.AddVoteClassification do
   use Ecto.Migration
 
   def change do

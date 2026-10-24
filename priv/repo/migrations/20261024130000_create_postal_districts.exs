@@ -1,4 +1,4 @@
-defmodule TheFloor.Repo.Migrations.CreatePostalDistricts do
+defmodule EverydayCitizen.Repo.Migrations.CreatePostalDistricts do
   use Ecto.Migration
 
   def change do

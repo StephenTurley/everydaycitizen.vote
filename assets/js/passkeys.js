@@ -1,4 +1,4 @@
-// Passkey (WebAuthn) glue for LiveView. The server — TheFloor.Accounts.Passkeys —
+// Passkey (WebAuthn) glue for LiveView. The server — EverydayCitizen.Accounts.Passkeys —
 // owns challenges and all verification. Everything on the wire is base64url
 // without padding. Manual conversion (instead of PublicKeyCredential.parse*FromJSON)
 // keeps older iPhones (iOS 16/17) working.

@@ -1,4 +1,4 @@
-defmodule TheFloor.Repo.Migrations.AddBillVersionSections do
+defmodule EverydayCitizen.Repo.Migrations.AddBillVersionSections do
   use Ecto.Migration
 
   def change do

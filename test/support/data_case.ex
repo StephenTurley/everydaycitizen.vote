@@ -1,4 +1,4 @@
-defmodule TheFloor.DataCase do
+defmodule EverydayCitizen.DataCase do
   @moduledoc """
   This module defines the setup for tests requiring
   access to the application's data layer.
@@ -10,7 +10,7 @@ defmodule TheFloor.DataCase do
   we enable the SQL sandbox, so changes done to the database
   are reverted at the end of every test. If you are using
   PostgreSQL, you can even run database tests asynchronously
-  by setting `use TheFloor.DataCase, async: true`, although
+  by setting `use EverydayCitizen.DataCase, async: true`, although
   this option is not recommended for other databases.
   """
 
@@ -18,17 +18,17 @@ defmodule TheFloor.DataCase do
 
   using do
     quote do
-      alias TheFloor.Repo
+      alias EverydayCitizen.Repo
 
       import Ecto
       import Ecto.Changeset
       import Ecto.Query
-      import TheFloor.DataCase
+      import EverydayCitizen.DataCase
     end
   end
 
   setup tags do
-    TheFloor.DataCase.setup_sandbox(tags)
+    EverydayCitizen.DataCase.setup_sandbox(tags)
     :ok
   end
 
@@ -36,13 +36,13 @@ defmodule TheFloor.DataCase do
   Sets up the sandbox based on the test tags.
   """
   def setup_sandbox(tags) do
-    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(TheFloor.Repo, shared: not tags[:async])
+    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(EverydayCitizen.Repo, shared: not tags[:async])
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
   end
 
   @doc "A fresh provenance ref with a unique URL, for building records in tests."
   def source_ref do
-    TheFloor.Ingest.Records.SourceRef.new(
+    EverydayCitizen.Ingest.Records.SourceRef.new(
       "https://example.test/#{System.unique_integer([:positive])}",
       "body"
     )

@@ -1,4 +1,4 @@
-defmodule TheFloor.Repo.Migrations.CreateCoverageChecks do
+defmodule EverydayCitizen.Repo.Migrations.CreateCoverageChecks do
   use Ecto.Migration
 
   def change do

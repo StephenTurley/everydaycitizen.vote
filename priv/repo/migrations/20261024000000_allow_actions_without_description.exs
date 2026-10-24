@@ -1,4 +1,4 @@
-defmodule TheFloor.Repo.Migrations.AllowActionsWithoutDescription do
+defmodule EverydayCitizen.Repo.Migrations.AllowActionsWithoutDescription do
   use Ecto.Migration
 
   # Some source actions carry only a date and a code; they are kept as given.

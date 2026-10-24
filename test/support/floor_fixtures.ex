@@ -1,12 +1,12 @@
-defmodule TheFloor.FloorFixtures do
+defmodule EverydayCitizen.FloorFixtures do
   @moduledoc """
   A small federal delegation for page tests: Iowa's two senators and its 1st
   District representative, a bill sponsored by a senator with a few actions,
   and a Senate passage vote on it.
   """
-  alias TheFloor.Ingest
-  alias TheFloor.Ingest.Records
-  alias TheFloor.Legislature
+  alias EverydayCitizen.Ingest
+  alias EverydayCitizen.Ingest.Records
+  alias EverydayCitizen.Legislature
 
   @src Records.SourceRef.new("https://www.congress.gov/x", "x")
 

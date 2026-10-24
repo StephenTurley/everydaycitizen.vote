@@ -5,7 +5,7 @@ import Config
 # The MIX_TEST_PARTITION environment variable can be used
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
-config :the_floor, TheFloor.Repo,
+config :everyday_citizen, EverydayCitizen.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
@@ -15,27 +15,27 @@ config :the_floor, TheFloor.Repo,
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
-config :the_floor, TheFloorWeb.Endpoint,
+config :everyday_citizen, EverydayCitizenWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "vx/m6u/9SJpiE3a7J/RmURB1seCTqc+9dZThH2F9hlsS3fv3TXIQyhlLc9D0Biox",
   server: false
 
 # In test we don't send emails
-config :the_floor, TheFloor.Mailer, adapter: Swoosh.Adapters.Test
+config :everyday_citizen, EverydayCitizen.Mailer, adapter: Swoosh.Adapters.Test
 
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 
-config :the_floor, Oban, testing: :manual
+config :everyday_citizen, Oban, testing: :manual
 
 # The test endpoint listens on 4002; the software authenticator signs for this origin.
-config :the_floor, :webauthn,
+config :everyday_citizen, :webauthn,
   origin: "http://localhost:4002",
   rp_id: "localhost",
   rp_name: "Everyday Citizen"
 
 # One bulk entry per chunk job, so tests exercise splitting
-config :the_floor, :bulk_chunk_size, 1
+config :everyday_citizen, :bulk_chunk_size, 1
 
 # Print only warnings and errors during test
 config :logger, level: :warning
@@ -52,7 +52,7 @@ config :phoenix,
   sort_verified_routes_query_params: true
 
 # Federal adapter: no rate limiting, no network, fast retries
-config :the_floor, :federal_rate_limits,
+config :everyday_citizen, :federal_rate_limits,
   congress_gov: 0,
   govinfo: 0,
   house_docs: 0,
@@ -60,9 +60,9 @@ config :the_floor, :federal_rate_limits,
   voteview: 0,
   census: 0
 
-config :the_floor, :congress_gov_api_key, "test-key"
+config :everyday_citizen, :congress_gov_api_key, "test-key"
 
-config :the_floor, :federal_req_options,
-  plug: {Req.Test, TheFloor.Federal},
+config :everyday_citizen, :federal_req_options,
+  plug: {Req.Test, EverydayCitizen.Federal},
   retry_delay: 0,
   retry_log_level: false
