@@ -3,11 +3,19 @@
 app = "thefloor-vote"
 primary_region = "iad"
 kill_signal = "SIGTERM"
+# room for in-flight requests and Oban's 25 s grace for running jobs
+kill_timeout = "60s"
 
 [build]
 
 [deploy]
+  # Runs in a temporary machine from the new image BEFORE the new app machine
+  # boots, while the old one is still serving: migrations must work with both
+  # the old and the new code (docs/ops/deploys.md).
   release_command = "/app/bin/migrate"
+  # Boot a new machine beside the old one, wait for its health checks, move
+  # traffic, then stop the old one. No downtime; needs the checks below.
+  strategy = "bluegreen"
 
 [env]
   PORT = "8080"
@@ -24,6 +32,18 @@ kill_signal = "SIGTERM"
   min_machines_running = 1
   processes = ["app"]
 
+  # Liveness, gates routing: the proxy sends traffic only to machines passing
+  # it. /health never touches the database (EverydayCitizenWeb.HealthCheck).
+  [[http_service.checks]]
+    interval = "10s"
+    timeout = "5s"
+    grace_period = "15s"
+    method = "GET"
+    path = "/health"
+
+    [http_service.checks.headers]
+      X-Forwarded-Proto = "https"
+
   [http_service.concurrency]
     type = "connections"
     hard_limit = 1000
@@ -33,3 +53,17 @@ kill_signal = "SIGTERM"
   memory = "1gb"
   cpu_kind = "shared"
   cpus = 1
+
+# Readiness: the app booted and the database answers. It doesn't route
+# traffic, but a blue-green deploy waits for it before switching.
+[checks.db]
+  type = "http"
+  port = 8080
+  method = "GET"
+  path = "/health/ready"
+  interval = "10s"
+  timeout = "5s"
+  grace_period = "15s"
+
+  [checks.db.headers]
+    X-Forwarded-Proto = "https"

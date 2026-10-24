@@ -17,6 +17,10 @@ defmodule EverydayCitizenWeb.Endpoint do
     longpoll: [connect_info: [:peer_data, :x_headers, session: @session_options]]
 
   # www. and the Fly hostname redirect to PHX_HOST (production only).
+  # Fly's health checks: before the canonical-host redirect, static files,
+  # logging and the session (EverydayCitizenWeb.HealthCheck).
+  plug EverydayCitizenWeb.HealthCheck
+
   plug EverydayCitizenWeb.CanonicalHost
 
   # Serve at "/" the static files from "priv/static" directory.
