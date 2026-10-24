@@ -39,17 +39,19 @@ Decision log: `docs/DECISIONS.md` (append; never rewrite history)
   text. Never show a summary without the text it came from.
 - The product never explains "why" in its own voice. Every argument is labeled
   with who made it (CRS, committee report, sponsor, CBO, opposing statement).
-- Expensive layers (plain-language, redline, why-panel) run only on bills that
-  meet the movement filter defined in the spec.
+- Expensive layers (plain-language, redline, why-panel) never process the
+  corpus in bulk: they run only when someone views the part in question, are
+  cached, and stay inside a daily budget (owner's decision, 2026-10-24; this
+  replaced the spec's movement filter).
 
 ## Current milestone
 
-M2 (see `docs/SPEC.md` → Milestones), designed in
-`docs/superpowers/specs/2026-10-23-m2-frontend-design.md`. M2a (public pages: find
-your reps, rep feed, bill page, this week) and M2b (accounts with email link and
-passkeys, following, daily email) are built; M2 is done once a person can find
-their reps and follow a bill end to end in production. Next is M3 (plain-language
-layer). M1 (schema + federal adapter) is done.
+M3, the plain-language layer (`docs/superpowers/plans/2026-10-24-m3-plain-language-summaries.md`):
+a plain-English summary of each bill section, written by Claude the first time
+someone opens it and cached, labeled as AI-written beside the text, with the
+prompt published in `priv/prompts/`. M1 (schema + federal adapter) and M2 (your
+reps, bill pages, accounts with email link and passkeys, following, daily email)
+are done and in production.
 
 ## Working conventions
 
