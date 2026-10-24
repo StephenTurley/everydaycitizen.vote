@@ -75,6 +75,10 @@ defmodule EverydayCitizenWeb.ThisWeekLive do
   defp time(event),
     do: event.start_at |> DateTime.shift_zone!(@zone) |> Calendar.strftime("%-I:%M %p")
 
+  # a definition, not a reason: what the term means
+  defp pro_forma?(%{title: title}) when is_binary(title), do: title =~ ~r/pro forma/i
+  defp pro_forma?(_event), do: false
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -164,6 +168,13 @@ defmodule EverydayCitizenWeb.ThisWeekLive do
                   do: event.body.name}
               </span>
               <p class="m-0 text-[16px] font-semibold leading-snug lg:col-start-2">{event.title}</p>
+              <p
+                :if={pro_forma?(event)}
+                data-term="pro-forma"
+                class="m-0 text-[14px] text-floor-ink-2 lg:col-start-2"
+              >
+                A pro forma session is a brief formal meeting, often only a few minutes long, where usually no business is done.
+              </p>
               <p
                 :if={event.event_bills != [] or event.unresolved_bill_labels != []}
                 class="m-0 text-[14px] flex flex-wrap gap-x-3 gap-y-1 lg:col-start-2"

@@ -95,6 +95,38 @@ defmodule EverydayCitizenWeb.ThisWeekLiveTest do
     refute render(view) =~ "Event floor-2"
   end
 
+  test "a pro forma session is defined in plain words; other items are not", %{conn: conn} do
+    for {id, title, hour} <- [
+          {"floor-pf", "Senate will meet in a pro forma session.", 14},
+          {"floor-2", "Consideration of S. 5", 16}
+        ] do
+      {:ok, _} =
+        EverydayCitizen.Ingest.write(
+          %EverydayCitizen.Ingest.Records.Event{
+            jurisdiction: "federal",
+            body_external_id: "senate",
+            external_id: id,
+            classification: "floor",
+            title: title,
+            start_at: DateTime.new!(~D[2026-10-26], Time.new!(hour, 0, 0)),
+            source: EverydayCitizen.Ingest.Records.SourceRef.new("https://x.test/e", "e")
+          },
+          nil
+        )
+    end
+
+    {:ok, view, _html} = live(conn, ~p"/this-week?from=2026-10-26")
+
+    assert [_] =
+             view
+             |> render()
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query("[data-term=pro-forma]")
+             |> Enum.to_list()
+
+    assert has_element?(view, "[data-term=pro-forma]", "brief formal meeting")
+  end
+
   test "signed out, there is no Followed filter", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/this-week?from=2026-10-26&followed=1")
     refute has_element?(view, "a", "Followed")
