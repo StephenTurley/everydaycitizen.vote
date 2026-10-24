@@ -116,6 +116,32 @@ defmodule TheFloor.Accounts do
     end)
   end
 
+  @doc """
+  Mints a single-use, 60-second token that carries a verified passkey sign-in
+  from the login LiveView to the session controller.
+  """
+  def generate_passkey_login_token(%User{} = user, key) do
+    {encoded, user_token} = UserToken.build_passkey_login_token(user, key)
+    Repo.insert!(user_token)
+    encoded
+  end
+
+  @doc """
+  Consumes a passkey sign-in token. The user carries `session_key_id`, so the
+  session created from it is tied to that passkey.
+  """
+  def login_user_by_passkey_token(token) when is_binary(token) do
+    with {:ok, query} <- UserToken.verify_passkey_login_token_query(token),
+         {%User{} = user, user_token} <- Repo.one(query),
+         {1, _} <- Repo.delete_all(from t in UserToken, where: t.id == ^user_token.id) do
+      {:ok, user}
+    else
+      _ -> {:error, :invalid}
+    end
+  end
+
+  def login_user_by_passkey_token(_token), do: {:error, :invalid}
+
   @doc "Saves a district key (never an address) on the account."
   @spec put_district(User.t(), String.t()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
   def put_district(%User{} = user, district) when is_binary(district) do

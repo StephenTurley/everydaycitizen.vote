@@ -11,6 +11,7 @@ defmodule TheFloor.Accounts.UserToken do
   @magic_link_validity_in_minutes 15
   @change_email_validity_in_days 7
   @session_validity_in_days 14
+  @passkey_login_validity_in_seconds 60
 
   schema "users_tokens" do
     field :token, :binary
@@ -18,6 +19,7 @@ defmodule TheFloor.Accounts.UserToken do
     field :sent_to, :string
     field :authenticated_at, :utc_datetime
     belongs_to :user, TheFloor.Accounts.User
+    belongs_to :user_key, TheFloor.Accounts.UserKey
 
     timestamps(type: :utc_datetime, updated_at: false)
   end
@@ -44,7 +46,15 @@ defmodule TheFloor.Accounts.UserToken do
   def build_session_token(user) do
     token = :crypto.strong_rand_bytes(@rand_size)
     dt = user.authenticated_at || DateTime.utc_now(:second)
-    {token, %UserToken{token: token, context: "session", user_id: user.id, authenticated_at: dt}}
+
+    {token,
+     %UserToken{
+       token: token,
+       context: "session",
+       user_id: user.id,
+       user_key_id: user.session_key_id,
+       authenticated_at: dt
+     }}
   end
 
   @doc """
@@ -60,9 +70,51 @@ defmodule TheFloor.Accounts.UserToken do
       from token in by_token_and_context_query(token, "session"),
         join: user in assoc(token, :user),
         where: token.inserted_at > ago(@session_validity_in_days, "day"),
-        select: {%{user | authenticated_at: token.authenticated_at}, token.inserted_at}
+        select:
+          {%{user | authenticated_at: token.authenticated_at, session_key_id: token.user_key_id},
+           token.inserted_at}
 
     {:ok, query}
+  end
+
+  @doc """
+  Builds a single-use token that hands a verified passkey sign-in from the
+  login LiveView (which cannot set the session cookie) to the session
+  controller. Only its hash is stored; it lasts #{@passkey_login_validity_in_seconds} seconds.
+  """
+  def build_passkey_login_token(user, key) do
+    token = :crypto.strong_rand_bytes(@rand_size)
+
+    {Base.url_encode64(token, padding: false),
+     %UserToken{
+       token: :crypto.hash(@hash_algorithm, token),
+       context: "passkey_login",
+       user_id: user.id,
+       user_key_id: key.id
+     }}
+  end
+
+  @doc """
+  Looks up a passkey sign-in token younger than #{@passkey_login_validity_in_seconds} seconds. The query
+  returns `{user, token}` with `user.session_key_id` set to the passkey used.
+  """
+  def verify_passkey_login_token_query(token) do
+    case Base.url_decode64(token, padding: false) do
+      {:ok, decoded} ->
+        {:ok,
+         from(
+           token in by_token_and_context_query(
+             :crypto.hash(@hash_algorithm, decoded),
+             "passkey_login"
+           ),
+           join: user in assoc(token, :user),
+           where: token.inserted_at > ago(@passkey_login_validity_in_seconds, "second"),
+           select: {%{user | session_key_id: token.user_key_id}, token}
+         )}
+
+      :error ->
+        :error
+    end
   end
 
   @doc """

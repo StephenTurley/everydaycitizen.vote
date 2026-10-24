@@ -14,6 +14,8 @@ defmodule TheFloor.Accounts.User do
     field :district, :string
     field :digest_enabled, :boolean, default: true
     field :digest_sent_at, :utc_datetime
+    # the passkey that started the current session, if any (from its token)
+    field :session_key_id, :integer, virtual: true
     field :authenticated_at, :utc_datetime, virtual: true
 
     timestamps(type: :utc_datetime)

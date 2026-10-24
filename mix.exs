@@ -70,6 +70,7 @@ defmodule TheFloor.MixProject do
        compile: false,
        depth: 1},
       {:swoosh, "~> 1.16"},
+      {:wax_, "~> 0.7.0"},
       {:req, "~> 0.5"},
       {:sentry, "~> 14.0"},
       {:nimble_csv, "~> 1.2"},

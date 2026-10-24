@@ -4,6 +4,7 @@ defmodule TheFloorWeb.UserLive.LoginTest do
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
   import TheFloor.AccountsFixtures
+  import TheFloor.WebAuthnFixtures
 
   alias TheFloor.Accounts
 
@@ -98,6 +99,85 @@ defmodule TheFloorWeb.UserLive.LoginTest do
       {:ok, view, html} = live(conn, ~p"/users/log-in")
       assert html =~ "Confirm it&#39;s you"
       assert has_element?(view, ~s(input[readonly][value="#{user.email}"]))
+    end
+  end
+
+  describe "passkey sign-in" do
+    setup do
+      user = user_fixture()
+      {key, authenticator} = passkey_fixture(user)
+      %{user: user, key: key, authenticator: authenticator}
+    end
+
+    defp start_passkey(view, for \\ "button") do
+      render_hook(view, "passkey:auth_options", %{"for" => for})
+      assert_reply(view, %{challenge: challenge, for: ^for})
+      Base.url_decode64!(challenge, padding: false)
+    end
+
+    test "offers a passkey button and passkey autofill on the email field", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/users/log-in")
+      assert has_element?(view, "#passkey-login[phx-hook='PasskeyLogin']")
+      assert has_element?(view, "#passkey-sign-in[data-passkey-button]")
+      assert has_element?(view, "#user_email[autocomplete='username webauthn']")
+    end
+
+    test "a verified passkey signs the person in on this device, tied to that passkey", %{
+      conn: conn,
+      user: user,
+      key: key,
+      authenticator: authenticator
+    } do
+      {:ok, view, _html} = live(conn, ~p"/users/log-in")
+      challenge = start_passkey(view)
+      render_hook(view, "passkey:auth", assertion_response(authenticator, challenge, 1))
+
+      conn = follow_trigger_action(form(view, "#passkey_login_form"), conn)
+
+      assert redirected_to(conn) == ~p"/"
+      assert conn.resp_cookies["_the_floor_web_user_remember_me"]
+      {session_user, _} = Accounts.get_user_by_session_token(get_session(conn, :user_token))
+      assert session_user.id == user.id
+      assert session_user.session_key_id == key.id
+    end
+
+    test "the button and the autofill each keep their own challenge, used once", %{
+      conn: conn,
+      authenticator: authenticator
+    } do
+      {:ok, view, _html} = live(conn, ~p"/users/log-in")
+      autofill = start_passkey(view, "autofill")
+      _button = start_passkey(view, "button")
+
+      response = assertion_response(authenticator, autofill, 1) |> Map.put("for", "autofill")
+      render_hook(view, "passkey:auth", response)
+      assert has_element?(view, "#passkey_login_form[phx-trigger-action]")
+
+      assert render_hook(view, "passkey:auth", response) =~
+               "That didn&#39;t work. Please try again."
+    end
+
+    test "an unknown or garbled passkey says the same thing and does not sign in", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/users/log-in")
+      challenge = start_passkey(view)
+
+      html =
+        render_hook(view, "passkey:auth", assertion_response(new_authenticator(), challenge, 1))
+
+      assert html =~ "couldn&#39;t sign you in with that passkey"
+
+      start_passkey(view)
+
+      assert render_hook(view, "passkey:auth", %{"rawId" => "%%%"}) =~
+               "couldn&#39;t sign you in with that passkey"
+
+      refute has_element?(view, "#passkey_login_form[phx-trigger-action]")
+    end
+
+    test "a browser without passkeys hides the button", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/users/log-in")
+      render_hook(view, "passkey:unsupported", %{})
+      refute has_element?(view, "#passkey-sign-in")
     end
   end
 end

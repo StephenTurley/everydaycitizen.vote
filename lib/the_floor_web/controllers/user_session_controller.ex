@@ -4,6 +4,22 @@ defmodule TheFloorWeb.UserSessionController do
   alias TheFloor.Accounts
   alias TheFloorWeb.UserAuth
 
+  # Passkey sign-in: the login LiveView verified the passkey and handed over a
+  # single-use token, because a LiveView cannot set the session cookie itself.
+  def create(conn, %{"passkey" => %{"token" => token}}) do
+    case Accounts.login_user_by_passkey_token(token) do
+      {:ok, user} ->
+        conn
+        |> put_flash(:info, "Welcome back!")
+        |> UserAuth.log_in_user(user, %{"remember_me" => "true"})
+
+      {:error, :invalid} ->
+        conn
+        |> put_flash(:error, "That sign-in expired. Please try again.")
+        |> redirect(to: ~p"/users/log-in")
+    end
+  end
+
   def create(conn, %{"_action" => "confirmed"} = params) do
     create(conn, params, "User confirmed successfully.")
   end

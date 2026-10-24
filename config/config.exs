@@ -53,6 +53,13 @@ config :phoenix_live_view,
 config :the_floor, TheFloor.Mailer, adapter: Swoosh.Adapters.Local
 config :the_floor, :mail_from, {"Everyday Citizen", "hello@everydaycitizen.vote"}
 
+# WebAuthn relying party (passkeys). Dev values; test.exs and runtime.exs (prod)
+# override. The origin must match the browser's address bar exactly.
+config :the_floor, :webauthn,
+  origin: "http://localhost:4000",
+  rp_id: "localhost",
+  rp_name: "Everyday Citizen"
+
 config :the_floor, Oban,
   repo: TheFloor.Repo,
   # bulk: the first-run bulk load's chunk jobs (Federal.BulkBatch)

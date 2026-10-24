@@ -111,6 +111,13 @@ if config_env() == :prod do
 
   host = System.get_env("PHX_HOST") || "example.com"
 
+  # Passkeys are bound to this RP ID forever: changing it orphans every
+  # registered passkey. PHX_HOST is everydaycitizen.vote.
+  config :the_floor, :webauthn,
+    origin: "https://#{host}",
+    rp_id: host,
+    rp_name: "Everyday Citizen"
+
   # Every other host redirects here (TheFloorWeb.CanonicalHost).
   config :the_floor, :canonical_host, host
 

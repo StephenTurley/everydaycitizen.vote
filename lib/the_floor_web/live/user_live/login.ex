@@ -1,6 +1,7 @@
 defmodule TheFloorWeb.UserLive.Login do
   @moduledoc """
-  Sign in, or create an account, by emailed link: there are no passwords. An
+  Sign in with a passkey (button or the email field's autofill), or sign in or
+  create an account by emailed link: there are no passwords. An
   email with no account gets one (unconfirmed until the link is used). The reply
   is the same either way, so the page does not reveal who has an account.
   Signed in, it re-confirms the person for sensitive changes.
@@ -8,6 +9,8 @@ defmodule TheFloorWeb.UserLive.Login do
   use TheFloorWeb, :live_view
 
   alias TheFloor.Accounts
+  alias TheFloor.Accounts.Passkeys
+  alias TheFloorWeb.PasskeyMessages
 
   @impl true
   def render(assigns) do
@@ -26,6 +29,29 @@ defmodule TheFloorWeb.UserLive.Login do
           <% end %>
         </p>
       </section>
+
+      <div id="passkey-login" phx-hook="PasskeyLogin" class="flex flex-col gap-3">
+        <div :if={@passkeys_supported and is_nil(@current_scope)} class="flex flex-col gap-3">
+          <button
+            type="button"
+            id="passkey-sign-in"
+            data-passkey-button
+            class="py-3 rounded-xl bg-floor-card border border-floor-line text-[16px] font-semibold text-floor-ink"
+          >
+            Sign in with a passkey
+          </button>
+          <p class="m-0 text-center text-[13px] text-floor-muted">or get a link by email</p>
+        </div>
+      </div>
+
+      <.form
+        for={@passkey_form}
+        id="passkey_login_form"
+        action={~p"/users/log-in"}
+        phx-trigger-action={@passkey_trigger}
+      >
+        <input type="hidden" name={@passkey_form[:token].name} value={@passkey_form[:token].value} />
+      </.form>
 
       <p :if={local_mail_adapter?()} class="m-0 mb-3 text-[13px] text-floor-muted">
         Development: sent emails appear in <.link href="/dev/mailbox" class="underline">the mailbox</.link>.
@@ -46,7 +72,7 @@ defmodule TheFloorWeb.UserLive.Login do
           name={f[:email].name}
           value={f[:email].value}
           readonly={!!@current_scope}
-          autocomplete="username"
+          autocomplete="username webauthn"
           spellcheck="false"
           required
           phx-mounted={JS.focus()}
@@ -71,10 +97,40 @@ defmodule TheFloorWeb.UserLive.Login do
       Phoenix.Flash.get(socket.assigns.flash, :email) ||
         get_in(socket.assigns, [:current_scope, Access.key(:user), Access.key(:email)])
 
-    {:ok, assign(socket, form: to_form(%{"email" => email}, as: "user"), errors: [])}
+    {:ok,
+     assign(socket,
+       form: to_form(%{"email" => email}, as: "user"),
+       errors: [],
+       passkey_form: to_form(%{"token" => nil}, as: "passkey"),
+       passkey_trigger: false,
+       passkey_challenges: %{},
+       passkeys_supported: true
+     )}
   end
 
+  # Each request keeps its own challenge: the email field's autofill
+  # ("autofill") and the button ("button"), fetched before the tap because
+  # Safari only shows its passkey sheet for a request started inside the tap.
   @impl true
+  def handle_event("passkey:auth_options", params, socket) do
+    for = request_for(params)
+    {challenge, options} = Passkeys.authentication_options()
+
+    {:reply, Map.put(options, :for, for),
+     update(socket, :passkey_challenges, &Map.put(&1, for, challenge))}
+  end
+
+  def handle_event("passkey:auth", params, socket) do
+    {challenge, challenges} = Map.pop(socket.assigns.passkey_challenges, request_for(params))
+    authenticate(assign(socket, :passkey_challenges, challenges), challenge, params)
+  end
+
+  def handle_event("passkey:error", params, socket),
+    do: {:noreply, put_flash(socket, :error, PasskeyMessages.client_error(params["name"]))}
+
+  def handle_event("passkey:unsupported", _params, socket),
+    do: {:noreply, assign(socket, :passkeys_supported, false)}
+
   def handle_event("submit_magic", %{"user" => %{"email" => email}}, socket) do
     case user_for(String.trim(email)) do
       {:ok, user} ->
@@ -92,6 +148,29 @@ defmodule TheFloorWeb.UserLive.Login do
         {:noreply, assign(socket, form: to_form(%{"email" => email}, as: "user"), errors: errors)}
     end
   end
+
+  # No challenge held: the socket reconnected mid-prompt, or a stray event.
+  defp authenticate(socket, nil, _params),
+    do: {:noreply, put_flash(socket, :error, PasskeyMessages.failed())}
+
+  defp authenticate(socket, challenge, params) do
+    case Passkeys.authenticate(challenge, params) do
+      {:ok, user, key} ->
+        token = Accounts.generate_passkey_login_token(user, key)
+
+        {:noreply,
+         assign(socket,
+           passkey_form: to_form(%{"token" => token}, as: "passkey"),
+           passkey_trigger: true
+         )}
+
+      {:error, :invalid_response} ->
+        {:noreply, put_flash(socket, :error, PasskeyMessages.rejected())}
+    end
+  end
+
+  defp request_for(%{"for" => "autofill"}), do: "autofill"
+  defp request_for(_params), do: "button"
 
   defp user_for(email) do
     case Accounts.get_user_by_email(email) do

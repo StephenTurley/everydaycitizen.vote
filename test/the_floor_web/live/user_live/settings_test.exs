@@ -4,6 +4,7 @@ defmodule TheFloorWeb.UserLive.SettingsTest do
   alias TheFloor.Accounts
   import Phoenix.LiveViewTest
   import TheFloor.AccountsFixtures
+  import TheFloor.WebAuthnFixtures
 
   describe "Settings page" do
     test "renders settings page", %{conn: conn} do
@@ -140,6 +141,49 @@ defmodule TheFloorWeb.UserLive.SettingsTest do
       assert path == ~p"/users/log-in"
       assert %{"error" => message} = flash
       assert message == "You must log in to access this page."
+    end
+  end
+
+  describe "passkeys" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "adding a passkey on this device lists it", %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/users/settings")
+      assert html =~ "No passkeys yet"
+      assert has_element?(view, "#passkey-add[phx-hook='PasskeyRegister']")
+
+      render_hook(view, "passkey:register_options", %{})
+      assert_reply(view, %{challenge: challenge})
+
+      response =
+        registration_response(new_authenticator(), Base.url_decode64!(challenge, padding: false))
+
+      html = render_hook(view, "passkey:register", response)
+      assert html =~ "Passkey added."
+      assert has_element?(view, "#passkeys li", "Added")
+    end
+
+    test "a bad registration says so and adds nothing", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/users/settings")
+      render_hook(view, "passkey:register_options", %{})
+      assert_reply(view, _options)
+
+      assert render_hook(view, "passkey:register", %{"attestationObject" => "%%%"}) =~
+               "That didn&#39;t work. Please try again."
+
+      assert render(view) =~ "No passkeys yet"
+    end
+
+    test "removing a passkey takes it off the list", %{conn: conn, user: user} do
+      {key, _} = passkey_fixture(user, "Old phone")
+      {:ok, view, _html} = live(conn, ~p"/users/settings")
+      assert has_element?(view, "#passkeys li", "Old phone")
+
+      view |> element("#passkey-#{key.id} button", "Remove") |> render_click()
+      refute has_element?(view, "#passkeys li", "Old phone")
     end
   end
 end

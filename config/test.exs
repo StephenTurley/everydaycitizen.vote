@@ -28,6 +28,12 @@ config :swoosh, :api_client, false
 
 config :the_floor, Oban, testing: :manual
 
+# The test endpoint listens on 4002; the software authenticator signs for this origin.
+config :the_floor, :webauthn,
+  origin: "http://localhost:4002",
+  rp_id: "localhost",
+  rp_name: "Everyday Citizen"
+
 # One bulk entry per chunk job, so tests exercise splitting
 config :the_floor, :bulk_chunk_size, 1
 
