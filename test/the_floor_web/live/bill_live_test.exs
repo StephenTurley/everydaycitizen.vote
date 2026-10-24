@@ -154,6 +154,47 @@ defmodule TheFloorWeb.BillLiveTest do
     assert html =~ ~s(data-level="2")
   end
 
+  test "Expand all opens every section; Collapse all closes them", %{conn: conn} do
+    add_versions!()
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+    assert has_element?(view, "a", "Expand all")
+    refute has_element?(view, ".section-text")
+
+    {:ok, view, html} = live(conn, ~p"/bills/119-s-5?version=es&section=all")
+    assert html =~ "This Act may be cited as es."
+    assert html =~ "Deeper."
+    assert has_element?(view, "a", "Collapse all")
+  end
+
+  test "a section that is not a number opens nothing", %{conn: conn} do
+    add_versions!()
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?section=nope")
+    refute has_element?(view, ".section-text")
+  end
+
+  test "the contents list links every section and marks the open one", %{conn: conn} do
+    add_versions!()
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es&section=1")
+
+    assert has_element?(
+             view,
+             ~s(nav[aria-label="Sections"] a[href*="section=0"][href*="version=es"])
+           )
+
+    assert has_element?(
+             view,
+             ~s(nav[aria-label="Sections"] a[href*="section=1"][aria-current="location"])
+           )
+
+    refute has_element?(view, ~s(nav[aria-label="Sections"] a[href*="section=0"][aria-current]))
+    assert has_element?(view, "#section-1")
+  end
+
+  test "a step passed over shows Skipped", %{conn: conn} do
+    {:ok, _view, html} = live(conn, ~p"/bills/119-s-5")
+    assert html =~ "Skipped"
+  end
+
   test "votes on the bill are listed", %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/bills/119-s-5")
     assert html =~ "Passed, 64–35" or html =~ "Bill Passed, 64–35"

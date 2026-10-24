@@ -13,14 +13,15 @@ defmodule TheFloorWeb.Layouts do
 
   @doc """
   The app shell: the header (name, "This week", "Change address") over a
-  phone-width column.
+  phone-width column, or with `width={:full}` a column that widens to 1280px on
+  large screens (the bill page's three columns).
 
       <Layouts.app flash={@flash}>
         <h1>Content</h1>
       </Layouts.app>
   """
   attr :flash, :map, required: true, doc: "the map of flash messages"
-  attr :wide, :boolean, default: false, doc: "allow a wider column on large screens"
+  attr :width, :atom, values: [:narrow, :full], default: :narrow
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -28,7 +29,10 @@ defmodule TheFloorWeb.Layouts do
     <header class="bg-floor-card border-b border-floor-line">
       <nav
         aria-label="Main"
-        class="mx-auto max-w-3xl px-5 flex items-center justify-between gap-4"
+        class={[
+          "mx-auto max-w-3xl px-5 flex items-center justify-between gap-4",
+          @width == :full && "lg:max-w-[1280px] lg:px-10"
+        ]}
       >
         <a href={~p"/"} class="py-4 text-[19px] font-bold tracking-tight text-floor-ink">
           The Floor
@@ -44,7 +48,10 @@ defmodule TheFloorWeb.Layouts do
       </nav>
     </header>
 
-    <main class={["mx-auto px-5 pb-10", if(@wide, do: "max-w-3xl", else: "max-w-xl")]}>
+    <main class={[
+      "mx-auto px-5 pb-10 max-w-xl",
+      @width == :full && "lg:max-w-[1280px] lg:px-10"
+    ]}>
       {render_slot(@inner_block)}
     </main>
 
