@@ -31,6 +31,8 @@ defmodule TheFloor.Jobs.SendDigestTest do
     flush_emails()
     bill = TheFloor.Legislation.get_bill("federal", "119-s-5")
     {:ok, _} = Follows.follow(Scope.for_user(user), {:bill, bill.id})
+    # followed well before the changes the tests make
+    Repo.update_all(TheFloor.Follows.Follow, set: [inserted_at: ~U[2026-09-01 00:00:00Z]])
     %{user: Repo.reload!(user), bill: bill}
   end
 
@@ -54,8 +56,8 @@ defmodule TheFloor.Jobs.SendDigestTest do
     })
   end
 
-  # the cutoff is whole seconds; run a second after the test's changes were stored
-  defp run(user, at \\ DateTime.add(DateTime.utc_now(), 1)) do
+  # the cutoff is 10 minutes before the run: run after the test's changes settle
+  defp run(user, at \\ DateTime.add(DateTime.utc_now(), 11, :minute)) do
     perform_job(
       SendDigest,
       %{"user_id" => user.id, "date" => Date.to_iso8601(DateTime.to_date(at))},
@@ -63,10 +65,38 @@ defmodule TheFloor.Jobs.SendDigestTest do
     )
   end
 
-  test "nothing changed: no email and the cutoff stays", %{user: user} do
-    assert :ok = run(user)
+  test "nothing changed: no email, and the cutoff still moves on", %{user: user} do
+    at = DateTime.utc_now(:second)
+    assert :ok = run(user, at)
     assert_no_email_sent()
-    assert Repo.reload!(user).digest_sent_at == nil
+    assert Repo.reload!(user).digest_sent_at == DateTime.add(at, -10, :minute)
+  end
+
+  test "a change stored just before the run waits for the next email, so none is lost", %{
+    user: user,
+    bill: bill
+  } do
+    Repo.update!(
+      Ecto.Changeset.change(user,
+        digest_sent_at: DateTime.add(DateTime.utc_now(:second), -1, :day)
+      )
+    )
+
+    new_action!(bill, DateTime.add(DateTime.utc_now(), -5, :minute))
+
+    :ok = run(user, DateTime.utc_now(:second))
+    assert_no_email_sent()
+
+    :ok = run(Repo.reload!(user), DateTime.add(DateTime.utc_now(:second), 1, :day))
+    assert_email_sent(fn email -> email.text_body =~ "Reported by the committee." end)
+  end
+
+  test "turning the daily email back on starts fresh, without the months it was off", %{
+    user: user
+  } do
+    {:ok, user} = TheFloor.Accounts.set_digest(user, false)
+    {:ok, user} = TheFloor.Accounts.set_digest(user, true)
+    assert DateTime.diff(DateTime.utc_now(), user.digest_sent_at) < 5
   end
 
   test "a change: one email linking the bill, with one-click unsubscribe", %{
@@ -74,7 +104,7 @@ defmodule TheFloor.Jobs.SendDigestTest do
     bill: bill
   } do
     new_action!(bill)
-    at = DateTime.add(DateTime.utc_now(:second), 1)
+    at = DateTime.add(DateTime.utc_now(:second), 11, :minute)
     assert :ok = run(user, at)
 
     assert_email_sent(fn email ->
@@ -96,12 +126,12 @@ defmodule TheFloor.Jobs.SendDigestTest do
       true
     end)
 
-    assert Repo.reload!(user).digest_sent_at == at
+    assert Repo.reload!(user).digest_sent_at == DateTime.add(at, -10, :minute)
   end
 
   test "run again the same day: no second email", %{user: user, bill: bill} do
     new_action!(bill)
-    at = DateTime.add(DateTime.utc_now(:second), 1)
+    at = DateTime.add(DateTime.utc_now(:second), 11, :minute)
     :ok = run(user, at)
     flush_emails()
 
@@ -111,8 +141,8 @@ defmodule TheFloor.Jobs.SendDigestTest do
 
   test "a failed send keeps the cutoff so the next run covers it", %{user: user, bill: bill} do
     new_action!(bill)
-    Application.put_env(:the_floor, :digest_mailer, adapter: FailingAdapter)
-    on_exit(fn -> Application.delete_env(:the_floor, :digest_mailer) end)
+    Application.put_env(:the_floor, :mailer_overrides, adapter: FailingAdapter)
+    on_exit(fn -> Application.delete_env(:the_floor, :mailer_overrides) end)
 
     assert {:error, :mail_service_down} = run(user)
     assert Repo.reload!(user).digest_sent_at == nil

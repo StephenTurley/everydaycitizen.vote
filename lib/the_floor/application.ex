@@ -10,6 +10,7 @@ defmodule TheFloor.Application do
     children = [
       TheFloorWeb.Telemetry,
       TheFloor.Repo,
+      TheFloor.RateLimit,
       TheFloor.Adapters.Federal.Supervisor,
       {Oban, Application.fetch_env!(:the_floor, Oban)},
       # Releases jobs the previous deploy left executing (production only)

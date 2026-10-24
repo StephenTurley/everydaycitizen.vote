@@ -142,13 +142,39 @@ defmodule TheFloor.Accounts do
 
   def login_user_by_passkey_token(_token), do: {:error, :invalid}
 
+  @doc """
+  Whether another emailed sign-in link may go to this account now: at most one
+  a minute and five an hour, so the site cannot be used to flood a mailbox.
+  """
+  @spec login_link_allowed?(User.t()) :: boolean()
+  def login_link_allowed?(%User{id: id}) do
+    recent = fn seconds ->
+      Repo.aggregate(
+        from(t in UserToken,
+          where:
+            t.user_id == ^id and t.context == "login" and t.inserted_at > ago(^seconds, "second")
+        ),
+        :count
+      )
+    end
+
+    recent.(60) == 0 and recent.(3600) < 5
+  end
+
   @doc "Gets a user by id, or nil."
   def get_user(id), do: Repo.get(User, id)
 
-  @doc "Turns the daily email on or off."
+  @doc "Turns the daily email on (starting from now) or off."
   @spec set_digest(User.t(), boolean()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
-  def set_digest(%User{} = user, enabled?) when is_boolean(enabled?),
-    do: user |> User.digest_changeset(enabled?) |> Repo.update()
+  def set_digest(%User{} = user, enabled?) when is_boolean(enabled?) do
+    # turned back on, the email starts from now, not from when it was turned off
+    sent_at = if enabled?, do: DateTime.utc_now(:second), else: user.digest_sent_at
+
+    user
+    |> User.digest_changeset(enabled?)
+    |> Ecto.Changeset.put_change(:digest_sent_at, sent_at)
+    |> Repo.update()
+  end
 
   @doc "Records the cutoff the last daily email covered."
   def put_digest_sent_at(%User{} = user, %DateTime{} = cutoff),

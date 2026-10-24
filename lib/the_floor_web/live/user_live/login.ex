@@ -12,6 +12,8 @@ defmodule TheFloorWeb.UserLive.Login do
   alias TheFloor.Accounts.Passkeys
   alias TheFloorWeb.PasskeyMessages
 
+  @hour :timer.hours(1)
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -93,6 +95,9 @@ defmodule TheFloorWeb.UserLive.Login do
 
   @impl true
   def mount(_params, _session, socket) do
+    socket =
+      assign(socket, :remote_ip, if(connected?(socket), do: remote_ip(socket), else: "unknown"))
+
     email =
       Phoenix.Flash.get(socket.assigns.flash, :email) ||
         get_in(socket.assigns, [:current_scope, Access.key(:user), Access.key(:email)])
@@ -131,21 +136,55 @@ defmodule TheFloorWeb.UserLive.Login do
   def handle_event("passkey:unsupported", _params, socket),
     do: {:noreply, assign(socket, :passkeys_supported, false)}
 
+  # Limits (ten requests an hour per visitor, one link a minute and five an
+  # hour per account) answer exactly like a sent link, so the reply never
+  # reveals who has an account; a failed send says so and reaches Sentry.
   def handle_event("submit_magic", %{"user" => %{"email" => email}}, socket) do
-    case user_for(String.trim(email)) do
-      {:ok, user} ->
-        Accounts.deliver_login_instructions(user, &url(~p"/users/log-in/#{&1}"))
+    with :ok <- TheFloor.RateLimit.hit({:login_link, socket.assigns.remote_ip}, 10, @hour),
+         {:ok, user} <- user_for(String.trim(email)),
+         true <- Accounts.login_link_allowed?(user),
+         {:ok, _email} <- Accounts.deliver_login_instructions(user, &url(~p"/users/log-in/#{&1}")) do
+      sent(socket)
+    else
+      limited when limited in [:limited, false] ->
+        sent(socket)
 
-        {:noreply,
-         socket
-         |> put_flash(:info, "Check your email for a link to sign in.")
-         |> push_navigate(to: ~p"/users/log-in")}
-
-      {:error, changeset} ->
+      {:error, %Ecto.Changeset{} = changeset} ->
         errors =
           for {msg, _opts} <- Keyword.get_values(changeset.errors, :email), do: "Email #{msg}."
 
         {:noreply, assign(socket, form: to_form(%{"email" => email}, as: "user"), errors: errors)}
+
+      {:error, reason} ->
+        Sentry.capture_message("Sign-in email failed to send", extra: %{reason: inspect(reason)})
+
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "We couldn't send the email. Please try again in a few minutes."
+         )}
+    end
+  end
+
+  defp sent(socket) do
+    {:noreply,
+     socket
+     |> put_flash(:info, "Check your email for a link to sign in.")
+     |> push_navigate(to: ~p"/users/log-in")}
+  end
+
+  # The visitor's address for the request limit: Fly's X-Forwarded-For (first
+  # entry), else the socket peer.
+  defp remote_ip(socket) do
+    forwarded =
+      for {"x-forwarded-for", value} <- get_connect_info(socket, :x_headers) || [],
+          do: value |> String.split(",") |> hd() |> String.trim()
+
+    case {forwarded, get_connect_info(socket, :peer_data)} do
+      {[ip | _], _} -> ip
+      {[], %{address: address}} -> address |> :inet.ntoa() |> to_string()
+      _ -> "unknown"
     end
   end
 
