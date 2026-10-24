@@ -151,4 +151,30 @@ defmodule TheFloor.Legislation do
     BillVersion |> where([v], v.id == ^version_id) |> Repo.update_all(set: [sections: sections])
     :ok
   end
+
+  @doc "Each bill's latest action (highest position), keyed by bill id."
+  @spec latest_actions([integer()]) :: %{integer() => BillAction.t()}
+  def latest_actions([]), do: %{}
+
+  def latest_actions(bill_ids) do
+    BillAction
+    |> where([a], a.bill_id in ^bill_ids)
+    |> distinct([a], a.bill_id)
+    |> order_by([a], asc: a.bill_id, desc: a.position)
+    |> Repo.all()
+    |> Map.new(&{&1.bill_id, &1})
+  end
+
+  @doc "Each bill's latest official summary, keyed by bill id."
+  @spec latest_summaries([integer()]) :: %{integer() => BillSummary.t()}
+  def latest_summaries([]), do: %{}
+
+  def latest_summaries(bill_ids) do
+    BillSummary
+    |> where([s], s.bill_id in ^bill_ids)
+    |> distinct([s], s.bill_id)
+    |> order_by([s], asc: s.bill_id, desc_nulls_last: s.action_date, desc: s.id)
+    |> Repo.all()
+    |> Map.new(&{&1.bill_id, &1})
+  end
 end

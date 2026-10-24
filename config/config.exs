@@ -107,6 +107,10 @@ config :tailwind,
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
 
+# A visitor's address is used once to find their district and never stored or
+# logged.
+config :phoenix, :filter_parameters, ["password", "address"]
+
 # Configure Elixir's Logger
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",

@@ -138,7 +138,12 @@ defmodule TheFloor.Activity do
 
   defp load(schema, ids) do
     ids = ids |> Enum.reject(&is_nil/1) |> Enum.uniq()
-    schema |> where([r], r.id in ^ids) |> Repo.all() |> Map.new(&{&1.id, &1})
+
+    schema
+    |> where([r], r.id in ^ids)
+    |> Repo.all()
+    |> then(&if(schema == Vote, do: Repo.preload(&1, :body), else: &1))
+    |> Map.new(&{&1.id, &1})
   end
 
   defp encode(%{date: date, rank: rank, ref_id: id}), do: "#{Date.to_iso8601(date)}.#{rank}.#{id}"

@@ -86,6 +86,7 @@ defmodule TheFloorWeb do
       import Phoenix.HTML
       # Core UI components
       import TheFloorWeb.CoreComponents
+      import TheFloorWeb.FloorComponents
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS
