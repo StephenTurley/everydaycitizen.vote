@@ -118,4 +118,15 @@ defmodule TheFloor.Legislature do
       dynamic([m, b], ^acc or (b.external_id == ^body and m.district == ^district))
     end)
   end
+
+  @doc "District keys overlapping a postal code, largest share of its land first."
+  @spec postal_districts(String.t(), String.t()) :: [String.t()]
+  def postal_districts(jurisdiction_key, postal_code) do
+    TheFloor.Legislature.PostalDistrict
+    |> join(:inner, [p], j in Jurisdiction, on: j.id == p.jurisdiction_id)
+    |> where([p, j], j.key == ^jurisdiction_key and p.postal_code == ^postal_code)
+    |> order_by([p], desc: p.land_share, asc: p.district_key)
+    |> select([p], p.district_key)
+    |> Repo.all()
+  end
 end

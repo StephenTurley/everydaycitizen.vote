@@ -21,6 +21,17 @@ defmodule TheFloor.Ingest.Records do
     end
   end
 
+  defmodule PostalDistricts do
+    @moduledoc """
+    A jurisdiction's complete postal-code-to-district table; replaces whatever is
+    stored. Each row is `%{postal_code, district_key, land_share}`.
+    """
+    @enforce_keys [:jurisdiction, :rows, :source]
+    defstruct [:jurisdiction, :rows, :source]
+
+    @type t :: %__MODULE__{}
+  end
+
   defmodule Jurisdiction do
     @moduledoc "A legislative jurisdiction (`federal`, `state`, `local`)."
     @enforce_keys [:key, :name, :classification, :source]

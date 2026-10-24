@@ -21,7 +21,8 @@ defmodule TheFloor.Adapters.Federal.Jobs do
     SyncHouseVotes,
     SyncMembers,
     SyncSenateFloor,
-    SyncSenateVotes
+    SyncSenateVotes,
+    SyncZipDistricts
   }
 
   @doc """
@@ -34,7 +35,8 @@ defmodule TheFloor.Adapters.Federal.Jobs do
       {"reclassify_actions", ReclassifyActions, %{}},
       {"bill_summaries", BackfillBillSummaries, %{}},
       {"reclassify_votes", ReclassifyVotes, %{}},
-      {"bill_sections", BackfillBillSections, %{}}
+      {"bill_sections", BackfillBillSections, %{}},
+      {"zip_districts", SyncZipDistricts, %{}}
     ]
   end
 
