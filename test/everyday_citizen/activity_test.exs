@@ -164,6 +164,15 @@ defmodule EverydayCitizen.ActivityTest do
              Enum.find(items, &(&1.kind == :vote))
   end
 
+  test "a date range keeps only that span's items", %{p1: p1} do
+    assert kinds(Activity.feed(p1, from: ~D[2025-03-31], to: ~D[2025-04-06]).items) == [
+             {:moved, ~D[2025-04-01]},
+             {:vote, ~D[2025-04-01]}
+           ]
+
+    assert Activity.feed(p1, from: ~D[2025-07-01], to: ~D[2025-07-07]).items == []
+  end
+
   test "filters narrow to votes, their bills, or laws", %{p1: p1} do
     assert [:vote] = Activity.feed(p1, filter: :votes).items |> Enum.map(& &1.kind)
 
