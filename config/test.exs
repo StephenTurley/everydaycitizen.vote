@@ -58,7 +58,6 @@ config :everyday_citizen, :federal_rate_limits,
   congress_gov: 0,
   govinfo: 0,
   house_docs: 0,
-  senate_gov: 0,
   voteview: 0,
   census: 0
 

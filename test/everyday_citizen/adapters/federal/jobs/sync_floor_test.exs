@@ -2,6 +2,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncFloorTest do
   use EverydayCitizen.DataCase, async: true
   use Oban.Testing, repo: EverydayCitizen.Repo
 
+  import Ecto.Query
   import ExUnit.CaptureLog
 
   alias EverydayCitizen.Adapters.Federal.Jobs.{SyncHouseFloor, SyncSenateFloor}
@@ -84,39 +85,60 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncFloorTest do
   end
 
   describe "SyncSenateFloor" do
-    test "stores one event per day, idempotently" do
-      stub_page(200, senate_html())
+    test "stores the next meeting named in each recent Record issue, idempotently" do
+      stub_record()
       assert :ok = perform_job(SyncSenateFloor, %{"congress" => 119})
-      assert Repo.aggregate(Event, :count) == 3
       assert :ok = perform_job(SyncSenateFloor, %{"congress" => 119})
-      assert Repo.aggregate(Event, :count) == 3
+
+      events = Repo.all(from e in Event, order_by: e.start_at)
+      assert [sep, oct] = events
+      assert sep.title =~ "S. 4668"
+      assert oct.title == "Senate will meet in a pro forma session."
+      assert Repo.preload(oct, :source).source.url =~ "/crec/2026/10/22/172/163/modified/"
 
       assert Provenance.last_succeeded_run("federal", "sync_senate_floor").stats == %{
-               "items" => 3
+               "items" => 2
              }
     end
 
-    test "a page that parses to nothing warns and records items 0" do
-      stub_page(200, "<html><body><p>Maintenance</p></body></html>")
-
-      log =
-        capture_log(fn -> assert :ok = perform_job(SyncSenateFloor, %{"congress" => 119}) end)
-
-      assert log =~ "parsed to 0 items"
-
-      assert Provenance.last_succeeded_run("federal", "sync_senate_floor").stats == %{
-               "items" => 0
-             }
+    test "an issue without a next-meeting section is skipped" do
+      stub_record(%{"163" => ~s({"articles": []})})
+      assert :ok = perform_job(SyncSenateFloor, %{"congress" => 119})
+      assert [%Event{start_at: start}] = Repo.all(Event)
+      assert DateTime.compare(start, ~U[2026-09-23 14:00:00Z]) == :eq
     end
 
-    test "a 403 fails the run" do
-      stub_page(403, "Forbidden")
-      assert {:error, {:http_status, 403}} = perform_job(SyncSenateFloor, %{"congress" => 119})
+    test "a failed API request fails the run" do
+      stub_page(500, "")
+      assert {:error, {:http_status, 500}} = perform_job(SyncSenateFloor, %{"congress" => 119})
     end
   end
 
   defp house_xml, do: File.read!("#{@fixtures}/house_docs/floor_week.xml")
-  defp senate_html, do: File.read!("#{@fixtures}/senate/floor_schedule_SYNTHETIC.htm")
+
+  # The Record list, each issue's Daily Digest articles, and the next-meeting pages.
+  defp stub_record(articles \\ %{}) do
+    dir = "#{@fixtures}/congress_gov"
+
+    Req.Test.stub(EverydayCitizen.Federal, fn conn ->
+      body =
+        case String.split(conn.request_path, "/", trim: true) do
+          ["v3", "daily-congressional-record"] ->
+            File.read!("#{dir}/daily_record_list.json")
+
+          ["v3", "daily-congressional-record", "172", issue, "articles"] ->
+            articles[issue] || File.read!("#{dir}/daily_record_172_#{issue}_articles.json")
+
+          ["119", "crec", "2026", "09", "22" | _] ->
+            File.read!("#{dir}/record_next_meeting_2026-09-22.htm")
+
+          ["119", "crec", "2026", "10", "22" | _] ->
+            File.read!("#{dir}/record_next_meeting_2026-10-22.htm")
+        end
+
+      Plug.Conn.send_resp(conn, 200, body)
+    end)
+  end
 
   defp stub_house(weeks) do
     Req.Test.stub(EverydayCitizen.Federal, fn conn ->

@@ -1,0 +1,22 @@
+{
+  "dailyCongressionalRecord": [
+    {
+      "congress": 119,
+      "issueDate": "2026-10-22T04:00:00Z",
+      "issueNumber": "163",
+      "sessionNumber": 2,
+      "updateDate": "2026-10-23T14:29:24Z",
+      "url": "https://api.congress.gov/v3/daily-congressional-record/172/163?format=json",
+      "volumeNumber": 172
+    },
+    {
+      "issueDate": "2026-09-22T04:00:00Z",
+      "issueNumber": "150",
+      "volumeNumber": 172,
+      "sessionNumber": 2,
+      "congress": 119,
+      "updateDate": "2026-09-23T10:00:00Z",
+      "url": "https://api.congress.gov/v3/daily-congressional-record/172/150?format=json"
+    }
+  ]
+}

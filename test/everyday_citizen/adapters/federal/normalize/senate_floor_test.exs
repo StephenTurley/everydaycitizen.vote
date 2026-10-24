@@ -1,50 +1,76 @@
 defmodule EverydayCitizen.Adapters.Federal.Normalize.SenateFloorTest do
   use ExUnit.Case, async: true
 
-  import ExUnit.CaptureLog
-
   alias EverydayCitizen.Adapters.Federal.Normalize.SenateFloor
   alias EverydayCitizen.Ingest.Records.{Event, SourceRef}
 
-  # Synthetic fixture: senate.gov blocks this machine, so the parser is unverified
-  # against the live page.
-  @html File.read!("test/support/fixtures/federal/senate/floor_schedule_SYNTHETIC.htm")
+  # Real Daily Digest "Next Meeting" pages from the Congressional Record.
+  @fixtures "test/support/fixtures/federal/congress_gov"
+  @busy File.read!("#{@fixtures}/record_next_meeting_2026-09-22.htm")
+  @recess File.read!("#{@fixtures}/record_next_meeting_2026-10-22.htm")
 
-  defp source, do: SourceRef.new("https://example.test/floor_schedule.htm", @html)
-  defp events, do: SenateFloor.events(@html, source(), 119)
+  defp event(html, issue_date),
+    do:
+      SenateFloor.event(html, issue_date, SourceRef.new("https://example.test/d.htm", html), 119)
 
-  test "one floor event per scheduled day, headings only" do
-    assert [mon, tue, wed] = events()
-    assert Enum.all?([mon, tue, wed], &match?(%Event{classification: "floor", all_day: true}, &1))
-    assert Enum.all?([mon, tue, wed], &(&1.body_external_id == "senate"))
+  test "the next meeting becomes a floor event at its time, titled with the day's program" do
+    e = event(@busy, ~D[2026-09-22])
 
-    assert [mon.external_id, tue.external_id, wed.external_id] ==
-             ["senate-floor-2026-10-19", "senate-floor-2026-10-20", "senate-floor-2026-10-21"]
+    assert %Event{classification: "floor", body_external_id: "senate", all_day: false} = e
+    assert e.external_id == "senate-floor-2026-09-23"
+    assert e.raw_classification == "record-next-meeting"
+    assert e.start_at == ~U[2026-09-23 14:00:00Z]
 
-    assert mon.start_at == ~U[2026-10-19 04:00:00Z]
-    assert mon.status == "scheduled"
+    assert e.title =~
+             "Senate will continue consideration of Thune (for Cruz) Amendment No. 6776, to S. 4668, Protect College Sports Act, post-cloture."
+
+    assert e.title =~ "At 2:15 p.m., Senate will vote on confirmation of the nomination"
+    refute e.title =~ "Senate Chamber"
+    refute e.title =~ "HOUSE"
+    refute e.title =~ "\n"
+    assert e.bill_external_ids == ["119-s-4668"]
   end
 
-  test "bills are extracted from the day's text" do
-    assert [mon, tue, wed] = events()
-    assert mon.bill_external_ids == ["119-s-1234", "119-hr-5678", "119-sjres-12"]
-    assert tue.bill_external_ids == []
-    assert wed.bill_external_ids == ["119-sres-99", "119-hres-40", "119-s-1234"]
+  test "a pro forma day" do
+    e = event(@recess, ~D[2026-10-22])
+    assert e.external_id == "senate-floor-2026-10-26"
+    assert e.start_at == ~U[2026-10-26 21:30:00Z]
+    assert e.title == "Senate will meet in a pro forma session."
+    assert e.bill_external_ids == []
   end
 
-  test "title is the day's source text" do
-    assert [mon | _] = events()
-    assert mon.title =~ "Convene at 3:00 p.m."
-    refute mon.title =~ "Tuesday"
+  test "a January meeting named in a December issue is in the next year; noon is read" do
+    html = """
+    <pre>
+                           Next Meeting of the SENATE
+                         12 noon, Monday, January 4
+
+                                 Senate Chamber
+    Program for Monday: Senate will meet in a pro forma session.
+
+                  Next Meeting of the HOUSE OF REPRESENTATIVES
+    </pre>
+    """
+
+    assert %Event{start_at: ~U[2027-01-04 17:00:00Z]} = event(html, ~D[2026-12-30])
   end
 
-  test "missing structure returns [] and logs a warning" do
-    log =
-      capture_log(fn ->
-        assert SenateFloor.events("<html><body><p>hi</p></body></html>", source(), 119) == []
-      end)
+  test "an unreadable time keeps the day as an all-day event" do
+    html = """
+    <pre>
+                           Next Meeting of the SENATE
+                    At the call of the Chair, Monday, January 4
 
-    assert log =~ "senate floor"
-    capture_log(fn -> assert SenateFloor.events("", source(), 119) == [] end)
+                                 Senate Chamber
+    Program for Monday: To be announced.
+    </pre>
+    """
+
+    assert %Event{all_day: true, start_at: ~U[2027-01-04 05:00:00Z], title: "To be announced."} =
+             event(html, ~D[2026-12-30])
+  end
+
+  test "a page without the next meeting gives nothing" do
+    assert event("<pre>Extensions of Remarks</pre>", ~D[2026-10-22]) == nil
   end
 end

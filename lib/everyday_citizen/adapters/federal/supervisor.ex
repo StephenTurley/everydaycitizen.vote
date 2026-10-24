@@ -8,7 +8,6 @@ defmodule EverydayCitizen.Adapters.Federal.Supervisor do
     congress_gov: 750,
     govinfo: 1000,
     house_docs: 1000,
-    senate_gov: 2000,
     voteview: 2000,
     census: 1000
   ]
