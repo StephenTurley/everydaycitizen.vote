@@ -14,7 +14,8 @@ defmodule TheFloorWeb.Layouts do
   @doc """
   The app shell: the header (name, "This week", "Change address") over a
   phone-width column, or with `width={:full}` a column that widens to 1280px on
-  large screens (the bill page's three columns).
+  large screens for a page's desktop columns. The header always spans 1280px
+  there, so every page lines up.
 
       <Layouts.app flash={@flash}>
         <h1>Content</h1>
@@ -29,10 +30,7 @@ defmodule TheFloorWeb.Layouts do
     <header class="bg-floor-card border-b border-floor-line">
       <nav
         aria-label="Main"
-        class={[
-          "mx-auto max-w-3xl px-5 flex items-center justify-between gap-4",
-          @width == :full && "lg:max-w-[1280px] lg:px-10"
-        ]}
+        class="mx-auto max-w-3xl lg:max-w-[1280px] px-5 lg:px-10 flex items-center justify-between gap-4"
       >
         <a href={~p"/"} class="py-4 text-[19px] font-bold tracking-tight text-floor-ink">
           The Floor

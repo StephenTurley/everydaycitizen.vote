@@ -80,7 +80,8 @@ defmodule TheFloorWeb.RepsLiveTest do
     for name <- ["Chuck Grassley", "Joni Ernst", "Mariannette Miller-Meeks"],
         do: assert(html =~ name)
 
-    assert has_element?(view, ~s(a[aria-pressed="true"][href="/reps/IA-1?rep=#{g.id}"]))
+    assert has_element?(view, ~s(a[aria-current="page"][href="/reps/IA-1?rep=#{g.id}"]))
+    assert has_element?(view, ~s(a[href="/this-week"]), "This week's schedule")
     assert html =~ "Sen." or html =~ "Senate"
   end
 
@@ -104,6 +105,15 @@ defmodule TheFloorWeb.RepsLiveTest do
   test "a rep with nothing in the filter sees Nothing yet", %{conn: conn, miller_meeks: m} do
     {:ok, _view, html} = live(conn, ~p"/reps/IA-1?rep=#{m.id}")
     assert html =~ "Nothing yet"
+  end
+
+  test "home says what you will find and links to this week", %{conn: conn} do
+    {:ok, view, html} = live(conn, ~p"/")
+
+    for heading <- ["How they voted", "What they introduced", "The text itself"],
+        do: assert(html =~ heading)
+
+    assert has_element?(view, ~s(a[href="/this-week"]), "See what's scheduled this week")
   end
 
   test "home offers your saved district", %{conn: conn} do
