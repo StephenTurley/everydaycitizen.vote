@@ -195,3 +195,6 @@ At the owner's direction there are now three AI summaries, each with its own pub
 
 ## 2026-10-24 — Correction: summary requests turn thinking off
 Claude Haiku 5.5 thinks before answering by default, and on a whole bill it spent the entire 500-token reply cap thinking and returned no text, so bill summaries failed in production. Summary requests now send `thinking: {type: "disabled"}`; the published prompts already say what to write, and the reply caps stay as set.
+
+## 2026-10-24 — Crawlers never start a summary
+Pages fetched by crawlers, link previewers and scripts (by user agent: bot, crawl, spider, preview, headless browsers, curl, HTTP libraries; `EverydayCitizenWeb.Crawler`) show summaries already written but never queue new ones, for sections, whole bills and rep weeks; with nothing cached the summary box is left out. Pages stay indexable (robots.txt unchanged). Clients that pass as browsers remain bounded by the daily budget and the per-visitor limit.

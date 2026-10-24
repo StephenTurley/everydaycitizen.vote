@@ -183,6 +183,29 @@ defmodule EverydayCitizenWeb.RepsLiveTest do
     assert [_] = all_enqueued(worker: EverydayCitizen.Jobs.SummarizeSubject)
   end
 
+  test "a crawler is shown a week's summary already written but never starts one", %{
+    conn: conn,
+    ernst: e
+  } do
+    conn = Plug.Conn.put_req_header(conn, "user-agent", "facebookexternalhit/1.1")
+
+    {:ok, view, html} = live(conn, ~p"/reps/IA-1?rep=#{e.id}&week=2026-01-19")
+    refute has_element?(view, "#week-summary")
+    refute html =~ "Writing a plain-English summary"
+    assert [] = all_enqueued(worker: EverydayCitizen.Jobs.SummarizeSubject)
+
+    {subject, input} = EverydayCitizen.Summaries.Inputs.rep_week(e.id, ~D[2026-01-19])
+
+    {:ok, _} =
+      EverydayCitizen.Summaries.put_ai(:rep_week, subject, input, %{
+        summary: "Cached.",
+        model: "m"
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/reps/IA-1?rep=#{e.id}&week=2026-01-19")
+    assert has_element?(view, "#week-summary", "Cached.")
+  end
+
   test "items link to their bill pages", %{conn: conn, grassley: g} do
     {:ok, view, _html} = live(conn, ~p"/reps/IA-1?rep=#{g.id}")
     assert has_element?(view, ~s(a[href="/bills/119-s-5"]))
