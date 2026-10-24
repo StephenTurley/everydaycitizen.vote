@@ -88,4 +88,29 @@ defmodule EverydayCitizen.SummariesTest do
     {:ok, _} = Summaries.put(v.id, 1, "text", summary_attrs())
     assert Summaries.created_today() == 1
   end
+
+  test "get_many finds every current summary for a version in one query", %{version: v} do
+    for i <- 1..3, do: {:ok, _} = Summaries.put(v.id, i, "text #{i}", summary_attrs())
+
+    test = self()
+    handler = {__MODULE__, make_ref()}
+
+    :telemetry.attach(
+      handler,
+      [:everyday_citizen, :repo, :query],
+      fn _, _, meta, _ ->
+        if meta.source == "section_summaries", do: send(test, :summary_query)
+      end,
+      nil
+    )
+
+    found =
+      Summaries.get_many(v.id, [{1, "text 1"}, {2, "changed text"}, {3, "text 3"}, {4, "text 4"}])
+
+    :telemetry.detach(handler)
+
+    assert Map.keys(found) |> Enum.sort() == [1, 3]
+    assert_received :summary_query
+    refute_received :summary_query
+  end
 end

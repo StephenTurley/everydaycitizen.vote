@@ -129,4 +129,23 @@ defmodule EverydayCitizen.Jobs.SummarizeSectionTest do
 
     refute_received {:section_summary, _, _}
   end
+
+  test "a queued job re-checks the day's budget and calls nothing once it is spent", %{
+    version: v
+  } do
+    for i <- 1..300,
+        do: {:ok, _} = Summaries.put(v.id, 100 + i, "t#{i}", %{summary: "s", model: "m"})
+
+    Req.Test.stub(EverydayCitizen.Claude, fn _conn -> flunk("no call over budget") end)
+    Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, Summaries.topic(v.id, 1))
+
+    assert {:cancel, :paused} =
+             perform_job(SummarizeSection, %{
+               "version_id" => v.id,
+               "index" => 1,
+               "prompt_version" => "v1"
+             })
+
+    assert_received {:section_summary, 1, {:error, :paused}}
+  end
 end

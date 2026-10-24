@@ -366,6 +366,27 @@ defmodule EverydayCitizenWeb.BillLiveTest do
       assert has_element?(view, "#summary-1", "Now it is explained.")
     end
 
+    test "a summary paused by the day's budget says so", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es&section=1")
+      send(view.pid, {:section_summary, 1, {:error, :paused}})
+      assert has_element?(view, "#summary-1", "paused for today")
+    end
+
+    test "the page listens before asking, so a summary finished in between is not missed", %{
+      conn: conn,
+      version: v
+    } do
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es&section=1")
+      # the page is subscribed to the section's topic by the time it renders
+      Phoenix.PubSub.broadcast(
+        EverydayCitizen.PubSub,
+        EverydayCitizen.Summaries.topic(v.id, 1),
+        {:section_summary, 1, {:ok, "Arrived."}}
+      )
+
+      assert has_element?(view, "#summary-1", "Arrived.")
+    end
+
     test "a summary that couldn't be written says so", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es&section=1")
       send(view.pid, {:section_summary, 1, {:error, :unavailable}})

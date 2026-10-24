@@ -39,10 +39,11 @@ Decision log: `docs/DECISIONS.md` (append; never rewrite history)
   text. Never show a summary without the text it came from.
 - The product never explains "why" in its own voice. Every argument is labeled
   with who made it (CRS, committee report, sponsor, CBO, opposing statement).
-- Expensive layers (plain-language, redline, why-panel) never process the
-  corpus in bulk: they run only when someone views the part in question, are
-  cached, and stay inside a daily budget (owner's decision, 2026-10-24; this
-  replaced the spec's movement filter).
+- Expensive layers run only on bills that meet the movement filter defined in
+  the spec, except plain-language summaries: those run on any bill, but only
+  when someone opens the section, cached and inside a daily budget, never on
+  the corpus in bulk (owner's decision, 2026-10-24). Redline and the why-panel
+  keep the movement filter until decided otherwise.
 
 ## Current milestone
 

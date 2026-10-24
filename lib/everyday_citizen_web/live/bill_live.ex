@@ -71,6 +71,9 @@ defmodule EverydayCitizenWeb.BillLive do
   def handle_info({:section_summary, index, {:ok, text}}, socket),
     do: {:noreply, update(socket, :summaries, &Map.put(&1, index, {:ok, text}))}
 
+  def handle_info({:section_summary, index, {:error, :paused}}, socket),
+    do: {:noreply, update(socket, :summaries, &Map.put(&1, index, :paused))}
+
   def handle_info({:section_summary, index, {:error, _}}, socket),
     do: {:noreply, update(socket, :summaries, &Map.put(&1, index, :unavailable))}
 
@@ -88,11 +91,14 @@ defmodule EverydayCitizenWeb.BillLive do
   end
 
   defp summaries_for(socket, :all) do
-    cached =
+    sections =
       for {%{"kind" => "section"} = entry, i} <- socket.assigns.sections,
-          summary = Summaries.get(socket.assigns.version.id, i, Summaries.section_text(entry)),
-          into: %{},
-          do: {i, {:ok, summary.summary}}
+          do: {i, Summaries.section_text(entry)}
+
+    cached =
+      socket.assigns.version.id
+      |> Summaries.get_many(sections)
+      |> Map.new(fn {i, summary} -> {i, {:ok, summary.summary}} end)
 
     assign(socket, :summaries, cached)
   end
@@ -106,35 +112,41 @@ defmodule EverydayCitizenWeb.BillLive do
 
   defp summaries_for(socket, _closed), do: socket
 
+  # Listens for the section's summary before asking for it, so one finished in
+  # between is not missed; stops listening if no job will answer.
   defp request_summary(socket, i, entry) do
     version_id = socket.assigns.version.id
-    text = Summaries.section_text(entry)
+    topic = Summaries.topic(version_id, i)
+    live? = connected?(socket)
+    if live?, do: Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, topic)
 
-    state =
-      cond do
-        summary = Summaries.get(version_id, i, text) ->
-          {:ok, summary.summary}
-
-        not connected?(socket) ->
-          :loading
-
-        RateLimit.hit({:summaries, socket.assigns.remote_ip}, @visitor_limit, @hour) == :limited ->
-          :limited
-
-        true ->
-          requested(Summaries.request(version_id, i, text))
-      end
-
-    socket =
-      if state == :loading and connected?(socket) do
-        topic = Summaries.topic(version_id, i)
-        Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, topic)
-        assign(socket, :summary_topics, [topic])
-      else
-        socket
-      end
+    state = summary_state(socket, version_id, i, Summaries.section_text(entry), live?)
+    socket = keep_listening(socket, topic, live? and state == :loading)
 
     if state == :disabled, do: socket, else: update(socket, :summaries, &Map.put(&1, i, state))
+  end
+
+  defp summary_state(socket, version_id, i, text, live?) do
+    cond do
+      summary = Summaries.get(version_id, i, text) ->
+        {:ok, summary.summary}
+
+      not live? ->
+        :loading
+
+      RateLimit.hit({:summaries, socket.assigns.remote_ip}, @visitor_limit, @hour) == :limited ->
+        :limited
+
+      true ->
+        requested(Summaries.request(version_id, i, text))
+    end
+  end
+
+  defp keep_listening(socket, topic, true), do: assign(socket, :summary_topics, [topic])
+
+  defp keep_listening(socket, topic, false) do
+    Phoenix.PubSub.unsubscribe(EverydayCitizen.PubSub, topic)
+    socket
   end
 
   defp requested({:cached, summary}), do: {:ok, summary.summary}

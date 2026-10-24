@@ -1,7 +1,8 @@
 defmodule EverydayCitizenWeb.RemoteIp do
   @moduledoc """
-  The visitor's address for per-visitor limits, from a connected LiveView:
-  Fly's X-Forwarded-For (its first entry), else the socket peer. Needs the
+  The visitor's address for per-visitor limits, from a connected LiveView: the
+  last X-Forwarded-For entry, which Fly's proxy appends (earlier entries come
+  from the client and can be made up), else the socket peer. Needs the
   socket's `:x_headers` and `:peer_data` connect info (endpoint).
   """
   import Phoenix.LiveView, only: [connected?: 1, get_connect_info: 2]
@@ -14,7 +15,7 @@ defmodule EverydayCitizenWeb.RemoteIp do
   defp lookup(socket) do
     forwarded =
       for {"x-forwarded-for", value} <- get_connect_info(socket, :x_headers) || [],
-          do: value |> String.split(",") |> hd() |> String.trim()
+          do: value |> String.split(",") |> List.last() |> String.trim()
 
     case {forwarded, get_connect_info(socket, :peer_data)} do
       {[ip | _], _} -> ip

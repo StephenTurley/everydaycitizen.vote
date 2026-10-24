@@ -32,9 +32,17 @@ defmodule EverydayCitizen.Jobs.SummarizeSection do
   defp summarize(job, version_id, index, section) do
     text = Summaries.section_text(section)
 
-    case Summaries.get(version_id, index, text) do
-      nil -> write(job, version_id, index, text)
-      summary -> broadcast(version_id, index, {:ok, summary.summary})
+    cond do
+      summary = Summaries.get(version_id, index, text) ->
+        broadcast(version_id, index, {:ok, summary.summary})
+
+      # jobs queued before the day's budget ran out must not overrun it
+      Summaries.over_budget?() ->
+        broadcast(version_id, index, {:error, :paused})
+        {:cancel, :paused}
+
+      true ->
+        write(job, version_id, index, text)
     end
   end
 

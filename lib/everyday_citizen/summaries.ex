@@ -57,6 +57,28 @@ defmodule EverydayCitizen.Summaries do
     )
   end
 
+  @doc """
+  The current summaries of several sections of a version, in one query:
+  `%{index => summary}` for each `{index, text}` whose text still matches.
+  """
+  @spec get_many(integer(), [{non_neg_integer(), String.t()}]) :: %{
+          non_neg_integer() => SectionSummary.t()
+        }
+  def get_many(_version_id, []), do: %{}
+
+  def get_many(version_id, sections) do
+    hashes = Map.new(sections, fn {index, text} -> {index, hash(text)} end)
+
+    from(s in SectionSummary,
+      where:
+        s.bill_version_id == ^version_id and s.prompt_version == ^prompt_version() and
+          s.section_index in ^Map.keys(hashes)
+    )
+    |> Repo.all()
+    |> Enum.filter(&(&1.source_hash == hashes[&1.section_index]))
+    |> Map.new(&{&1.section_index, &1})
+  end
+
   @doc "Stores (or replaces) the summary of a section's text."
   @spec put(integer(), non_neg_integer(), String.t(), map()) :: {:ok, SectionSummary.t()}
   def put(version_id, index, text, attrs) do
@@ -93,7 +115,7 @@ defmodule EverydayCitizen.Summaries do
       summary = get(version_id, index, text) -> {:cached, summary}
       String.length(text) > @max_chars -> :too_long
       not Claude.enabled?() -> :disabled
-      created_today() >= config(:daily_limit) -> :paused
+      over_budget?() -> :paused
       true -> queue(version_id, index)
     end
   end
@@ -105,6 +127,10 @@ defmodule EverydayCitizen.Summaries do
 
     :queued
   end
+
+  @doc "Whether today's `daily_limit` of new summaries is used up."
+  @spec over_budget?() :: boolean()
+  def over_budget?, do: created_today() >= config(:daily_limit)
 
   @doc "The PubSub topic a section's new summary is broadcast on."
   @spec topic(integer(), non_neg_integer()) :: String.t()
