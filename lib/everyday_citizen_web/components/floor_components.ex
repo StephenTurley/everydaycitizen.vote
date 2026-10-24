@@ -146,7 +146,8 @@ defmodule EverydayCitizenWeb.FloorComponents do
 
   @doc """
   A plain-English AI summary box: `title`, the summary (paragraphs; lines
-  starting "- " as a list) labeled "Written by AI from <source>; it can be
+  starting "- " as a list; lines starting "## " head a part, and the
+  "For example" part is set apart as made up) labeled "Written by AI from <source>; it can be
   wrong" with a link to the published prompt, or a state line while it is being
   written, paused, limited, too long or unavailable.
   """
@@ -161,13 +162,26 @@ defmodule EverydayCitizenWeb.FloorComponents do
       </p>
       <%= case @state do %>
         <% {:ok, text} -> %>
-          <div class="text-[15px] leading-relaxed text-floor-ink flex flex-col gap-1.5">
-            <%= for part <- summary_parts(text) do %>
-              <ul :if={match?({:list, _}, part)} class="m-0 pl-5 list-disc flex flex-col gap-1">
-                <li :for={item <- elem(part, 1)}>{item}</li>
-              </ul>
-              <p :if={match?({:para, _}, part)} class="m-0">{elem(part, 1)}</p>
-            <% end %>
+          <div class="text-[15px] leading-relaxed text-floor-ink flex flex-col gap-2">
+            <div
+              :for={{heading, parts} <- summary_sections(text)}
+              data-part={heading == "For example" && "example"}
+              class={[
+                "flex flex-col gap-1.5",
+                heading == "For example" &&
+                  "mt-1 px-3 py-2.5 rounded-lg border border-dashed border-floor-line bg-floor-card"
+              ]}
+            >
+              <h3 :if={heading} class="m-0 mt-1 text-[13px] font-semibold text-floor-muted">
+                {heading}
+              </h3>
+              <%= for part <- parts do %>
+                <ul :if={match?({:list, _}, part)} class="m-0 pl-5 list-disc flex flex-col gap-1">
+                  <li :for={item <- elem(part, 1)}>{item}</li>
+                </ul>
+                <p :if={match?({:para, _}, part)} class="m-0">{elem(part, 1)}</p>
+              <% end %>
+            </div>
           </div>
           <p class="m-0 text-[12px] text-floor-muted">
             Written by AI from {@source}; it can be wrong.
@@ -190,6 +204,24 @@ defmodule EverydayCitizenWeb.FloorComponents do
       <% end %>
     </div>
     """
+  end
+
+  # Parts headed by "## " lines (the first part has no heading), each split into
+  # paragraphs and lists.
+  defp summary_sections(text) do
+    text
+    |> String.split(~r/^##[ \t]+(.+)$/m, include_captures: true)
+    |> Enum.map(&String.trim/1)
+    |> then(fn [first | rest] ->
+      headed =
+        rest
+        |> Enum.chunk_every(2, 2, [""])
+        |> Enum.map(fn ["##" <> heading, body] -> {String.trim(heading), body} end)
+
+      [{nil, first} | headed]
+    end)
+    |> Enum.reject(fn {heading, body} -> is_nil(heading) and body == "" end)
+    |> Enum.map(fn {heading, body} -> {heading, summary_parts(body)} end)
   end
 
   # Paragraphs on blank lines; consecutive lines starting "- " become one list.
