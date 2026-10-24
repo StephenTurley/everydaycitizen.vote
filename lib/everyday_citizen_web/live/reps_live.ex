@@ -1,12 +1,21 @@
 defmodule EverydayCitizenWeb.RepsLive do
   @moduledoc """
   A district's reps, one at a time (mockup board A): the row of reps, the
-  selected rep's header and counts, filters, and their activity feed grouped by
-  day, each item linking to its bill page.
+  selected rep's header and counts, a week switcher, filters, and that week's
+  activity grouped by day, each item linking to its bill page. Above the week's
+  items, a plain-English summary of the rep's week, written by AI the first time
+  anyone views that week and cached (rewritten when the week gains activity).
+  With no week chosen, the page opens on the rep's most recent active week.
   """
   use EverydayCitizenWeb, :live_view
 
-  alias EverydayCitizen.{Activity, Follows, Legislation, Reps}
+  alias EverydayCitizen.{Activity, Follows, Legislation, RateLimit, Reps, Summaries}
+  alias EverydayCitizen.Summaries.{Claude, Inputs}
+
+  @repo_url "https://github.com/StephenTurley/everydaycitizen.vote/blob/main/"
+  @visitor_limit 30
+  @hour :timer.hours(1)
+  @zone "America/New_York"
 
   @filters [
     {"all", "Everything", :all},
@@ -17,7 +26,14 @@ defmodule EverydayCitizenWeb.RepsLive do
 
   @impl true
   def mount(%{"district" => district}, _session, socket) do
-    {:ok, assign(socket, district: district, reps: Reps.for_district(district))}
+    {:ok,
+     assign(socket,
+       district: district,
+       reps: Reps.for_district(district),
+       remote_ip: EverydayCitizenWeb.RemoteIp.from_socket(socket),
+       week_summary: nil,
+       week_topic: nil
+     )}
   end
 
   @impl true
@@ -29,15 +45,96 @@ defmodule EverydayCitizenWeb.RepsLive do
     socket =
       socket
       |> assign(rep: rep, filter: filter, page_title: rep && rep.person.name)
+      |> assign(week: rep && week(params["week"], rep), this_monday: this_monday())
       |> assign(counts: rep && Activity.counts(rep.person.id))
       |> assign(
         following:
           !!rep && Follows.following?(socket.assigns.current_scope, {:person, rep.person.id})
       )
       |> load_feed(nil, [])
+      |> load_week_summary()
 
     {:noreply, socket}
   end
+
+  @impl true
+  def handle_info({:ai_summary, "rep_week", subject, result}, socket) do
+    case socket.assigns.week_summary do
+      {^subject, _} -> {:noreply, assign(socket, :week_summary, {subject, ai_state(result)})}
+      _ -> {:noreply, socket}
+    end
+  end
+
+  defp ai_state({:ok, text}), do: {:ok, text}
+  defp ai_state({:error, :paused}), do: :paused
+  defp ai_state({:error, _}), do: :unavailable
+
+  defp this_monday, do: DateTime.now!(@zone) |> DateTime.to_date() |> Date.beginning_of_week()
+
+  # The Monday of the week to show: the one asked for (not in the future), else
+  # the rep's most recent active week, else this week.
+  defp week(param, rep) do
+    with {:ok, date} <- Date.from_iso8601(param || ""),
+         false <- Date.after?(date, DateTime.now!(@zone) |> DateTime.to_date()) do
+      Date.beginning_of_week(date)
+    else
+      _ -> latest_week(rep)
+    end
+  end
+
+  defp latest_week(rep) do
+    case Activity.latest_date(rep.person.id) do
+      nil -> this_monday()
+      date -> Date.beginning_of_week(date)
+    end
+  end
+
+  defp week_label(monday),
+    do:
+      "#{Calendar.strftime(monday, "%b %-d")} – #{Calendar.strftime(Date.add(monday, 6), "%b %-d")}"
+
+  # The week's summary: cached, or asked for once the page is live (listening
+  # first); none for a week with nothing on the record.
+  defp load_week_summary(socket) do
+    if topic = socket.assigns.week_topic,
+      do: Phoenix.PubSub.unsubscribe(EverydayCitizen.PubSub, topic)
+
+    socket = assign(socket, week_summary: nil, week_topic: nil)
+
+    with %{rep: %{} = rep, week: %Date{} = week} <- socket.assigns,
+         true <- Claude.enabled?(),
+         {subject, input} when is_binary(input) <- Inputs.rep_week(rep.person.id, week) do
+      week_summary_state(socket, subject, input)
+    else
+      _ -> socket
+    end
+  end
+
+  defp week_summary_state(socket, subject, input) do
+    cond do
+      summary = Summaries.get_ai(:rep_week, subject, input) ->
+        assign(socket, :week_summary, {subject, {:ok, summary.summary}})
+
+      not connected?(socket) ->
+        assign(socket, :week_summary, {subject, :loading})
+
+      true ->
+        topic = Summaries.ai_topic(:rep_week, subject)
+        Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, topic)
+
+        state =
+          if RateLimit.hit({:summaries, socket.assigns.remote_ip}, @visitor_limit, @hour) ==
+               :limited,
+             do: :limited,
+             else: requested(Summaries.request_ai(:rep_week, subject, input))
+
+        assign(socket, week_summary: {subject, state}, week_topic: topic)
+    end
+  end
+
+  defp requested({:cached, summary}), do: {:ok, summary.summary}
+  defp requested(:queued), do: :loading
+  defp requested(other), do: other
 
   @impl true
   def handle_event("toggle_follow", _params, %{assigns: %{rep: %{} = rep}} = socket),
@@ -54,7 +151,9 @@ defmodule EverydayCitizenWeb.RepsLive do
     %{items: more, next: next} =
       Activity.feed(socket.assigns.rep.person.id,
         filter: elem(socket.assigns.filter, 2),
-        before: before
+        before: before,
+        from: socket.assigns.week,
+        to: Date.add(socket.assigns.week, 6)
       )
 
     items = items ++ more
@@ -71,8 +170,9 @@ defmodule EverydayCitizenWeb.RepsLive do
     )
   end
 
-  defp rep_path(district, rep, filter),
-    do: ~p"/reps/#{district}?#{query(rep: rep && rep.person.id, filter: filter)}"
+  defp rep_path(district, rep, filter, week \\ nil),
+    do:
+      ~p"/reps/#{district}?#{query(rep: rep && rep.person.id, filter: filter, week: week && Date.to_iso8601(week))}"
 
   defp query(pairs),
     do: Enum.reject(pairs, fn {k, v} -> is_nil(v) or (k == :filter and v == "all") end)
@@ -101,7 +201,7 @@ defmodule EverydayCitizenWeb.RepsLive do
 
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, :filters, @filters)
+    assigns = assign(assigns, filters: @filters, repo_url: @repo_url)
 
     ~H"""
     <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>
@@ -184,10 +284,28 @@ defmodule EverydayCitizenWeb.RepsLive do
                 </.card>
               </div>
             </div>
+            <div id="week" class="flex items-center gap-2">
+              <.link
+                patch={rep_path(@district, @rep, elem(@filter, 0), Date.add(@week, -7))}
+                aria-label="Previous week"
+                class="px-3 py-2 rounded-[10px] border border-floor-line bg-floor-card font-semibold text-floor-accent"
+              >
+                ‹
+              </.link>
+              <span class="text-[15px] font-semibold">{week_label(@week)}</span>
+              <.link
+                :if={Date.compare(@week, @this_monday) == :lt}
+                patch={rep_path(@district, @rep, elem(@filter, 0), Date.add(@week, 7))}
+                aria-label="Next week"
+                class="px-3 py-2 rounded-[10px] border border-floor-line bg-floor-card font-semibold text-floor-accent"
+              >
+                ›
+              </.link>
+            </div>
             <nav aria-label="Show" class="flex flex-wrap gap-1.5">
               <.link
                 :for={{key, label, _} <- @filters}
-                patch={rep_path(@district, @rep, key)}
+                patch={rep_path(@district, @rep, key, @week)}
                 aria-current={if elem(@filter, 0) == key, do: "page"}
                 class={[
                   "flex-none px-3.5 py-2.5 rounded-full text-[14px]",
@@ -203,7 +321,18 @@ defmodule EverydayCitizenWeb.RepsLive do
           </section>
 
           <section :if={@rep} aria-label="Activity" class="flex flex-col gap-2.5">
-            <p :if={@items == []} class="m-0 py-6 text-[15px] text-floor-muted">Nothing yet.</p>
+            <.ai_box
+              :if={@week_summary}
+              id="week-summary"
+              class="bg-floor-card border border-floor-line"
+              title="In plain English: this week"
+              source="this week's record below"
+              state={elem(@week_summary, 1)}
+              prompt_url={@repo_url <> Claude.prompt_path(:rep_week)}
+            />
+            <p :if={@items == []} class="m-0 py-6 text-[15px] text-floor-muted">
+              Nothing on the record for this week.
+            </p>
             <%= for items <- @days do %>
               <h2 class="mt-2.5 mb-0 text-[13px] font-semibold text-floor-muted">
                 {day(hd(items).date)}

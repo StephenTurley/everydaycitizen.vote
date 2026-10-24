@@ -9,15 +9,15 @@ defmodule EverydayCitizen.Summaries do
 
   alias EverydayCitizen.Jobs.SummarizeSection
   alias EverydayCitizen.Repo
-  alias EverydayCitizen.Summaries.{Claude, SectionSummary}
+  alias EverydayCitizen.Summaries.{AiSummary, Claude, SectionSummary}
 
   @max_chars 40_000
 
   @zone "America/New_York"
 
-  @doc "The prompt version summaries are written and looked up with."
-  @spec prompt_version() :: String.t()
-  def prompt_version, do: config(:prompt_version)
+  @doc "The prompt version a kind of summary is written and looked up with."
+  @spec prompt_version(atom()) :: String.t()
+  def prompt_version(kind \\ :section), do: Map.fetch!(config(:prompt_versions), kind)
 
   @doc """
   The text of a section as sent to the model: its number and heading, then each
@@ -106,7 +106,7 @@ defmodule EverydayCitizen.Summaries do
   A summary of a section someone opened: the cached one, or a queued job that
   writes it (one per section at a time) and broadcasts it on `topic/2`. Not
   queued when the section is over #{@max_chars} characters, when no credentials
-  are configured, or once today's `daily_limit` is reached.
+  are configured, or once today's spending budget is used up.
   """
   @spec request(integer(), non_neg_integer(), String.t()) ::
           {:cached, SectionSummary.t()} | :queued | :too_long | :paused | :disabled
@@ -128,20 +128,133 @@ defmodule EverydayCitizen.Summaries do
     :queued
   end
 
-  @doc "Whether today's `daily_limit` of new summaries is used up."
+  @doc "Whether today's spending (America/New_York day) has reached `daily_budget_usd`."
   @spec over_budget?() :: boolean()
-  def over_budget?, do: created_today() >= config(:daily_limit)
+  def over_budget?, do: spent_today_usd() >= config(:daily_budget_usd)
+
+  @doc """
+  Records one Claude call's cost: input and output tokens at the configured
+  rates, the long-prompt rates when the input exceeds the tier (100K tokens).
+  """
+  @spec record_usage(atom(), map()) :: :ok
+  def record_usage(kind, result) do
+    input = result[:input_tokens] || 0
+    output = result[:output_tokens] || 0
+    rates = config(:rates)
+
+    {in_rate, out_rate} =
+      if input > rates.long_prompt_tokens,
+        do: {rates.long_input, rates.long_output},
+        else: {rates.input, rates.output}
+
+    # rates are dollars per million tokens, so micro-dollars per token
+    cost = round(input * in_rate + output * out_rate)
+
+    Repo.insert_all("ai_usage", [
+      %{
+        kind: to_string(kind),
+        input_tokens: input,
+        output_tokens: output,
+        cost_micros: cost,
+        inserted_at: DateTime.utc_now(:second)
+      }
+    ])
+
+    :ok
+  end
+
+  @doc "Dollars spent on Claude today (America/New_York)."
+  @spec spent_today_usd() :: float()
+  def spent_today_usd do
+    micros =
+      Repo.one(
+        from u in "ai_usage",
+          where: u.inserted_at >= ^today_start(),
+          select: type(sum(u.cost_micros), :integer)
+      )
+
+    (micros || 0) / 1_000_000
+  end
+
+  @doc "The cached bill or week summary for that input, or nil."
+  @spec get_ai(atom(), String.t(), String.t()) :: AiSummary.t() | nil
+  def get_ai(kind, subject, input) do
+    Repo.one(
+      from s in AiSummary,
+        where:
+          s.kind == ^to_string(kind) and s.subject == ^subject and
+            s.prompt_version == ^prompt_version(kind) and s.source_hash == ^hash(input)
+    )
+  end
+
+  @doc """
+  A bill or week summary someone is viewing: the cached one, or one queued job
+  per subject that writes it and broadcasts on `ai_topic/2`. Not queued without
+  credentials or once today's budget is spent.
+  """
+  @spec request_ai(atom(), String.t(), String.t()) ::
+          {:cached, AiSummary.t()} | :queued | :paused | :disabled
+  def request_ai(kind, subject, input) do
+    cond do
+      summary = get_ai(kind, subject, input) ->
+        {:cached, summary}
+
+      not Claude.enabled?() ->
+        :disabled
+
+      over_budget?() ->
+        :paused
+
+      true ->
+        %{
+          "kind" => to_string(kind),
+          "subject" => subject,
+          "prompt_version" => prompt_version(kind)
+        }
+        |> EverydayCitizen.Jobs.SummarizeSubject.new()
+        |> Oban.insert!()
+
+        :queued
+    end
+  end
+
+  @doc "The PubSub topic a bill or week summary is broadcast on."
+  @spec ai_topic(atom() | String.t(), String.t()) :: String.t()
+  def ai_topic(kind, subject), do: "ai_summary:#{kind}:#{subject}"
+
+  @doc "Stores (or replaces) a bill or week summary."
+  @spec put_ai(atom(), String.t(), String.t(), map()) :: {:ok, AiSummary.t()}
+  def put_ai(kind, subject, input, attrs) do
+    row = %AiSummary{
+      kind: to_string(kind),
+      subject: subject,
+      prompt_version: prompt_version(kind),
+      source_hash: hash(input),
+      summary: attrs.summary,
+      model: attrs.model,
+      input_tokens: attrs[:input_tokens],
+      output_tokens: attrs[:output_tokens]
+    }
+
+    Repo.insert(row,
+      on_conflict:
+        {:replace, [:summary, :model, :source_hash, :input_tokens, :output_tokens, :updated_at]},
+      conflict_target: [:kind, :subject, :prompt_version],
+      returning: true
+    )
+  end
 
   @doc "The PubSub topic a section's new summary is broadcast on."
   @spec topic(integer(), non_neg_integer()) :: String.t()
   def topic(version_id, index), do: "section_summary:#{version_id}:#{index}"
 
-  @doc "How many summaries were written today (America/New_York)."
+  @doc "How many section summaries were written today (America/New_York)."
   @spec created_today() :: non_neg_integer()
-  def created_today do
-    start = DateTime.now!(@zone) |> DateTime.to_date() |> DateTime.new!(~T[00:00:00], @zone)
-    Repo.aggregate(from(s in SectionSummary, where: s.inserted_at >= ^start), :count)
-  end
+  def created_today,
+    do: Repo.aggregate(from(s in SectionSummary, where: s.inserted_at >= ^today_start()), :count)
+
+  defp today_start,
+    do: DateTime.now!(@zone) |> DateTime.to_date() |> DateTime.new!(~T[00:00:00], @zone)
 
   defp hash(text), do: :crypto.hash(:sha256, text)
 

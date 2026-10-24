@@ -49,6 +49,7 @@ defmodule EverydayCitizen.Jobs.SummarizeSection do
   defp write(job, version_id, index, text) do
     case Claude.summarize(text) do
       {:ok, result} ->
+        :ok = Summaries.record_usage(:section, result)
         {:ok, summary} = Summaries.put(version_id, index, text, result)
         broadcast(version_id, index, {:ok, summary.summary})
 

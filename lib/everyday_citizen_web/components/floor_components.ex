@@ -136,4 +136,74 @@ defmodule EverydayCitizenWeb.FloorComponents do
     </.link>
     """
   end
+
+  attr :id, :string, required: true
+  attr :class, :string, default: nil
+  attr :title, :string, required: true
+  attr :source, :string, required: true
+  attr :state, :any, required: true
+  attr :prompt_url, :string, required: true
+
+  @doc """
+  A plain-English AI summary box: `title`, the summary (paragraphs; lines
+  starting "- " as a list) labeled "Written by AI from <source>; it can be
+  wrong" with a link to the published prompt, or a state line while it is being
+  written, paused, limited, too long or unavailable.
+  """
+  def ai_box(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class={["px-4 py-3 rounded-xl bg-floor-ground flex flex-col gap-1.5", @class]}
+    >
+      <p class="m-0 text-[12px] font-semibold uppercase tracking-wide text-floor-muted">
+        {@title}
+      </p>
+      <%= case @state do %>
+        <% {:ok, text} -> %>
+          <div class="text-[15px] leading-relaxed text-floor-ink flex flex-col gap-1.5">
+            <%= for part <- summary_parts(text) do %>
+              <ul :if={match?({:list, _}, part)} class="m-0 pl-5 list-disc flex flex-col gap-1">
+                <li :for={item <- elem(part, 1)}>{item}</li>
+              </ul>
+              <p :if={match?({:para, _}, part)} class="m-0">{elem(part, 1)}</p>
+            <% end %>
+          </div>
+          <p class="m-0 text-[12px] text-floor-muted">
+            Written by AI from {@source}; it can be wrong.
+            <a href={@prompt_url} class="underline">How it's written</a>
+          </p>
+        <% :loading -> %>
+          <p class="m-0 text-[14px] text-floor-muted">Writing a plain-English summary…</p>
+        <% :paused -> %>
+          <p class="m-0 text-[14px] text-floor-muted">
+            Plain-English summaries are paused for today.
+          </p>
+        <% :limited -> %>
+          <p class="m-0 text-[14px] text-floor-muted">
+            You've opened many sections; summaries will be back within the hour.
+          </p>
+        <% :too_long -> %>
+          <p class="m-0 text-[14px] text-floor-muted">This section is too long to summarize.</p>
+        <% _unavailable -> %>
+          <p class="m-0 text-[14px] text-floor-muted">A summary isn't available right now.</p>
+      <% end %>
+    </div>
+    """
+  end
+
+  # Paragraphs on blank lines; consecutive lines starting "- " become one list.
+  defp summary_parts(text) do
+    text
+    |> String.split(~r/\n\s*\n/)
+    |> Enum.flat_map(fn chunk ->
+      chunk
+      |> String.split("\n", trim: true)
+      |> Enum.chunk_by(&String.starts_with?(&1, "- "))
+      |> Enum.map(fn
+        ["- " <> _ | _] = items -> {:list, Enum.map(items, &String.trim_leading(&1, "- "))}
+        lines -> {:para, Enum.join(lines, " ")}
+      end)
+    end)
+  end
 end

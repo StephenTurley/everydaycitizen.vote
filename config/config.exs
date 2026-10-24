@@ -57,8 +57,18 @@ config :everyday_citizen, :mail_from, {"Everyday Citizen", "hello@everydaycitize
 # view and cached; the prompt is priv/prompts/section_summary.<prompt_version>.md.
 config :everyday_citizen, :summaries,
   model: "claude-haiku-5-5",
-  prompt_version: "v1",
-  daily_limit: 300
+  prompt_versions: %{section: "v2", bill: "v1", bill_chunk: "v1", rep_week: "v1"},
+  # new summaries pause once today's Claude spend reaches this (dollars)
+  daily_budget_usd: 2.0,
+  # dollars per million tokens; the long-prompt rates apply to a whole request
+  # whose input exceeds long_prompt_tokens
+  rates: %{
+    input: 0.10,
+    output: 0.50,
+    long_input: 0.50,
+    long_output: 2.50,
+    long_prompt_tokens: 100_000
+  }
 
 # WebAuthn relying party (passkeys). Dev values; test.exs and runtime.exs (prod)
 # override. The origin must match the browser's address bar exactly.

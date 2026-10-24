@@ -1,6 +1,8 @@
 defmodule EverydayCitizenWeb.RepsLiveTest do
   use EverydayCitizenWeb.ConnCase, async: true
 
+  use Oban.Testing, repo: EverydayCitizen.Repo
+
   import Phoenix.LiveViewTest
   import EverydayCitizen.AccountsFixtures
 
@@ -87,16 +89,98 @@ defmodule EverydayCitizenWeb.RepsLiveTest do
     assert html =~ "Sen." or html =~ "Senate"
   end
 
-  test "picking a rep and a filter patches the page", %{conn: conn, ernst: e} do
+  test "picking a rep opens their latest week; another week and a filter patch the page", %{
+    conn: conn,
+    ernst: e
+  } do
     {:ok, view, _html} = live(conn, ~p"/reps/IA-1")
 
-    view |> element(~s(a[href="/reps/IA-1?rep=#{e.id}"])) |> render_click()
-    assert_patch(view, "/reps/IA-1?rep=#{e.id}")
-    assert render(view) =~ "Introduced a bill"
+    view
+    |> element(~s(nav[aria-label="Representatives"] a[href="/reps/IA-1?rep=#{e.id}"]))
+    |> render_click()
 
-    html = view |> element("a", "Votes") |> render_click()
-    assert html =~ "Voted Nay"
-    refute html =~ "Introduced a bill"
+    assert_patch(view, "/reps/IA-1?rep=#{e.id}")
+    # her latest activity is the Jan 20 vote
+    assert has_element?(view, "#week", "Jan 19 – Jan 25")
+    assert render(view) =~ "Voted Nay"
+    refute render(view) =~ "Introduced a bill"
+
+    {:ok, view, _html} = live(conn, ~p"/reps/IA-1?rep=#{e.id}&week=2026-01-05")
+    assert render(view) =~ "Introduced a bill"
+    refute render(view) =~ "Voted Nay"
+
+    {:ok, view, _html} = live(conn, ~p"/reps/IA-1?rep=#{e.id}&week=2026-01-19&filter=votes")
+    assert render(view) =~ "Voted Nay"
+  end
+
+  test "the week switcher keeps the rep and filter, and stops at the current week", %{
+    conn: conn,
+    ernst: e
+  } do
+    {:ok, view, _html} = live(conn, ~p"/reps/IA-1?rep=#{e.id}&week=2026-01-19&filter=votes")
+
+    assert has_element?(
+             view,
+             ~s(#week a[aria-label="Previous week"][href="/reps/IA-1?filter=votes&rep=#{e.id}&week=2026-01-12"])
+           )
+
+    assert has_element?(view, ~s(#week a[aria-label="Next week"][href*="week=2026-01-26"]))
+
+    monday =
+      DateTime.now!("America/New_York")
+      |> DateTime.to_date()
+      |> Date.beginning_of_week()
+      |> Date.to_iso8601()
+
+    {:ok, view, _html} = live(conn, ~p"/reps/IA-1?rep=#{e.id}&week=#{monday}")
+    refute has_element?(view, ~s(#week a[aria-label="Next week"]))
+  end
+
+  test "a malformed or future week opens the latest week instead", %{conn: conn, ernst: e} do
+    for week <- ["nope", "2099-01-05"] do
+      {:ok, view, _html} = live(conn, ~p"/reps/IA-1?rep=#{e.id}&week=#{week}")
+      assert has_element?(view, "#week", "Jan 19 – Jan 25")
+    end
+  end
+
+  test "a week with nothing on the record says so and asks for no summary", %{
+    conn: conn,
+    ernst: e
+  } do
+    {:ok, view, _html} = live(conn, ~p"/reps/IA-1?rep=#{e.id}&week=2026-03-02")
+    assert render(view) =~ "Nothing on the record for this week."
+    refute has_element?(view, "#week-summary")
+    assert [] = all_enqueued(worker: EverydayCitizen.Jobs.SummarizeSubject)
+  end
+
+  test "a week with activity shows its summary at the top", %{conn: conn, ernst: e} do
+    {subject, input} = EverydayCitizen.Summaries.Inputs.rep_week(e.id, ~D[2026-01-19])
+    assert input =~ "Voted nay"
+    assert input =~ "S. 5"
+
+    {:ok, _} =
+      EverydayCitizen.Summaries.put_ai(:rep_week, subject, input, %{
+        summary: "She voted against one bill.",
+        model: "m"
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/reps/IA-1?rep=#{e.id}&week=2026-01-19")
+    assert has_element?(view, "#week-summary", "She voted against one bill.")
+    assert has_element?(view, "#week-summary", "Written by AI from this week's record below")
+  end
+
+  test "a new vote in a week already summarized gets a fresh summary", %{conn: conn, ernst: e} do
+    {subject, input} = EverydayCitizen.Summaries.Inputs.rep_week(e.id, ~D[2026-01-19])
+
+    {:ok, _} =
+      EverydayCitizen.Summaries.put_ai(:rep_week, subject, input <> " (old)", %{
+        summary: "Stale.",
+        model: "m"
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/reps/IA-1?rep=#{e.id}&week=2026-01-19")
+    assert has_element?(view, "#week-summary", "Writing a plain-English summary")
+    assert [_] = all_enqueued(worker: EverydayCitizen.Jobs.SummarizeSubject)
   end
 
   test "items link to their bill pages", %{conn: conn, grassley: g} do
@@ -106,7 +190,7 @@ defmodule EverydayCitizenWeb.RepsLiveTest do
 
   test "a rep with nothing in the filter sees Nothing yet", %{conn: conn, miller_meeks: m} do
     {:ok, _view, html} = live(conn, ~p"/reps/IA-1?rep=#{m.id}")
-    assert html =~ "Nothing yet"
+    assert html =~ "Nothing on the record for this week."
   end
 
   test "home says what you will find and links to this week", %{conn: conn} do

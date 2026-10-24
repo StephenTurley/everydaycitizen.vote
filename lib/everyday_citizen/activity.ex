@@ -30,6 +30,11 @@ defmodule EverydayCitizen.Activity do
 
   @type cursor :: String.t()
 
+  @doc """
+  A page of the person's activity, newest first. Options: `filter` (`:all`,
+  `:votes`, `:bills`, `:law`), `limit` (25), `before` (a cursor from the last
+  page), and `from`/`to` (dates, both inclusive) to keep one span such as a week.
+  """
   @spec feed(integer(), keyword()) :: %{items: [Item.t()], next: cursor() | nil}
   def feed(person_id, opts) do
     kinds = Map.fetch!(@kinds, Keyword.get(opts, :filter, :all))
@@ -40,6 +45,7 @@ defmodule EverydayCitizen.Activity do
       |> Enum.map(&source(&1, person_id))
       |> Enum.reduce(fn q, acc -> union_all(acc, ^q) end)
       |> subquery()
+      |> within(opts[:from], opts[:to])
       |> before(opts[:before])
       |> order_by([r], desc: r.date, desc: r.rank, desc: r.ref_id)
       |> limit(^(limit + 1))
@@ -108,6 +114,18 @@ defmodule EverydayCitizen.Activity do
         option: nil
       }
   end
+
+  @doc "The date of the person's most recent item, or nil."
+  @spec latest_date(integer()) :: Date.t() | nil
+  def latest_date(person_id) do
+    case feed(person_id, limit: 1).items do
+      [item | _] -> item.date
+      [] -> nil
+    end
+  end
+
+  defp within(query, nil, nil), do: query
+  defp within(query, from, to), do: where(query, [r], r.date >= ^from and r.date <= ^to)
 
   defp before(query, nil), do: query
 

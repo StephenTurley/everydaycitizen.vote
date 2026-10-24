@@ -113,4 +113,14 @@ defmodule EverydayCitizen.SummariesTest do
     assert_received :summary_query
     refute_received :summary_query
   end
+
+  test "a summary written under an older prompt version is not served", %{version: v} do
+    text = Summaries.section_text(@section)
+    {:ok, s} = Summaries.put(v.id, 1, text, summary_attrs())
+    Repo.update_all(SectionSummary, set: [prompt_version: "v1"])
+
+    assert Summaries.prompt_version(:section) == "v2"
+    assert Summaries.get(v.id, 1, text) == nil
+    _ = s
+  end
 end

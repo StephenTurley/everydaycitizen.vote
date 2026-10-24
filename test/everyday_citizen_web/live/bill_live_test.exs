@@ -348,7 +348,7 @@ defmodule EverydayCitizenWeb.BillLiveTest do
 
       assert has_element?(
                view,
-               ~s(#summary-1 a[href="https://github.com/StephenTurley/everydaycitizen.vote/blob/main/priv/prompts/section_summary.v1.md"])
+               ~s(#summary-1 a[href="https://github.com/StephenTurley/everydaycitizen.vote/blob/main/priv/prompts/section_summary.v2.md"])
              )
 
       assert render(view) =~ ~r/id="summary-1".*Deeper\./s
@@ -419,5 +419,69 @@ defmodule EverydayCitizenWeb.BillLiveTest do
       {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es&section=1")
       assert has_element?(view, "#summary-1 li", "Second point.")
     end
+  end
+
+  describe "executive summary" do
+    setup do
+      add_versions!()
+      bill = EverydayCitizen.Legislation.get_bill("federal", "119-s-5")
+
+      EverydayCitizen.Repo.update_all(EverydayCitizen.Legislation.BillVersion,
+        set: [plain_text: "SEC. 1. The text."]
+      )
+
+      %{bill: bill}
+    end
+
+    test "a cached executive summary sits above the bill's text", %{conn: conn, bill: bill} do
+      {subject, input} = EverydayCitizen.Summaries.Inputs.bill(bill)
+
+      {:ok, _} =
+        EverydayCitizen.Summaries.put_ai(:bill, subject, input, %{
+          summary: "It does one thing.",
+          model: "m"
+        })
+
+      {:ok, view, html} = live(conn, ~p"/bills/119-s-5")
+      assert has_element?(view, "#bill-summary", "It does one thing.")
+      assert has_element?(view, "#bill-summary", "Written by AI from the bill")
+      assert html =~ ~r/id="bill-summary".*Text of the bill/s
+    end
+
+    test "beside an older version's text, the summary says which version it was written from",
+         %{conn: conn, bill: bill} do
+      {subject, input} = EverydayCitizen.Summaries.Inputs.bill(bill)
+
+      {:ok, _} =
+        EverydayCitizen.Summaries.put_ai(:bill, subject, input, %{summary: "S.", model: "m"})
+
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=is")
+
+      assert has_element?(
+               view,
+               "#bill-summary",
+               "Written by AI from the “es” version of this bill"
+             )
+
+      refute has_element?(view, "#bill-summary", "text below")
+
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es")
+      assert has_element?(view, "#bill-summary", "Written by AI from the bill's text below")
+    end
+
+    test "without one, the page asks for it and shows it when it lands", %{conn: conn, bill: bill} do
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+      assert has_element?(view, "#bill-summary", "Writing a plain-English summary")
+      assert [_] = all_enqueued(worker: EverydayCitizen.Jobs.SummarizeSubject)
+
+      {subject, _} = EverydayCitizen.Summaries.Inputs.bill(bill)
+      send(view.pid, {:ai_summary, "bill", subject, {:ok, "Now summarized."}})
+      assert has_element?(view, "#bill-summary", "Now summarized.")
+    end
+  end
+
+  test "a bill with no text shows no executive summary", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+    refute has_element?(view, "#bill-summary")
   end
 end
