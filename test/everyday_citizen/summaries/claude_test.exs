@@ -36,11 +36,11 @@ defmodule EverydayCitizen.Summaries.ClaudeTest do
     assert headers["anthropic-version"] == "2023-06-01"
     assert body["model"] == "claude-haiku-5-5"
     refute Map.has_key?(body, "temperature")
-    assert body["max_tokens"] == 400
+    assert body["max_tokens"] == 300
 
     assert body["system"] ==
              File.read!(
-               Application.app_dir(:everyday_citizen, "priv/prompts/section_summary.v1.md")
+               Application.app_dir(:everyday_citizen, "priv/prompts/section_summary.v2.md")
              )
 
     assert [%{"role" => "user", "content" => content}] = body["messages"]
@@ -53,5 +53,42 @@ defmodule EverydayCitizen.Summaries.ClaudeTest do
       Req.Test.stub(EverydayCitizen.Claude, &reply(&1, status, %{"type" => "error"}))
       assert {:error, {:http_status, ^status}} = Claude.summarize("text")
     end
+  end
+
+  test "each kind uses its own published prompt, tag and reply cap; options can override" do
+    test = self()
+
+    Req.Test.stub(EverydayCitizen.Claude, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      send(test, {:body, Jason.decode!(body)})
+
+      conn
+      |> Plug.Conn.put_resp_content_type("application/json")
+      |> Plug.Conn.send_resp(
+        200,
+        Jason.encode!(%{"content" => [%{"type" => "text", "text" => "ok"}]})
+      )
+    end)
+
+    prompt = &File.read!(Application.app_dir(:everyday_citizen, "priv/prompts/#{&1}"))
+
+    for {kind, file, tag, cap} <- [
+          {:section, "section_summary.v2.md", "section", 300},
+          {:bill, "bill_summary.v1.md", "bill", 500},
+          {:bill_chunk, "bill_chunk.v1.md", "part", 600},
+          {:rep_week, "rep_week.v1.md", "activity", 300}
+        ] do
+      {:ok, _} = Claude.summarize("input", kind)
+      assert_received {:body, body}
+      assert body["system"] == prompt.(file)
+      assert body["max_tokens"] == cap
+      assert [%{"content" => content}] = body["messages"]
+      assert content == "<#{tag}>\ninput\n</#{tag}>"
+    end
+
+    {:ok, _} = Claude.summarize("input", :bill, max_tokens: 900, note: "Length: long")
+    assert_received {:body, body}
+    assert body["max_tokens"] == 900
+    assert [%{"content" => "Length: long\n\n<bill>\ninput\n</bill>"}] = body["messages"]
   end
 end

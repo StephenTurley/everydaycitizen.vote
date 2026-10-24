@@ -348,7 +348,7 @@ defmodule EverydayCitizenWeb.BillLiveTest do
 
       assert has_element?(
                view,
-               ~s(#summary-1 a[href="https://github.com/StephenTurley/everydaycitizen.vote/blob/main/priv/prompts/section_summary.v1.md"])
+               ~s(#summary-1 a[href="https://github.com/StephenTurley/everydaycitizen.vote/blob/main/priv/prompts/section_summary.v2.md"])
              )
 
       assert render(view) =~ ~r/id="summary-1".*Deeper\./s

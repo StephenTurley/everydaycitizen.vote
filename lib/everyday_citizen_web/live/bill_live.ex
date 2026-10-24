@@ -13,7 +13,7 @@ defmodule EverydayCitizenWeb.BillLive do
   alias EverydayCitizen.{BillPage, Follows, RateLimit, Reps, Summaries}
   alias EverydayCitizen.Summaries.Claude
 
-  @prompt_url "https://github.com/StephenTurley/everydaycitizen.vote/blob/main/priv/prompts/section_summary.v1.md"
+  @repo_url "https://github.com/StephenTurley/everydaycitizen.vote/blob/main/"
   @visitor_limit 30
   @hour :timer.hours(1)
 
@@ -296,7 +296,7 @@ defmodule EverydayCitizenWeb.BillLive do
 
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, :prompt_url, @prompt_url)
+    assigns = assign(assigns, :prompt_url, @repo_url <> Claude.prompt_path(:section))
 
     ~H"""
     <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>

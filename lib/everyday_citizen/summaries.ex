@@ -15,9 +15,9 @@ defmodule EverydayCitizen.Summaries do
 
   @zone "America/New_York"
 
-  @doc "The prompt version summaries are written and looked up with."
-  @spec prompt_version() :: String.t()
-  def prompt_version, do: config(:prompt_version)
+  @doc "The prompt version a kind of summary is written and looked up with."
+  @spec prompt_version(atom()) :: String.t()
+  def prompt_version(kind \\ :section), do: Map.fetch!(config(:prompt_versions), kind)
 
   @doc """
   The text of a section as sent to the model: its number and heading, then each
