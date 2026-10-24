@@ -145,10 +145,17 @@ defmodule TheFloor.Accounts do
   @doc "Gets a user by id, or nil."
   def get_user(id), do: Repo.get(User, id)
 
-  @doc "Turns the daily email on or off."
+  @doc "Turns the daily email on (starting from now) or off."
   @spec set_digest(User.t(), boolean()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
-  def set_digest(%User{} = user, enabled?) when is_boolean(enabled?),
-    do: user |> User.digest_changeset(enabled?) |> Repo.update()
+  def set_digest(%User{} = user, enabled?) when is_boolean(enabled?) do
+    # turned back on, the email starts from now, not from when it was turned off
+    sent_at = if enabled?, do: DateTime.utc_now(:second), else: user.digest_sent_at
+
+    user
+    |> User.digest_changeset(enabled?)
+    |> Ecto.Changeset.put_change(:digest_sent_at, sent_at)
+    |> Repo.update()
+  end
 
   @doc "Records the cutoff the last daily email covered."
   def put_digest_sent_at(%User{} = user, %DateTime{} = cutoff),

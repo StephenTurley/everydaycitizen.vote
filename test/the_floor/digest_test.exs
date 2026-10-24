@@ -100,6 +100,16 @@ defmodule TheFloor.DigestTest do
     assert Digest.items(user, DateTime.utc_now(), DateTime.add(DateTime.utc_now(), 60)) == []
   end
 
+  test "following something new does not email its history from before the follow", %{
+    scope: scope,
+    grassley: g,
+    user: user
+  } do
+    # the rep's votes were stored after `since` but before the follow
+    {:ok, _} = Follows.follow(scope, {:person, g.id})
+    assert Digest.items(user, ~U[2025-01-01 00:00:00Z], DateTime.utc_now()) == []
+  end
+
   test "unsubscribe tokens name the user and cannot be forged", %{user: user} do
     token = Digest.unsubscribe_token(user)
     assert {:ok, id} = Digest.verify_unsubscribe(token)
