@@ -1,4 +1,4 @@
-defmodule TheFloorWeb.ConnCase do
+defmodule EverydayCitizenWeb.ConnCase do
   @moduledoc """
   This module defines the test case to be used by
   tests that require setting up a connection.
@@ -11,7 +11,7 @@ defmodule TheFloorWeb.ConnCase do
   we enable the SQL sandbox, so changes done to the database
   are reverted at the end of every test. If you are using
   PostgreSQL, you can even run database tests asynchronously
-  by setting `use TheFloorWeb.ConnCase, async: true`, although
+  by setting `use EverydayCitizenWeb.ConnCase, async: true`, although
   this option is not recommended for other databases.
   """
 
@@ -20,19 +20,19 @@ defmodule TheFloorWeb.ConnCase do
   using do
     quote do
       # The default endpoint for testing
-      @endpoint TheFloorWeb.Endpoint
+      @endpoint EverydayCitizenWeb.Endpoint
 
-      use TheFloorWeb, :verified_routes
+      use EverydayCitizenWeb, :verified_routes
 
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
-      import TheFloorWeb.ConnCase
+      import EverydayCitizenWeb.ConnCase
     end
   end
 
   setup tags do
-    TheFloor.DataCase.setup_sandbox(tags)
+    EverydayCitizen.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 
@@ -45,8 +45,8 @@ defmodule TheFloorWeb.ConnCase do
   test context.
   """
   def register_and_log_in_user(%{conn: conn} = context) do
-    user = TheFloor.AccountsFixtures.user_fixture()
-    scope = TheFloor.Accounts.Scope.for_user(user)
+    user = EverydayCitizen.AccountsFixtures.user_fixture()
+    scope = EverydayCitizen.Accounts.Scope.for_user(user)
 
     opts =
       context
@@ -62,7 +62,7 @@ defmodule TheFloorWeb.ConnCase do
   It returns an updated `conn`.
   """
   def log_in_user(conn, user, opts \\ []) do
-    token = TheFloor.Accounts.generate_user_session_token(user)
+    token = EverydayCitizen.Accounts.generate_user_session_token(user)
 
     maybe_set_token_authenticated_at(token, opts[:token_authenticated_at])
 
@@ -74,6 +74,6 @@ defmodule TheFloorWeb.ConnCase do
   defp maybe_set_token_authenticated_at(_token, nil), do: nil
 
   defp maybe_set_token_authenticated_at(token, authenticated_at) do
-    TheFloor.AccountsFixtures.override_token_authenticated_at(token, authenticated_at)
+    EverydayCitizen.AccountsFixtures.override_token_authenticated_at(token, authenticated_at)
   end
 end

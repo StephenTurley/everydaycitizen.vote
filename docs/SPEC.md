@@ -177,7 +177,7 @@ Elixir + Phoenix LiveView, Ecto + PostgreSQL, Oban for ingest scheduling, Req
 for HTTP, Saxy for streaming XML. LiveView fits the product: the bill page,
 this-week view, and redline are server-rendered views over a changing dataset,
 and alerts/follows map naturally onto PubSub. Detailed conventions are in
-`CLAUDE.md`. App name `the_floor`; modules `TheFloor` and `TheFloorWeb`.
+`CLAUDE.md`. App name `everyday_citizen`; modules `EverydayCitizen` and `EverydayCitizenWeb`.
 
 ## 11. Open questions
 

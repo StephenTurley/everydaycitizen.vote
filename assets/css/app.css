@@ -2,12 +2,12 @@
    https://tailwindcss.com/docs/configuration */
 
 @import "tailwindcss" source(none);
-@import "phoenix-colocated/the_floor/colocated.css";
+@import "phoenix-colocated/everyday_citizen/colocated.css";
 @source "../css";
 @source "../js";
-@source "../../lib/the_floor_web";
+@source "../../lib/everyday_citizen_web";
 /* Required for Tailwind to automatically pick up changes in colocated CSS files in dev */
-@source "../../_build/dev/phoenix-colocated/the_floor/*/";
+@source "../../_build/dev/phoenix-colocated/everyday_citizen/*/";
 
 /* A Tailwind plugin that makes "hero-#{ICON}" classes available.
    The heroicons installation itself is managed by your mix.exs */

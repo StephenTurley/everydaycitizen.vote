@@ -1,13 +1,13 @@
-defmodule TheFloor.AccountsFixtures do
+defmodule EverydayCitizen.AccountsFixtures do
   @moduledoc """
   This module defines test helpers for creating
-  entities via the `TheFloor.Accounts` context.
+  entities via the `EverydayCitizen.Accounts` context.
   """
 
   import Ecto.Query
 
-  alias TheFloor.Accounts
-  alias TheFloor.Accounts.Scope
+  alias EverydayCitizen.Accounts
+  alias EverydayCitizen.Accounts.Scope
 
   def unique_user_email, do: "user#{System.unique_integer()}@example.com"
 
@@ -56,7 +56,7 @@ defmodule TheFloor.AccountsFixtures do
   end
 
   def override_token_authenticated_at(token, authenticated_at) when is_binary(token) do
-    TheFloor.Repo.update_all(
+    EverydayCitizen.Repo.update_all(
       from(t in Accounts.UserToken,
         where: t.token == ^token
       ),
@@ -66,14 +66,14 @@ defmodule TheFloor.AccountsFixtures do
 
   def generate_user_magic_link_token(user) do
     {encoded_token, user_token} = Accounts.UserToken.build_email_token(user, "login")
-    TheFloor.Repo.insert!(user_token)
+    EverydayCitizen.Repo.insert!(user_token)
     {encoded_token, user_token.token}
   end
 
   def offset_user_token(token, amount_to_add, unit) do
     dt = DateTime.add(DateTime.utc_now(:second), amount_to_add, unit)
 
-    TheFloor.Repo.update_all(
+    EverydayCitizen.Repo.update_all(
       from(ut in Accounts.UserToken, where: ut.token == ^token),
       set: [inserted_at: dt, authenticated_at: dt]
     )

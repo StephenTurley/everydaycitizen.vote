@@ -1,4 +1,4 @@
-defmodule TheFloor.Repo.Migrations.CreateBillSummaries do
+defmodule EverydayCitizen.Repo.Migrations.CreateBillSummaries do
   use Ecto.Migration
 
   def change do

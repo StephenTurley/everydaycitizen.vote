@@ -1,4 +1,4 @@
-defmodule TheFloor.Repo.Migrations.CreateFollows do
+defmodule EverydayCitizen.Repo.Migrations.CreateFollows do
   use Ecto.Migration
 
   # A person follows a bill or a rep (exactly one), once.

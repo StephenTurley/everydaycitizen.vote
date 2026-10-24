@@ -1,4 +1,4 @@
-defmodule TheFloor.Repo.Migrations.CreateVotesAndCalendar do
+defmodule EverydayCitizen.Repo.Migrations.CreateVotesAndCalendar do
   use Ecto.Migration
 
   def change do

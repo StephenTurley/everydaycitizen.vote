@@ -1,6 +1,6 @@
 # Everyday Citizen (everydaycitizen.vote)
 
-Code name `the_floor`. See `CLAUDE.md` and `docs/SPEC.md`.
+Code name `everyday_citizen`. See `CLAUDE.md` and `docs/SPEC.md`.
 
 To start your Phoenix server:
 
@@ -25,16 +25,16 @@ Jobs run in the app (`mix phx.server` or a release) on a nightly Oban schedule
 (America/New_York): jurisdiction 02:00, members 02:10, bills 02:30, votes 02:40,
 committee meetings 02:50, floor schedules 03:00, coverage checks 06:00.
 
-* `mix the_floor.ingest` enqueues every list-level job (they run concurrently);
-  `mix the_floor.ingest bills` enqueues one by name (`congress`, `members`, `bills`,
+* `mix everyday_citizen.ingest` enqueues every list-level job (they run concurrently);
+  `mix everyday_citizen.ingest bills` enqueues one by name (`congress`, `members`, `bills`,
   `house_votes`, `senate_votes`, `committee_meetings`, `house_floor`, `senate_floor`,
   `relink`, `coverage`). It only enqueues, so the app must be running for the jobs to
-  execute. On an empty database a single `mix the_floor.ingest` is enough: jobs whose
+  execute. On an empty database a single `mix everyday_citizen.ingest` is enough: jobs whose
   prerequisites (congress sessions, members, committees) are not stored yet snooze and
   retry, and `relink` and `coverage` snooze while other ingest jobs are queued. Each
   waits at most about 2 hours, then fails; `coverage` can finish before a long backfill
-  does, so re-run `mix the_floor.ingest coverage` once the backfill is done.
-* `mix the_floor.coverage` prints the latest coverage check per name (stored count vs the
+  does, so re-run `mix everyday_citizen.ingest coverage` once the backfill is done.
+* `mix everyday_citizen.coverage` prints the latest coverage check per name (stored count vs the
   source's count, `PASS`/`FAIL`) and exits non-zero if any fail. The checks are produced by
   the `coverage` job. A check whose source count could not be fetched shows `-` and `FAIL`.
 
@@ -59,8 +59,8 @@ Later runs are incremental.
 
 ## One-off jobs
 
-Run by name only, never by the full ingest (`mix the_floor.ingest <name>` locally,
-`TheFloor.Release.ingest("<name>")` in production):
+Run by name only, never by the full ingest (`mix everyday_citizen.ingest <name>` locally,
+`EverydayCitizen.Release.ingest("<name>")` in production):
 
 * `bill_summaries`: fill official summaries for bills stored before summaries were kept.
 * `bill_sections`: split stored bill text into sections (500 versions per run, re-queues).
@@ -87,9 +87,9 @@ flags a run that failed, ran long or never happened. Reports carry no request bo
 cookies or query strings. The ingest commands have release equivalents that
 run inside the live app:
 
-    fly ssh console -C "/app/bin/the_floor rpc 'TheFloor.Release.ingest()'"
-    fly ssh console -C "/app/bin/the_floor rpc 'TheFloor.Release.ingest(\"bills\")'"
-    fly ssh console -C "/app/bin/the_floor rpc 'TheFloor.Release.coverage()'"
+    fly ssh console -C "/app/bin/everyday_citizen rpc 'EverydayCitizen.Release.ingest()'"
+    fly ssh console -C "/app/bin/everyday_citizen rpc 'EverydayCitizen.Release.ingest(\"bills\")'"
+    fly ssh console -C "/app/bin/everyday_citizen rpc 'EverydayCitizen.Release.coverage()'"
 
 ## Learn more
 

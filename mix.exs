@@ -1,9 +1,9 @@
-defmodule TheFloor.MixProject do
+defmodule EverydayCitizen.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :the_floor,
+      app: :everyday_citizen,
       version: "0.1.0",
       elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -20,7 +20,7 @@ defmodule TheFloor.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {TheFloor.Application, []},
+      mod: {EverydayCitizen.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -96,10 +96,10 @@ defmodule TheFloor.MixProject do
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind the_floor", "esbuild the_floor"],
+      "assets.build": ["compile", "tailwind everyday_citizen", "esbuild everyday_citizen"],
       "assets.deploy": [
-        "tailwind the_floor --minify",
-        "esbuild the_floor --minify",
+        "tailwind everyday_citizen --minify",
+        "esbuild everyday_citizen --minify",
         "phx.digest"
       ],
       precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]

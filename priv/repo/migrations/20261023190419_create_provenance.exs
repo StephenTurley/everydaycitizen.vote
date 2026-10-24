@@ -1,4 +1,4 @@
-defmodule TheFloor.Repo.Migrations.CreateProvenance do
+defmodule EverydayCitizen.Repo.Migrations.CreateProvenance do
   use Ecto.Migration
 
   def change do

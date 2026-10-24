@@ -1,4 +1,4 @@
-defmodule TheFloor.Repo.Migrations.CreateLegislation do
+defmodule EverydayCitizen.Repo.Migrations.CreateLegislation do
   use Ecto.Migration
 
   def change do

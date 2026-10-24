@@ -1,4 +1,4 @@
-defmodule TheFloor.WebAuthnFixtures do
+defmodule EverydayCitizen.WebAuthnFixtures do
   @moduledoc """
   A software WebAuthn authenticator for tests.
 
@@ -8,7 +8,7 @@ defmodule TheFloor.WebAuthnFixtures do
   config, like the server's.
   """
 
-  alias TheFloor.Accounts.Passkeys
+  alias EverydayCitizen.Accounts.Passkeys
 
   @doc "A fresh authenticator: `%{priv, x, y, credential_id, aaguid}`."
   def new_authenticator do
@@ -91,7 +91,7 @@ defmodule TheFloor.WebAuthnFixtures do
   end
 
   defp rp_id_hash, do: :crypto.hash(:sha256, config(:rp_id))
-  defp config(key), do: Application.fetch_env!(:the_floor, :webauthn)[key]
+  defp config(key), do: Application.fetch_env!(:everyday_citizen, :webauthn)[key]
   defp bytes(bin), do: %CBOR.Tag{tag: :bytes, value: bin}
   defp b64(bin), do: Base.url_encode64(bin, padding: false)
 

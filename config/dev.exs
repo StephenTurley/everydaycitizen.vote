@@ -1,7 +1,7 @@
 import Config
 
 # Configure your database
-config :the_floor, TheFloor.Repo,
+config :everyday_citizen, EverydayCitizen.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
@@ -16,7 +16,7 @@ config :the_floor, TheFloor.Repo,
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
-config :the_floor, TheFloorWeb.Endpoint,
+config :everyday_citizen, EverydayCitizenWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}],
@@ -25,8 +25,8 @@ config :the_floor, TheFloorWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "fvwRfrcWmELNy8XfP8NZ0B1tKG/nidNGcOWz4sUrGQhO+uX/dl1lc/onFqMk+tl1",
   watchers: [
-    esbuild: {Esbuild, :install_and_run, [:the_floor, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:the_floor, ~w(--watch)]}
+    esbuild: {Esbuild, :install_and_run, [:everyday_citizen, ~w(--sourcemap=inline --watch)]},
+    tailwind: {Tailwind, :install_and_run, [:everyday_citizen, ~w(--watch)]}
   ]
 
 # ## SSL Support
@@ -53,7 +53,7 @@ config :the_floor, TheFloorWeb.Endpoint,
 # different ports.
 
 # Enable dev routes for dashboard and mailbox
-config :the_floor, dev_routes: true
+config :everyday_citizen, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

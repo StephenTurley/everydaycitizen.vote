@@ -12,30 +12,32 @@ import Config
 # If you use `mix release`, you need to explicitly enable the server
 # by passing the PHX_SERVER=true when you start it:
 #
-#     PHX_SERVER=true bin/the_floor start
+#     PHX_SERVER=true bin/everyday_citizen start
 #
 # Alternatively, you can use `mix phx.gen.release` to generate a `bin/server`
 # script that automatically sets the env var above.
 # Failed jobs to Sentry: a transient source failure only once its last retry
-# fails (TheFloor.SentryJobs). A function, so it lives here, not in config.exs.
+# fails (EverydayCitizen.SentryJobs). A function, so it lives here, not in config.exs.
 config :sentry,
-  integrations: [oban: [should_report_error_callback: &TheFloor.SentryJobs.report_error?/2]]
+  integrations: [
+    oban: [should_report_error_callback: &EverydayCitizen.SentryJobs.report_error?/2]
+  ]
 
 if System.get_env("PHX_SERVER") do
-  config :the_floor, TheFloorWeb.Endpoint, server: true
+  config :everyday_citizen, EverydayCitizenWeb.Endpoint, server: true
 end
 
-config :the_floor, TheFloorWeb.Endpoint,
+config :everyday_citizen, EverydayCitizenWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
 # Congress.gov API key. Test config sets a dummy; nil is allowed in dev.
 if config_env() != :test do
-  config :the_floor, :congress_gov_api_key, System.get_env("CONGRESS_GOV_API_KEY")
+  config :everyday_citizen, :congress_gov_api_key, System.get_env("CONGRESS_GOV_API_KEY")
 end
 
 if config_env() == :dev do
   # Reload browser tabs when matching files change.
-  config :the_floor, TheFloorWeb.Endpoint,
+  config :everyday_citizen, EverydayCitizenWeb.Endpoint,
     live_reload: [
       web_console_logger: true,
       patterns: [
@@ -44,15 +46,15 @@ if config_env() == :dev do
         # Gettext translations
         ~r"priv/gettext/.*\.po$",
         # Router, Controllers, LiveViews and LiveComponents
-        ~r"lib/the_floor_web/router\.ex$",
-        ~r"lib/the_floor_web/(controllers|live|components)/.*\.(ex|heex)$"
+        ~r"lib/everyday_citizen_web/router\.ex$",
+        ~r"lib/everyday_citizen_web/(controllers|live|components)/.*\.(ex|heex)$"
       ]
     ]
 end
 
 if config_env() == :prod do
   # Oban's node names the machine and the deploy's image, so a deploy's jobs are
-  # told apart from the previous deploy's, which TheFloor.ObanRescue releases at
+  # told apart from the previous deploy's, which EverydayCitizen.ObanRescue releases at
   # boot. (The release node name stays the machine id, for `rpc` and ssh.)
   image_tag =
     case String.split(System.get_env("FLY_IMAGE_REF", ""), ":") do
@@ -60,8 +62,10 @@ if config_env() == :prod do
       _ -> "local"
     end
 
-  config :the_floor, Oban, node: "#{System.get_env("FLY_MACHINE_ID", "machine")}-#{image_tag}"
-  config :the_floor, :rescue_orphaned_jobs, true
+  config :everyday_citizen, Oban,
+    node: "#{System.get_env("FLY_MACHINE_ID", "machine")}-#{image_tag}"
+
+  config :everyday_citizen, :rescue_orphaned_jobs, true
 
   # The deploy labels the image with the commit (`--image-label git-<sha>`), so
   # each Sentry event names the release that produced it.
@@ -89,7 +93,7 @@ if config_env() == :prod do
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
-  config :the_floor, TheFloor.Repo,
+  config :everyday_citizen, EverydayCitizen.Repo,
     # ssl: true,
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
@@ -113,17 +117,17 @@ if config_env() == :prod do
 
   # Passkeys are bound to this RP ID forever: changing it orphans every
   # registered passkey. PHX_HOST is everydaycitizen.vote.
-  config :the_floor, :webauthn,
+  config :everyday_citizen, :webauthn,
     origin: "https://#{host}",
     rp_id: host,
     rp_name: "Everyday Citizen"
 
-  # Every other host redirects here (TheFloorWeb.CanonicalHost).
-  config :the_floor, :canonical_host, host
+  # Every other host redirects here (EverydayCitizenWeb.CanonicalHost).
+  config :everyday_citizen, :canonical_host, host
 
-  config :the_floor, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
+  config :everyday_citizen, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
-  config :the_floor, TheFloorWeb.Endpoint,
+  config :everyday_citizen, EverydayCitizenWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
       # Enable IPv6 and bind on all interfaces.
@@ -139,7 +143,7 @@ if config_env() == :prod do
   # To get SSL working, you will need to add the `https` key
   # to your endpoint configuration:
   #
-  #     config :the_floor, TheFloorWeb.Endpoint,
+  #     config :everyday_citizen, EverydayCitizenWeb.Endpoint,
   #       https: [
   #         ...,
   #         port: 443,
@@ -161,14 +165,14 @@ if config_env() == :prod do
   # We also recommend setting `force_ssl` in your config/prod.exs,
   # ensuring no data is ever sent via http, always redirecting to https:
   #
-  #     config :the_floor, TheFloorWeb.Endpoint,
+  #     config :everyday_citizen, EverydayCitizenWeb.Endpoint,
   #       force_ssl: [hsts: true]
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
 
   # Email (sign-in links, the daily email) goes through Resend; the domain is
   # verified there. Required: without it no one could sign in.
-  config :the_floor, TheFloor.Mailer,
+  config :everyday_citizen, EverydayCitizen.Mailer,
     adapter: Swoosh.Adapters.Resend,
     api_key:
       System.get_env("RESEND_API_KEY") ||

@@ -18,17 +18,21 @@ Decision log: `docs/DECISIONS.md` (append; never rewrite history)
   launch). Domain `everydaycitizen.vote`, registered at Namecheap, served by the
   Fly.io app `thefloor-vote` (iad); every other host (`www.`, the old
   `thefloor.vote`, `thefloor-vote.fly.dev`) redirects to it. Errors go to Sentry
-  (`thefloorvote/the-floor`). Infrastructure names keep the old name.
-- Elixir app name `the_floor`; modules `TheFloor` (domain) and `TheFloorWeb`
-  (LiveView). Generated with `mix phx.new the_floor`. Code names are not
-  user-facing and stay as they are.
+  (`thefloorvote/the-floor`). Fly and Sentry names keep the old name (Fly apps
+  cannot be renamed).
+- GitHub repo `StephenTurley/everydaycitizen.vote`. Elixir app name
+  `everyday_citizen`; modules `EverydayCitizen` (domain) and `EverydayCitizenWeb`
+  (LiveView); renamed from `the_floor`/`TheFloor` on 2026-10-24. The local dev
+  and test databases are still named `the_floor_dev`/`the_floor_test`.
+- Production commands: `fly ssh console -C "/app/bin/everyday_citizen rpc
+  'EverydayCitizen.Release.ingest(\"name\")'"` (and `.coverage()`).
 - Product direction: plain-language understanding of what your reps do now;
   later, proposals that citizens second and send to their own reps (SPEC §9).
 
 ## Non-negotiables
 
 - No UI or domain code may know it is federal. Jurisdiction-specific logic lives
-  only in adapters (`lib/the_floor/adapters/<jurisdiction>/`). The schema is
+  only in adapters (`lib/everyday_citizen/adapters/<jurisdiction>/`). The schema is
   the contract.
 - Every record carries provenance: source URL, `fetched_at`, content hash.
 - Plain-language output is always clause-anchored and rendered beside the source
@@ -65,19 +69,19 @@ layer). M1 (schema + federal adapter) is done.
 - Elixir 1.20 / OTP 29 (pinned in `.tool-versions` for asdf), Phoenix 1.8 with LiveView for all UI. No separate JS
   frontend; keep client-side JS to LiveView hooks only.
 - Ecto + PostgreSQL. The schema in `docs/SPEC.md` §4 maps to Ecto schemas
-  under `lib/the_floor/` with LiveViews under `lib/the_floor_web/`.
+  under `lib/everyday_citizen/` with LiveViews under `lib/everyday_citizen_web/`.
 - Oban for scheduled and incremental ingest jobs.
 - Req for HTTP; Saxy (streaming) for USLM bill text and US Code XML, which
   are large.
-- Adapters live in `lib/the_floor/adapters/<jurisdiction>/` and only produce
+- Adapters live in `lib/everyday_citizen/adapters/<jurisdiction>/` and only produce
   structs that match the schema.
 
 ## Build and test
 
 - `mix setup` — deps, database, assets
 - `mix phx.server` — run locally at http://localhost:4000
-- `mix the_floor.ingest [job]` — enqueue the ingest jobs (all, or one by name)
-- `mix the_floor.coverage` — print latest coverage checks; non-zero exit on any failure
+- `mix everyday_citizen.ingest [job]` — enqueue the ingest jobs (all, or one by name)
+- `mix everyday_citizen.coverage` — print latest coverage checks; non-zero exit on any failure
 - `mix test` — run before every commit
 - `mix format` and `mix credo` before opening a PR
 
