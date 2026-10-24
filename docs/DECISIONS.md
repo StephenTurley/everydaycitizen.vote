@@ -150,3 +150,9 @@ The home page asks for a ZIP code before an address. `postal_districts` maps pos
 
 ## 2026-10-24 — One Sentry cron monitor, on the coverage job
 Sentry's free plan allows one cron monitor, and the Oban integration's cron reporting created one per scheduled worker (10), so all but the first were dropped. Its cron reporting is off; `TheFloor.SentryCrons.monitor/2` reports only the coverage job's scheduled runs. Coverage runs last each night after the other ingest jobs settle, so an on-time "ok" means the scheduler and app ran the night; individual job failures still arrive as Sentry issues.
+
+## 2026-10-24 — Quoted law keeps its structure; split format versioned
+Language a bill inserts into existing law (`<quoted-block>`, USLM `<quotedContent>`) was flattened into one paragraph with its numbers and headings run together (about a quarter of stored versions). The section splitter now keeps it as a `"quote"` block holding its own levelled blocks, rendered as a set-off block labeled "Text this section adds to the law". `bill_versions.sections_version` records the splitter's output format (`BillSections.format/0`, now 2); the on-demand `bill_sections` job re-splits any version on an older or unrecorded format, 100 per job, so pages keep the old split until each version is redone rather than showing no text.
+
+## 2026-10-24 — Desktop bill page
+From 1024px the bill page widens to a 1280px column: the bill text (720px max, Source Serif 4 at 17px) beside a sticky sidebar with where it stands (as a vertical list), your reps and votes; from 1280px a contents list of the bill's sections sits on the left. Expand all / Collapse all is `?section=all`. Phones keep the approved single column. A status step reached with no date of its own (a bill that went to the floor without a committee report) reads "Skipped".

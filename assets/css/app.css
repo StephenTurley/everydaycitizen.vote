@@ -107,6 +107,7 @@
 /* The Floor: tokens from the approved mockups (neutral, no party colors). */
 @theme {
   --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Source Serif 4", Georgia, serif;
   --color-floor-ground: #f4f5f6;
   --color-floor-card: #ffffff;
   --color-floor-line: #dadde1;

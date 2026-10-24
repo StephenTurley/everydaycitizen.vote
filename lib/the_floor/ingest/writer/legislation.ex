@@ -135,6 +135,7 @@ defmodule TheFloor.Ingest.Writer.Legislation do
         xml_schema: r.xml_schema,
         plain_text: r.plain_text,
         sections: r.sections,
+        sections_version: r.sections_version,
         text_source_id: source_id
       })
       |> Repo.update()

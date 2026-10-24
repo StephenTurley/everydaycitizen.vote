@@ -128,7 +128,8 @@ defmodule TheFloor.BillPage do
     mark(raw)
   end
 
-  # Done steps up to the last one reached; the first step after is current.
+  # Done steps up to the last one reached; the first step after is current. A
+  # done step with no date of its own was passed over (`skipped`).
   defp mark(raw) do
     reached =
       raw
@@ -147,7 +148,12 @@ defmodule TheFloor.BillPage do
           true -> :todo
         end
 
-      %{label: label, date: if(state == :done, do: date), state: state}
+      %{
+        label: label,
+        date: if(state == :done, do: date),
+        state: state,
+        skipped: state == :done and is_nil(date)
+      }
     end)
   end
 

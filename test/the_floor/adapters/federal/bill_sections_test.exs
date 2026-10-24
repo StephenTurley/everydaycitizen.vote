@@ -54,18 +54,94 @@ defmodule TheFloor.Adapters.Federal.BillSectionsTest do
              sections("uslm_sample.xml")
   end
 
-  test "sections quoted into existing law stay inside their block, not as sections" do
+  test "law quoted into a section keeps its own numbers, headings and levels" do
     xml = """
     <bill><legis-body><section><enum>1.</enum><header>Amendment</header>
     <text>Section 5 is amended by adding:</text>
-    <quoted-block><section><enum>6.</enum><header>New</header><text>Inserted text.</text></section></quoted-block>
+    <quoted-block><section><enum>6.</enum><header>New</header>
+    <subsection><enum>(a)</enum><header>Rule</header><text>Inserted text.</text>
+    <paragraph><enum>(1)</enum><text>First.</text></paragraph></subsection>
+    </section><after-quoted-block>.</after-quoted-block></quoted-block>
     </section></legis-body></bill>
     """
 
-    assert {:ok, [%{"kind" => "section", "enum" => "1.", "blocks" => blocks}]} =
-             BillSections.parse(xml)
+    assert {:ok, [%{"kind" => "section", "blocks" => blocks}]} = BillSections.parse(xml)
 
-    assert Enum.map_join(blocks, " ", & &1["text"]) =~ "Inserted text."
+    assert [
+             %{"level" => 0, "text" => "Section 5 is amended by adding:"},
+             %{
+               "level" => 0,
+               "quote" => [
+                 %{"level" => 0, "enum" => "6.", "heading" => "New", "text" => ""},
+                 %{
+                   "level" => 0,
+                   "enum" => "(a)",
+                   "heading" => "Rule",
+                   "text" => "Inserted text."
+                 },
+                 %{"level" => 1, "enum" => "(1)", "text" => "First."}
+               ]
+             }
+           ] = blocks
+
+    refute Enum.any?(blocks, &((&1["text"] || "") =~ "Inserted text."))
+  end
+
+  test "a quote inside a paragraph sits at the paragraph's level, before its later siblings" do
+    xml = """
+    <bill><legis-body><section><enum>2.</enum><header>Changes</header>
+    <subsection><enum>(a)</enum><text>Amendments.</text>
+    <paragraph><enum>(1)</enum><text>by inserting:</text>
+    <quoted-block><paragraph><enum>(4)</enum><text>New paragraph.</text></paragraph></quoted-block></paragraph>
+    <paragraph><enum>(2)</enum><text>by striking.</text></paragraph></subsection>
+    </section></legis-body></bill>
+    """
+
+    assert {:ok, [%{"blocks" => blocks}]} = BillSections.parse(xml)
+
+    assert [
+             %{"enum" => "(a)"},
+             %{"enum" => "(1)", "level" => 1},
+             %{
+               "level" => 1,
+               "quote" => [%{"enum" => "(4)", "level" => 1, "text" => "New paragraph."}]
+             },
+             %{"enum" => "(2)", "level" => 1}
+           ] = blocks
+  end
+
+  test "USLM quoted content is kept the same way" do
+    xml = """
+    <bill xmlns="http://schemas.gpo.gov/xml/uslm"><main><section><num>1.</num><heading>Amendment</heading>
+    <content>Section 5 is amended by adding:</content>
+    <quotedContent><section><num>6.</num><heading>New</heading><content>Inserted text.</content></section></quotedContent>
+    </section></main></bill>
+    """
+
+    assert {:ok, [%{"blocks" => [_, %{"quote" => [%{"enum" => "6.", "heading" => "New"}]}]}]} =
+             BillSections.parse(xml)
+  end
+
+  test "words after a quote are kept; a lone closing period is dropped" do
+    xml = """
+    <bill><legis-body><section><enum>3.</enum><header>More</header><text>Amended by adding:</text>
+    <quoted-block><paragraph><enum>(5)</enum><text>Five.</text></paragraph><after-quoted-block>; and</after-quoted-block></quoted-block>
+    </section></legis-body></bill>
+    """
+
+    assert {:ok, [%{"blocks" => [_, %{"quote" => _}, %{"level" => 0, "text" => "; and"}]}]} =
+             BillSections.parse(xml)
+  end
+
+  test "NUL characters (which the database cannot store) are dropped from text" do
+    xml =
+      "<bill><section><enum>1.</enum><header>A&#0;</header><text>a&#0;b</text></section></bill>"
+
+    assert {:ok, [%{"heading" => "A", "blocks" => [%{"text" => "ab"}]}]} = BillSections.parse(xml)
+  end
+
+  test "the format number marks the splitter's output shape" do
+    assert BillSections.format() == 2
   end
 
   test "titles appear before their sections" do

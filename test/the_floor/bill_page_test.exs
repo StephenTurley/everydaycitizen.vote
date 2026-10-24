@@ -71,6 +71,19 @@ defmodule TheFloor.BillPageTest do
     assert page.latest_action.position == 1
   end
 
+  test "a step passed over with no date of its own is marked skipped" do
+    page =
+      bill!("119-hr-9", "bill", [
+        {~D[2026-02-01], "introduced", "house"},
+        {~D[2026-02-10], "passed_chamber", "house"}
+      ])
+
+    [introduced, committee | _] = page.steps
+    assert %{label: "Committee", state: :done, skipped: true} = committee
+    assert %{state: :done, skipped: false} = introduced
+    assert Enum.all?(page.steps, &is_boolean(&1.skipped))
+  end
+
   test "a law has every step done" do
     page =
       bill!("119-hr-9", "bill", [
@@ -175,7 +188,7 @@ defmodule TheFloor.BillPageTest do
       set: [xml: "<bill/>", plain_text: "text"]
     )
 
-    :ok = TheFloor.Legislation.put_sections(v.id, [%{"kind" => "section", "enum" => "1."}])
+    :ok = TheFloor.Legislation.put_sections(v.id, [%{"kind" => "section", "enum" => "1."}], 2)
 
     {:ok, page} = BillPage.load("federal", "119-s-5", [])
     assert [%{code: "is", xml: nil, plain_text: nil, sections: nil}] = page.versions
