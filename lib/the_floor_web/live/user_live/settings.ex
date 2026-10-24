@@ -1,12 +1,12 @@
 defmodule TheFloorWeb.UserLive.Settings do
   @moduledoc """
-  The account page: passkeys (add one on this device, remove any), the email,
-  and signing out. Changing the email needs a recent sign-in (sudo mode); the
+  The account page: what you follow (with Unfollow), passkeys (add one on this
+  device, remove any), the email, and signing out. Changing the email needs a recent sign-in (sudo mode); the
   rest of the page does not.
   """
   use TheFloorWeb, :live_view
 
-  alias TheFloor.Accounts
+  alias TheFloor.{Accounts, Follows}
   alias TheFloor.Accounts.Passkeys
   alias TheFloorWeb.{PasskeyMessages, UserAuth}
 
@@ -17,6 +17,41 @@ defmodule TheFloorWeb.UserLive.Settings do
       <section class="pt-10 pb-4 flex flex-col gap-1">
         <h1 class="m-0 text-[28px] leading-tight font-bold tracking-tight">Your account</h1>
         <p class="m-0 text-[15px] text-floor-muted">{@current_email}</p>
+      </section>
+
+      <section aria-label="What you follow" class="pb-6 flex flex-col gap-2.5">
+        <h2 class="m-0 text-[18px] font-bold">What you follow</h2>
+        <p :if={@follows == []} class="m-0 text-[15px] text-floor-muted">
+          You don't follow anything yet. Use Follow on a bill or a rep's page.
+        </p>
+        <ul :if={@follows != []} id="follows" class="m-0 p-0 list-none flex flex-col gap-2">
+          <li
+            :for={f <- @follows}
+            class="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl bg-floor-card border border-floor-line"
+          >
+            <.link
+              :if={f.bill}
+              navigate={~p"/bills/#{f.bill.external_id}"}
+              class="flex flex-col gap-0.5 text-floor-ink min-w-0"
+            >
+              <span class="text-[15px] font-semibold">{f.bill.identifier}</span>
+              <span class="text-[13px] text-floor-muted truncate">{f.bill.title}</span>
+            </.link>
+            <span :if={f.person} class="flex flex-col gap-0.5">
+              <span class="text-[15px] font-semibold">{f.person.name}</span>
+              <span class="text-[13px] text-floor-muted">Representative</span>
+            </span>
+            <button
+              type="button"
+              phx-click="unfollow"
+              phx-value-kind={elem(f.target, 0)}
+              phx-value-id={elem(f.target, 1)}
+              class="flex-none px-3 py-2 text-[14px] font-semibold text-floor-accent"
+            >
+              Unfollow
+            </button>
+          </li>
+        </ul>
       </section>
 
       <section aria-label="Passkeys" class="pb-6 flex flex-col gap-2.5">
@@ -140,6 +175,7 @@ defmodule TheFloorWeb.UserLive.Settings do
        current_email: user.email,
        sudo: Accounts.sudo_mode?(user, -10),
        passkeys: Passkeys.list_keys(socket.assigns.current_scope),
+       follows: Follows.list(socket.assigns.current_scope),
        passkeys_supported: true,
        passkey_challenge: nil,
        email_form: to_form(Accounts.change_user_email(user, %{}, validate_unique: false))
@@ -167,6 +203,16 @@ defmodule TheFloorWeb.UserLive.Settings do
 
   def handle_event("passkey:unsupported", _params, socket),
     do: {:noreply, assign(socket, :passkeys_supported, false)}
+
+  def handle_event("unfollow", %{"kind" => kind, "id" => id}, socket)
+      when kind in ["bill", "person"] do
+    scope = socket.assigns.current_scope
+
+    with {id, ""} <- Integer.parse(id),
+         do: :ok = Follows.unfollow(scope, {String.to_existing_atom(kind), id})
+
+    {:noreply, assign(socket, :follows, Follows.list(scope))}
+  end
 
   def handle_event("remove_passkey", %{"id" => id}, socket) do
     scope = socket.assigns.current_scope

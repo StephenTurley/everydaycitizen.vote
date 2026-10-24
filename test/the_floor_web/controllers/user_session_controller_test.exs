@@ -116,4 +116,23 @@ defmodule TheFloorWeb.UserSessionControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Logged out successfully"
     end
   end
+
+  describe "GET /users/sign-in-to" do
+    test "remembers where to return after signing in", %{conn: conn, user: user} do
+      conn = get(conn, ~p"/users/sign-in-to?to=/bills/119-s-5")
+      assert redirected_to(conn) == ~p"/users/log-in"
+
+      {token, _} = generate_user_magic_link_token(user)
+      conn = conn |> recycle() |> post(~p"/users/log-in", %{"user" => %{"token" => token}})
+      assert redirected_to(conn) == "/bills/119-s-5"
+    end
+
+    test "never returns to another site", %{conn: conn} do
+      for to <- ["https://evil.example/", "//evil.example/x", "javascript:alert(1)"] do
+        conn = get(conn, ~p"/users/sign-in-to?#{[to: to]}")
+        assert redirected_to(conn) == ~p"/users/log-in"
+        refute get_session(conn, :user_return_to)
+      end
+    end
+  end
 end

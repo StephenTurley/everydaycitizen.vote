@@ -6,7 +6,7 @@ defmodule TheFloorWeb.BillLive do
   """
   use TheFloorWeb, :live_view
 
-  alias TheFloor.{BillPage, Reps}
+  alias TheFloor.{BillPage, Follows, Reps}
 
   @impl true
   def mount(%{"id" => id}, session, socket) do
@@ -15,7 +15,13 @@ defmodule TheFloorWeb.BillLive do
 
     case BillPage.load(Reps.jurisdiction(), id, reps) do
       {:ok, page} ->
-        {:ok, assign(socket, page: page, district: district, page_title: page.bill.identifier)}
+        {:ok,
+         assign(socket,
+           page: page,
+           district: district,
+           page_title: page.bill.identifier,
+           following: Follows.following?(socket.assigns.current_scope, {:bill, page.bill.id})
+         )}
 
       :not_found ->
         raise TheFloorWeb.NotFoundError
@@ -44,6 +50,10 @@ defmodule TheFloorWeb.BillLive do
   end
 
   @impl true
+  def handle_event("toggle_follow", _params, socket) do
+    {:noreply, TheFloorWeb.FollowToggle.toggle(socket, {:bill, socket.assigns.page.bill.id})}
+  end
+
   def handle_event("version", %{"version" => code}, socket) do
     {:noreply,
      push_patch(socket, to: ~p"/bills/#{socket.assigns.page.bill.external_id}?#{[version: code]}")}
@@ -135,9 +145,18 @@ defmodule TheFloorWeb.BillLive do
         <h1 class="m-0 text-[26px] lg:text-[34px] lg:max-w-[920px] leading-tight font-bold tracking-tight">
           {@page.bill.title}
         </h1>
-        <p :if={@page.sponsor} class="m-0 text-[14px] lg:text-[15px] text-floor-muted">
-          Sponsor: {@page.sponsor.name} · {cosponsors(@page.cosponsor_count)}
-        </p>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <p :if={@page.sponsor} class="m-0 text-[14px] lg:text-[15px] text-floor-muted">
+            Sponsor: {@page.sponsor.name} · {cosponsors(@page.cosponsor_count)}
+          </p>
+          <.follow_button
+            id="follow-bill"
+            label="Follow this bill"
+            signed_in={!!(@current_scope && @current_scope.user)}
+            following={@following}
+            return_to={~p"/bills/#{@page.bill.external_id}"}
+          />
+        </div>
       </section>
 
       <%!-- Phones: one column in the order below (`order-*`; the two wrappers are

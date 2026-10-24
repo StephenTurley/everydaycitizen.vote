@@ -2,6 +2,7 @@ defmodule TheFloorWeb.BillLiveTest do
   use TheFloorWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+  import TheFloor.AccountsFixtures
 
   alias TheFloor.Ingest
   alias TheFloor.Ingest.Records
@@ -273,5 +274,42 @@ defmodule TheFloorWeb.BillLiveTest do
     assert html =~ "Second division text."
     refute html =~ "First division text."
     refute html =~ "Loose text."
+  end
+
+  describe "following the bill" do
+    test "signed out, Follow leads to sign-in and back to this bill", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+
+      assert has_element?(
+               view,
+               ~s(a[href="/users/sign-in-to?to=%2Fbills%2F119-s-5"]),
+               "Follow this bill"
+             )
+    end
+
+    test "signed in, Follow toggles and is remembered", %{conn: conn} do
+      user = user_fixture()
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+
+      view |> element("#follow-bill") |> render_click()
+      assert has_element?(view, ~s(#follow-bill[aria-pressed="true"]), "Following")
+
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+      assert has_element?(view, ~s(#follow-bill[aria-pressed="true"]))
+
+      view |> element("#follow-bill") |> render_click()
+      assert has_element?(view, ~s(#follow-bill[aria-pressed="false"]), "Follow this bill")
+    end
+
+    test "with the daily email off, following says so", %{conn: conn} do
+      user = user_fixture()
+      TheFloor.Repo.update!(Ecto.Changeset.change(user, digest_enabled: false))
+      {:ok, view, _html} = conn |> log_in_user(user) |> live(~p"/bills/119-s-5")
+
+      html = view |> element("#follow-bill") |> render_click()
+      assert html =~ "Your daily email is off"
+      assert has_element?(view, ~s(a[href="/users/settings"]))
+    end
   end
 end

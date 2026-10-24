@@ -97,4 +97,43 @@ defmodule TheFloorWeb.FloorComponents do
     |> Enum.map_join(&String.first/1)
     |> String.upcase()
   end
+
+  @doc """
+  Follow / Following for a bill or a rep. Signed in, it toggles (`toggle_follow`
+  event, `aria-pressed`); signed out, it links to sign-in and back to `return_to`.
+  """
+  attr :id, :string, required: true
+  attr :signed_in, :boolean, required: true
+  attr :following, :boolean, default: false
+  attr :return_to, :string, required: true
+  attr :label, :string, default: "Follow"
+
+  def follow_button(assigns) do
+    ~H"""
+    <button
+      :if={@signed_in}
+      type="button"
+      id={@id}
+      phx-click="toggle_follow"
+      aria-pressed={to_string(@following)}
+      class={[
+        "self-start px-4 py-2.5 rounded-xl text-[15px] font-semibold whitespace-nowrap",
+        if(@following,
+          do: "bg-floor-card border border-floor-ink text-floor-ink",
+          else: "bg-floor-ink text-white"
+        )
+      ]}
+    >
+      {if @following, do: "Following", else: @label}
+    </button>
+    <.link
+      :if={!@signed_in}
+      id={@id}
+      href={"/users/sign-in-to?" <> URI.encode_query(to: @return_to)}
+      class="self-start px-4 py-2.5 rounded-xl bg-floor-ink text-white text-[15px] font-semibold whitespace-nowrap"
+    >
+      {@label}
+    </.link>
+    """
+  end
 end

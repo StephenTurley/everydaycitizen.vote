@@ -22,6 +22,8 @@ defmodule TheFloorWeb.Router do
 
     get "/district/:district", DistrictController, :show
     post "/district", DistrictController, :create
+    # "Follow" while signed out: remember the page, then sign in
+    get "/users/sign-in-to", UserSessionController, :sign_in_to
   end
 
   # Other scopes may use custom stacks.

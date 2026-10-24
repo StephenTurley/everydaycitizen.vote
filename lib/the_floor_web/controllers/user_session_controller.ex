@@ -45,6 +45,24 @@ defmodule TheFloorWeb.UserSessionController do
     end
   end
 
+  @doc """
+  Remembers a page on this site to return to after signing in (from "Follow"
+  while signed out), then goes to the sign-in page. Only local paths are
+  kept, so the link cannot send anyone to another site.
+  """
+  def sign_in_to(conn, params) do
+    case local_path(params["to"]) do
+      nil -> redirect(conn, to: ~p"/users/log-in")
+      to -> conn |> put_session(:user_return_to, to) |> redirect(to: ~p"/users/log-in")
+    end
+  end
+
+  defp local_path("/" <> rest = path) do
+    if String.starts_with?(rest, ["/", "\\"]), do: nil, else: path
+  end
+
+  defp local_path(_), do: nil
+
   def delete(conn, _params) do
     conn
     |> put_flash(:info, "Logged out successfully.")

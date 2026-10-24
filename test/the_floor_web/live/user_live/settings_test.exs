@@ -186,4 +186,22 @@ defmodule TheFloorWeb.UserLive.SettingsTest do
       refute has_element?(view, "#passkeys li", "Old phone")
     end
   end
+
+  describe "what you follow" do
+    test "lists followed bills and reps, each with Unfollow", %{conn: conn} do
+      TheFloor.FloorFixtures.iowa!()
+      user = user_fixture()
+      scope = TheFloor.Accounts.Scope.for_user(user)
+      bill = TheFloor.Legislation.get_bill("federal", "119-s-5")
+      {:ok, _} = TheFloor.Follows.follow(scope, {:bill, bill.id})
+
+      {:ok, view, html} = conn |> log_in_user(user) |> live(~p"/users/settings")
+      assert html =~ "S. 5"
+      assert has_element?(view, ~s(#follows a[href="/bills/119-s-5"]))
+
+      view |> element("#follows button", "Unfollow") |> render_click()
+      refute has_element?(view, ~s(#follows a[href="/bills/119-s-5"]))
+      assert render(view) =~ "You don&#39;t follow anything yet"
+    end
+  end
 end
