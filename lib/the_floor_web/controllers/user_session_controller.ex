@@ -57,8 +57,11 @@ defmodule TheFloorWeb.UserSessionController do
     end
   end
 
-  defp local_path("/" <> rest = path) do
-    if String.starts_with?(rest, ["/", "\\"]), do: nil, else: path
+  # A path on this site that `redirect(to:)` accepts: one leading slash, no
+  # backslash, whitespace or control characters (a bad path stored here would
+  # break every later sign-in in that browser).
+  defp local_path(path) when is_binary(path) do
+    if path =~ ~r/\A\/(?![\/\\])[^\s\\\x00-\x1f\x7f]*\z/u, do: path
   end
 
   defp local_path(_), do: nil

@@ -35,6 +35,37 @@ defmodule TheFloorWeb.UserSessionControllerTest do
       assert get_session(conn, :district) == "IA-1"
     end
 
+    test "a new district found while signed out replaces the account's at sign-in", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, user} = Accounts.put_district(user, "IA-1")
+      conn = conn |> init_test_session(%{district: "IA-2"}) |> sign_in(user)
+
+      assert get_session(conn, :district) == "IA-2"
+      assert Accounts.get_user!(user.id).district == "IA-2"
+    end
+
+    test "after a browser restart, the remembered sign-in brings the district back", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, user} = Accounts.put_district(user, "IA-1")
+      {token, _hashed_token} = generate_user_magic_link_token(user)
+
+      signed_in =
+        post(conn, ~p"/users/log-in", %{"user" => %{"token" => token, "remember_me" => "true"}})
+
+      remember = signed_in.resp_cookies["_the_floor_web_user_remember_me"]
+
+      conn =
+        build_conn()
+        |> put_req_cookie("_the_floor_web_user_remember_me", remember.value)
+        |> get(~p"/this-week")
+
+      assert get_session(conn, :district) == "IA-1"
+    end
+
     test "signed in, finding a new district replaces the account's", %{conn: conn, user: user} do
       {:ok, user} = Accounts.put_district(user, "IA-1")
       conn = conn |> sign_in(user) |> recycle() |> get(~p"/district/IA-2")
@@ -128,7 +159,14 @@ defmodule TheFloorWeb.UserSessionControllerTest do
     end
 
     test "never returns to another site", %{conn: conn} do
-      for to <- ["https://evil.example/", "//evil.example/x", "javascript:alert(1)"] do
+      for to <- [
+            "https://evil.example/",
+            "//evil.example/x",
+            "javascript:alert(1)",
+            "/a\\b",
+            "/x\nSet-Cookie: a=b",
+            "/\t/evil.example"
+          ] do
         conn = get(conn, ~p"/users/sign-in-to?#{[to: to]}")
         assert redirected_to(conn) == ~p"/users/log-in"
         refute get_session(conn, :user_return_to)

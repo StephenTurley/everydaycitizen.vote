@@ -48,16 +48,26 @@ defmodule TheFloorWeb.UserAuth do
     |> redirect(to: user_return_to || signed_in_path(conn))
   end
 
-  # The district survives the session reset at sign-in: one looked up before
-  # signing in is saved on an account that has none; else the account's is used.
-  defp settle_district(%Accounts.User{district: nil} = user, session_district)
+  # The district survives the session reset at sign-in. One looked up before
+  # signing in is the newer address, so it is saved on the account; with none in
+  # the session, the account's is used.
+  defp settle_district(%Accounts.User{district: district} = user, session_district)
        when is_binary(session_district) do
-    {:ok, _user} = Accounts.put_district(user, session_district)
+    if session_district != district,
+      do: {:ok, _user} = Accounts.put_district(user, session_district)
+
     session_district
   end
 
-  defp settle_district(%Accounts.User{district: district}, session_district),
-    do: district || session_district
+  defp settle_district(%Accounts.User{district: district}, nil), do: district
+
+  # A session restored from the remember-me cookie (after a browser restart)
+  # starts empty: bring back the account's district.
+  defp restore_district(conn, %Accounts.User{district: district}) when is_binary(district) do
+    if get_session(conn, :district), do: conn, else: put_session(conn, :district, district)
+  end
+
+  defp restore_district(conn, _user), do: conn
 
   @doc """
   Logs the user out.
@@ -88,6 +98,7 @@ defmodule TheFloorWeb.UserAuth do
          {user, token_inserted_at} <- Accounts.get_user_by_session_token(token) do
       conn
       |> assign(:current_scope, Scope.for_user(user))
+      |> restore_district(user)
       |> maybe_reissue_user_session_token(user, token_inserted_at)
     else
       nil -> assign(conn, :current_scope, Scope.for_user(nil))
