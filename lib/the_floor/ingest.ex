@@ -7,6 +7,7 @@ defmodule TheFloor.Ingest do
   alias TheFloor.Ingest.Writer
 
   @spec write(struct(), integer() | nil) :: {:ok, term()} | {:error, term()}
+  def write(%Records.PostalDistricts{} = r, run_id), do: Writer.PostalDistricts.write(r, run_id)
   def write(%Records.Jurisdiction{} = r, run_id), do: Writer.Legislature.write(r, run_id)
   def write(%Records.Body{} = r, run_id), do: Writer.Legislature.write(r, run_id)
   def write(%Records.LegislativeSession{} = r, run_id), do: Writer.Legislature.write(r, run_id)

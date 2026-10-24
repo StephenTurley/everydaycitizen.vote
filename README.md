@@ -46,7 +46,8 @@ Later runs are incremental.
 
 ## Pages
 
-* `/`: enter an address; it is used once to find the district and never stored.
+* `/`: enter a ZIP code (or, when it is split between districts or unknown, the street or
+  full address); it is used once to find the district and never stored.
 * `/district/:district` remembers the district in the session and shows `/reps/:district`.
 * `/reps/:district`: the district's reps, one at a time, with their activity feed
   (`?rep=<person id>&filter=all|votes|bills|law`).
@@ -63,6 +64,7 @@ Run by name only, never by the full ingest (`mix the_floor.ingest <name>` locall
 * `bill_sections`: split stored bill text into sections (500 versions per run, re-queues).
 * `reclassify_actions`: re-run the action classifier over stored actions.
 * `reclassify_votes`: re-type stored votes from their questions.
+* `zip_districts`: load the ZIP code to district table (once per congress).
 
 ## Deploy
 
