@@ -23,10 +23,13 @@ defmodule TheFloor.Adapters.Federal.Normalize.Bill do
   @doc "Builds the bill from a `/bill/{c}/{t}/{n}` response and a `/subjects` response."
   @spec bill(map(), map(), SourceRef.t()) :: Bill.t()
   def bill(%{"bill" => b}, subjects_json, %SourceRef{} = source) do
+    external_id = BillId.external_id(b["congress"], b["type"], b["number"])
+
     %Bill{
       jurisdiction: @jurisdiction,
       session_identifier: to_string(b["congress"]),
-      external_id: BillId.external_id(b["congress"], b["type"], b["number"]),
+      external_id: external_id,
+      web_url: BillId.web_url(external_id),
       identifier: BillId.identifier(b["type"], b["number"]),
       classification: BillId.classification(b["type"]),
       title: b["title"],

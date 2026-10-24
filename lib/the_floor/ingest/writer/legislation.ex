@@ -53,6 +53,7 @@ defmodule TheFloor.Ingest.Writer.Legislation do
           session_id: session.id,
           from_body_id: from_body && from_body.id,
           external_id: r.external_id,
+          web_url: r.web_url,
           identifier: r.identifier,
           classification: r.classification,
           title: r.title,

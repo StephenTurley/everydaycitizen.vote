@@ -81,12 +81,16 @@ defmodule TheFloor.Ingest.Records do
   end
 
   defmodule Bill do
-    @moduledoc "A bill or resolution within a session."
+    @moduledoc """
+    A bill or resolution within a session. `web_url` is its official page for
+    people, when the source has one (unlike `source.url`, which may be an API).
+    """
     @enforce_keys [:jurisdiction, :session_identifier, :external_id, :identifier, :title, :source]
     defstruct [
       :jurisdiction,
       :session_identifier,
       :external_id,
+      :web_url,
       :identifier,
       :classification,
       :title,

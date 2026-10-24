@@ -279,9 +279,9 @@ defmodule TheFloorWeb.BillLive do
 
           <footer class="order-6 pb-4 flex flex-col gap-2">
             <a
-              href={@page.bill.source.url}
+              href={@page.bill.web_url || @page.bill.source.url}
               class="self-start text-[14px] font-semibold text-floor-accent py-1"
-            >Source record</a>
+            >Official page</a>
             <.source_line>Every item on this page comes from the official record.</.source_line>
           </footer>
         </aside>

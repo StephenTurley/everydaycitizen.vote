@@ -131,6 +131,18 @@ defmodule TheFloorWeb.BillLiveTest do
     assert html =~ ~s(href="https://www.congress.gov/x")
   end
 
+  test "the bill links its official page, else its source record", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+    assert has_element?(view, ~s(a[href="https://www.congress.gov/x"]), "Official page")
+
+    TheFloor.Repo.update_all(TheFloor.Legislation.Bill,
+      set: [web_url: "https://official.test/s5"]
+    )
+
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+    assert has_element?(view, ~s(a[href="https://official.test/s5"]), "Official page")
+  end
+
   test "missing summary and text each say so in one line", %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/bills/119-s-5")
     assert html =~ "No official summary yet."

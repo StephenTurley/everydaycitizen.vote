@@ -15,6 +15,35 @@ defmodule TheFloor.Adapters.Federal.BillId do
     "SCONRES" => {"S.Con.Res.", "concurrent_resolution"}
   }
 
+  @slugs %{
+    "hr" => "house-bill",
+    "s" => "senate-bill",
+    "hres" => "house-resolution",
+    "sres" => "senate-resolution",
+    "hjres" => "house-joint-resolution",
+    "sjres" => "senate-joint-resolution",
+    "hconres" => "house-concurrent-resolution",
+    "sconres" => "senate-concurrent-resolution"
+  }
+
+  @doc "The bill's page for people on Congress.gov, from its external id (`nil` if not one)."
+  @spec web_url(String.t()) :: String.t() | nil
+  def web_url(external_id) do
+    with [congress, type, number] <- String.split(external_id, "-"),
+         {n, ""} <- Integer.parse(congress),
+         {:ok, slug} <- Map.fetch(@slugs, type) do
+      "https://www.congress.gov/bill/#{ordinal(n)}-congress/#{slug}/#{number}"
+    else
+      _ -> nil
+    end
+  end
+
+  defp ordinal(n) when rem(n, 100) in 11..13, do: "#{n}th"
+  defp ordinal(n) when rem(n, 10) == 1, do: "#{n}st"
+  defp ordinal(n) when rem(n, 10) == 2, do: "#{n}nd"
+  defp ordinal(n) when rem(n, 10) == 3, do: "#{n}rd"
+  defp ordinal(n), do: "#{n}th"
+
   @spec external_id(integer(), String.t(), integer() | String.t()) :: String.t()
   def external_id(congress, type_code, number) do
     "#{congress}-#{String.downcase(type_code)}-#{number}"

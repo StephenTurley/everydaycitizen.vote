@@ -3,6 +3,37 @@ defmodule TheFloor.Adapters.Federal.BillIdTest do
 
   alias TheFloor.Adapters.Federal.BillId
 
+  test "web_url/1 is the bill's page for people on Congress.gov" do
+    assert BillId.web_url("119-s-5") ==
+             "https://www.congress.gov/bill/119th-congress/senate-bill/5"
+
+    assert BillId.web_url("119-hconres-3") ==
+             "https://www.congress.gov/bill/119th-congress/house-concurrent-resolution/3"
+
+    for {type, slug} <- [
+          {"hr", "house-bill"},
+          {"hres", "house-resolution"},
+          {"sres", "senate-resolution"},
+          {"hjres", "house-joint-resolution"},
+          {"sjres", "senate-joint-resolution"},
+          {"sconres", "senate-concurrent-resolution"}
+        ],
+        do: assert(BillId.web_url("119-#{type}-7") =~ "/119th-congress/#{slug}/7")
+
+    for {congress, ordinal} <- [
+          {101, "101st"},
+          {102, "102nd"},
+          {103, "103rd"},
+          {111, "111th"},
+          {112, "112th"},
+          {113, "113th"},
+          {121, "121st"}
+        ],
+        do: assert(BillId.web_url("#{congress}-hr-1") =~ "/#{ordinal}-congress/")
+
+    assert BillId.web_url("not-an-id") == nil
+  end
+
   test "external_id/3 lowercases the type" do
     assert BillId.external_id(119, "HJRES", 5) == "119-hjres-5"
     assert BillId.external_id(119, "HR", "1234") == "119-hr-1234"
