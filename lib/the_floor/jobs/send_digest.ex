@@ -44,7 +44,7 @@ defmodule TheFloor.Jobs.SendDigest do
   defp deliver(user, items, cutoff) do
     email = Digest.Email.build(user, items)
 
-    case Mailer.deliver(email, Application.get_env(:the_floor, :digest_mailer, [])) do
+    case Mailer.deliver(email, Application.get_env(:the_floor, :mailer_overrides, [])) do
       {:ok, _} ->
         {:ok, _} = Accounts.put_digest_sent_at(user, cutoff)
         :ok

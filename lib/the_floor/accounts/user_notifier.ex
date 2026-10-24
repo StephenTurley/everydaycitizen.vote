@@ -14,7 +14,8 @@ defmodule TheFloor.Accounts.UserNotifier do
       |> subject(subject)
       |> text_body(body)
 
-    with {:ok, _metadata} <- Mailer.deliver(email) do
+    with {:ok, _metadata} <-
+           Mailer.deliver(email, Application.get_env(:the_floor, :mailer_overrides, [])) do
       {:ok, email}
     end
   end

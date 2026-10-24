@@ -142,6 +142,25 @@ defmodule TheFloor.Accounts do
 
   def login_user_by_passkey_token(_token), do: {:error, :invalid}
 
+  @doc """
+  Whether another emailed sign-in link may go to this account now: at most one
+  a minute and five an hour, so the site cannot be used to flood a mailbox.
+  """
+  @spec login_link_allowed?(User.t()) :: boolean()
+  def login_link_allowed?(%User{id: id}) do
+    recent = fn seconds ->
+      Repo.aggregate(
+        from(t in UserToken,
+          where:
+            t.user_id == ^id and t.context == "login" and t.inserted_at > ago(^seconds, "second")
+        ),
+        :count
+      )
+    end
+
+    recent.(60) == 0 and recent.(3600) < 5
+  end
+
   @doc "Gets a user by id, or nil."
   def get_user(id), do: Repo.get(User, id)
 

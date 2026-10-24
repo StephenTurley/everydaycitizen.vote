@@ -141,8 +141,8 @@ defmodule TheFloor.Jobs.SendDigestTest do
 
   test "a failed send keeps the cutoff so the next run covers it", %{user: user, bill: bill} do
     new_action!(bill)
-    Application.put_env(:the_floor, :digest_mailer, adapter: FailingAdapter)
-    on_exit(fn -> Application.delete_env(:the_floor, :digest_mailer) end)
+    Application.put_env(:the_floor, :mailer_overrides, adapter: FailingAdapter)
+    on_exit(fn -> Application.delete_env(:the_floor, :mailer_overrides) end)
 
     assert {:error, :mail_service_down} = run(user)
     assert Repo.reload!(user).digest_sent_at == nil
