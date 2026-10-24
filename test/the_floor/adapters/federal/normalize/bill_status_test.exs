@@ -71,6 +71,35 @@ defmodule TheFloor.Adapters.Federal.Normalize.BillStatusTest do
     assert Bill.bill(parts.detail, parts.subjects, @src).subjects == []
   end
 
+  test "repeated non-item children become a list; a single one stays a map" do
+    xml = """
+    <billStatus><bill><number>9</number><type>HR</type><congress>119</congress><title>T</title>
+    <summaries><summary><versionCode>00</versionCode></summary><summary><versionCode>36</versionCode></summary></summaries>
+    <policyArea><name>Taxation</name></policyArea></bill></billStatus>
+    """
+
+    assert {:ok, parts} = BillStatus.parse(xml)
+
+    assert parts.detail["bill"]["summaries"]["summary"] == [
+             %{"versionCode" => "00"},
+             %{"versionCode" => "36"}
+           ]
+
+    assert parts.detail["bill"]["policyArea"] == %{"name" => "Taxation"}
+    assert Enum.map(parts.summaries, & &1["versionCode"]) == ["00", "36"]
+  end
+
+  test "every summary in the hr22 file is kept" do
+    assert length(bulk().summaries) == 1
+  end
+
+  test "a bill without summaries has none" do
+    assert {:ok, %{summaries: []}} =
+             BillStatus.parse(
+               "<billStatus><bill><number>9</number><type>HR</type></bill></billStatus>"
+             )
+  end
+
   test "malformed XML returns an error" do
     xml = File.read!("test/support/fixtures/federal/govinfo/malformed.xml")
     assert {:error, _} = BillStatus.parse(xml)
