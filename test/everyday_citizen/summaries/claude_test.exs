@@ -76,7 +76,7 @@ defmodule EverydayCitizen.Summaries.ClaudeTest do
 
     for {kind, file, tag, cap} <- [
           {:section, "section_summary.v2.md", "section", 300},
-          {:bill, "bill_summary.v2.md", "bill", 800},
+          {:bill, "bill_summary.v3.md", "bill", 800},
           {:bill_chunk, "bill_chunk.v2.md", "part", 600},
           {:rep_week, "rep_week.v1.md", "activity", 300}
         ] do

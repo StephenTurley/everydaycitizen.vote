@@ -125,4 +125,34 @@ defmodule EverydayCitizen.Jobs.SummarizeSubjectTest do
 
     assert_received {:ai_summary, "bill", ^subject, {:error, :paused}}
   end
+
+  test "a summary cut off even with twice the room is not retried; the page hears it is unavailable",
+       %{bill: bill} do
+    {subject, _} = Inputs.bill(bill)
+
+    Req.Test.stub(EverydayCitizen.Claude, fn conn ->
+      conn
+      |> Plug.Conn.put_resp_content_type("application/json")
+      |> Plug.Conn.send_resp(
+        200,
+        Jason.encode!(%{
+          "stop_reason" => "max_tokens",
+          "content" => [%{"type" => "text", "text" => "Cut off"}],
+          "usage" => %{"input_tokens" => 10, "output_tokens" => 10}
+        })
+      )
+    end)
+
+    Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, Summaries.ai_topic(:bill, subject))
+
+    assert {:cancel, :truncated} =
+             perform_job(SummarizeSubject, %{
+               "kind" => "bill",
+               "subject" => subject,
+               "prompt_version" => "v3"
+             })
+
+    assert_received {:ai_summary, "bill", ^subject, {:error, :unavailable}}
+    assert Summaries.get_ai(:bill, subject, elem(Inputs.bill(bill), 1)) == nil
+  end
 end

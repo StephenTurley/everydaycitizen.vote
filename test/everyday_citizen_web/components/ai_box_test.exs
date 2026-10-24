@@ -56,7 +56,7 @@ defmodule EverydayCitizenWeb.AiBoxTest do
 
   test "the published bill prompt asks for the headings the page shows" do
     prompt =
-      File.read!(Application.app_dir(:everyday_citizen, "priv/prompts/bill_summary.v2.md"))
+      File.read!(Application.app_dir(:everyday_citizen, "priv/prompts/bill_summary.v3.md"))
 
     for heading <- ["## Who this affects", "## Words to know", "## For example"],
         do: assert(prompt =~ heading)

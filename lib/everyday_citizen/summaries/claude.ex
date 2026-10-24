@@ -24,7 +24,8 @@ defmodule EverydayCitizen.Summaries.Claude do
           summary: String.t(),
           model: String.t(),
           input_tokens: integer() | nil,
-          output_tokens: integer() | nil
+          output_tokens: integer() | nil,
+          truncated: boolean()
         }
 
   @doc "Whether summaries can be written (credentials are configured)."
@@ -82,7 +83,9 @@ defmodule EverydayCitizen.Summaries.Claude do
            summary: summary,
            model: body["model"] || config(:model),
            input_tokens: get_in(body, ["usage", "input_tokens"]),
-           output_tokens: get_in(body, ["usage", "output_tokens"])
+           output_tokens: get_in(body, ["usage", "output_tokens"]),
+           # the reply ran into max_tokens and stops mid-way
+           truncated: body["stop_reason"] == "max_tokens"
          }}
     end
   end
