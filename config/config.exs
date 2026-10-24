@@ -99,7 +99,7 @@ config :everyday_citizen, Oban,
        {"40 2 * * *", EverydayCitizen.Adapters.Federal.Jobs.SyncSenateVotes},
        {"50 2 * * *", EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeetings},
        {"0 3 * * *", EverydayCitizen.Adapters.Federal.Jobs.SyncHouseFloor},
-       {"0 3 * * *", EverydayCitizen.Adapters.Federal.Jobs.SyncSenateFloor},
+       {"0 3,12,18 * * *", EverydayCitizen.Adapters.Federal.Jobs.SyncSenateFloor},
        {"30 5 * * *", EverydayCitizen.Adapters.Federal.Jobs.Relink},
        {"0 6 * * *", EverydayCitizen.Adapters.Federal.Jobs.Coverage},
        {"0 7 * * *", EverydayCitizen.Jobs.DigestScheduler}

@@ -1,0 +1,39 @@
+{
+  "articles": [
+    {
+      "name": "Daily Digest",
+      "sectionArticles": [
+        {
+          "endPage": "D928",
+          "startPage": "D927",
+          "text": [
+            {
+              "type": "Formatted Text",
+              "url": "https://www.congress.gov/119/crec/2026/09/22/172/150/modified/CREC-2026-09-22-pt1-PgD927.htm"
+            },
+            {
+              "type": "PDF",
+              "url": "https://www.congress.gov/119/crec/2026/09/22/172/150/CREC-2026-09-22-pt1-PgD927.pdf"
+            }
+          ],
+          "title": "Daily Digest/Next Meeting of the SENATE + Next Meeting of the HOUSE OF REPRESENTATIVES + Other End Matter; Congressional Record Vol. 172, No. 150"
+        },
+        {
+          "endPage": "D925",
+          "startPage": "D924",
+          "text": [
+            {
+              "type": "Formatted Text",
+              "url": "https://www.congress.gov/119/crec/2026/09/22/172/150/modified/CREC-2026-09-22-pt1-PgD924.htm"
+            },
+            {
+              "type": "PDF",
+              "url": "https://www.congress.gov/119/crec/2026/09/22/172/150/CREC-2026-09-22-pt1-PgD924.pdf"
+            }
+          ],
+          "title": "Daily Digest/Senate; Congressional Record Vol. 172, No. 150"
+        }
+      ]
+    }
+  ]
+}

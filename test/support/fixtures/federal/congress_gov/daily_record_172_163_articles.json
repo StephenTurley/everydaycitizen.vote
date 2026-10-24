@@ -1,0 +1,39 @@
+{
+  "articles": [
+    {
+      "name": "Daily Digest",
+      "sectionArticles": [
+        {
+          "endPage": "D980",
+          "startPage": "D979",
+          "text": [
+            {
+              "type": "Formatted Text",
+              "url": "https://www.congress.gov/119/crec/2026/10/22/172/163/modified/CREC-2026-10-22-pt1-PgD979-6.htm"
+            },
+            {
+              "type": "PDF",
+              "url": "https://www.congress.gov/119/crec/2026/10/22/172/163/CREC-2026-10-22-pt1-PgD979-6.pdf"
+            }
+          ],
+          "title": "Daily Digest/Next Meeting of the SENATE + Next Meeting of the HOUSE OF REPRESENTATIVES + Other End Matter; Congressional Record Vol. 172, No. 163"
+        },
+        {
+          "endPage": "D979",
+          "startPage": "D979",
+          "text": [
+            {
+              "type": "Formatted Text",
+              "url": "https://www.congress.gov/119/crec/2026/10/22/172/163/modified/CREC-2026-10-22-pt1-PgD979.htm"
+            },
+            {
+              "type": "PDF",
+              "url": "https://www.congress.gov/119/crec/2026/10/22/172/163/CREC-2026-10-22-pt1-PgD979.pdf"
+            }
+          ],
+          "title": "Daily Digest/Senate; Congressional Record Vol. 172, No. 163"
+        }
+      ]
+    }
+  ]
+}
