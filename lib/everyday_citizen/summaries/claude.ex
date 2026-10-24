@@ -17,7 +17,8 @@ defmodule EverydayCitizen.Summaries.Claude do
     section: {"section_summary", "section", 300},
     bill: {"bill_summary", "bill", 800},
     bill_chunk: {"bill_chunk", "part", 600},
-    rep_week: {"rep_week", "activity", 300}
+    rep_week: {"rep_week", "activity", 300},
+    change: {"change_summary", "change", 400}
   }
 
   @type result :: %{

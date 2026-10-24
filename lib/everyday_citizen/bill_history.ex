@@ -180,6 +180,32 @@ defmodule EverydayCitizen.BillHistory do
 
   defp local_date(%DateTime{} = at), do: at |> DateTime.shift_zone!(@zone) |> DateTime.to_date()
 
+  @doc """
+  The texts an explanation of section `index`'s change in version `code` is
+  written from: `{:added, paragraphs}` for a section added after the first
+  version, `{:changed, before, after}` for one changed since, else nil.
+  """
+  @spec change_texts(map(), String.t(), non_neg_integer()) ::
+          {:added, [String.t()]} | {:changed, [String.t()], [String.t()]} | nil
+  def change_texts(bill, code, index) do
+    with {[_, _ | _] = keyed, target} <- lineage(bill, code),
+         {key, paragraphs} <- Enum.at(target, index) do
+      case origin(keyed, key) do
+        %{status: :added} ->
+          {:added, paragraphs}
+
+        %{changed_in: [_ | _] = changed} ->
+          {_from, before} = before_change(keyed, key, List.last(changed))
+          {:changed, before, paragraphs}
+
+        _ ->
+          nil
+      end
+    else
+      _ -> nil
+    end
+  end
+
   # [{code, %{key => paragraphs}}] for versions up to `code`, and `code`'s own
   # [{key, paragraphs}] in order
   defp lineage(bill, code) do

@@ -25,7 +25,7 @@ defmodule EverydayCitizen.Summaries do
   the law is marked `[Inserted into the law: … ]`.
   """
   @spec section_text(map()) :: String.t()
-  def section_text(%{"blocks" => blocks} = section) do
+  def section_text(%{"blocks" => _} = section) do
     heading =
       Enum.join(Enum.reject(["Sec. #{section["enum"]}", section["heading"]], &blank?/1), " ")
 

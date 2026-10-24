@@ -78,7 +78,8 @@ defmodule EverydayCitizen.Summaries.ClaudeTest do
           {:section, "section_summary.v2.md", "section", 300},
           {:bill, "bill_summary.v3.md", "bill", 800},
           {:bill_chunk, "bill_chunk.v2.md", "part", 600},
-          {:rep_week, "rep_week.v1.md", "activity", 300}
+          {:rep_week, "rep_week.v1.md", "activity", 300},
+          {:change, "change_summary.v1.md", "change", 400}
         ] do
       {:ok, _} = Claude.summarize("input", kind)
       assert_received {:body, body}
