@@ -233,6 +233,19 @@ defmodule EverydayCitizenWeb.BillLive do
   defp cosponsors(1), do: "1 cosponsor"
   defp cosponsors(n), do: "#{n} cosponsors"
 
+  # The summary is of the newest version with text; beside another version it
+  # names the one it was written from rather than pointing at the text below.
+  defp bill_summary_source(subject, version, versions) do
+    [_, _, code] = String.split(subject, ":", parts: 3)
+    summarized = Enum.find(versions, &(&1.code == code))
+
+    cond do
+      version && version.code == code -> "the bill's text below"
+      summarized -> "the “#{summarized.classification || code}” version of this bill"
+      true -> "another version of this bill"
+    end
+  end
+
   defp version_label(v), do: "#{v.classification || v.code}#{if v.date, do: " · #{date(v.date)}"}"
 
   defp rep_note(%{state: :sponsor}), do: "Sponsor of this bill"
@@ -495,7 +508,7 @@ defmodule EverydayCitizenWeb.BillLive do
                 id="bill-summary"
                 class="bg-floor-card border border-floor-line"
                 title="In plain English: what this bill does"
-                source="the bill's text below"
+                source={bill_summary_source(elem(@bill_summary, 0), @version, @page.versions)}
                 state={elem(@bill_summary, 1)}
                 prompt_url={@repo_url <> Claude.prompt_path(:bill)}
               />

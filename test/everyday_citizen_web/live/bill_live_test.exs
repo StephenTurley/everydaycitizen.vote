@@ -448,6 +448,27 @@ defmodule EverydayCitizenWeb.BillLiveTest do
       assert html =~ ~r/id="bill-summary".*Text of the bill/s
     end
 
+    test "beside an older version's text, the summary says which version it was written from",
+         %{conn: conn, bill: bill} do
+      {subject, input} = EverydayCitizen.Summaries.Inputs.bill(bill)
+
+      {:ok, _} =
+        EverydayCitizen.Summaries.put_ai(:bill, subject, input, %{summary: "S.", model: "m"})
+
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=is")
+
+      assert has_element?(
+               view,
+               "#bill-summary",
+               "Written by AI from the “es” version of this bill"
+             )
+
+      refute has_element?(view, "#bill-summary", "text below")
+
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=es")
+      assert has_element?(view, "#bill-summary", "Written by AI from the bill's text below")
+    end
+
     test "without one, the page asks for it and shows it when it lands", %{conn: conn, bill: bill} do
       {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
       assert has_element?(view, "#bill-summary", "Writing a plain-English summary")

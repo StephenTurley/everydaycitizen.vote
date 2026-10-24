@@ -61,6 +61,25 @@ defmodule EverydayCitizen.Jobs.SummarizeSubjectTest do
     assert Inputs.bill(bill) == nil
   end
 
+  test "a job still writing after ten minutes blocks a second one for the same bill", %{
+    bill: bill
+  } do
+    {subject, input} = Inputs.bill(bill)
+    assert :queued = Summaries.request_ai(:bill, subject, input)
+    assert [job] = all_enqueued(worker: SummarizeSubject)
+
+    Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id),
+      set: [state: "executing", inserted_at: DateTime.add(DateTime.utc_now(), -20, :minute)]
+    )
+
+    assert :queued = Summaries.request_ai(:bill, subject, input)
+
+    assert Repo.aggregate(
+             from(j in Oban.Job, where: j.worker == ^inspect(SummarizeSubject)),
+             :count
+           ) == 1
+  end
+
   test "two requests at once queue one job; it writes, stores and tells the page", %{bill: bill} do
     {subject, input} = Inputs.bill(bill)
     assert :queued = Summaries.request_ai(:bill, subject, input)

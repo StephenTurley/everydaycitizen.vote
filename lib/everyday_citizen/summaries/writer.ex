@@ -7,7 +7,8 @@ defmodule EverydayCitizen.Summaries.Writer do
   A bill up to #{250_000} characters is sent whole; a longer one is split at
   section breaks into parts of at most that size (each under the model's
   long-prompt price tier), each part summarized in a few bullets, then one
-  final call combines the parts' summaries in order.
+  final call combines the parts' summaries in order. Each part's summary is
+  stored by its text's hash, so a retry pays only for the calls still to make.
   """
   alias EverydayCitizen.Summaries
   alias EverydayCitizen.Summaries.Claude
@@ -50,7 +51,7 @@ defmodule EverydayCitizen.Summaries.Writer do
     text
     |> parts()
     |> Enum.reduce_while({:ok, []}, fn part, {:ok, done} ->
-      case call(:bill_chunk, part, []) do
+      case part_summary(part) do
         {:ok, result} -> {:cont, {:ok, [result | done]}}
         error -> {:halt, error}
       end
@@ -71,6 +72,22 @@ defmodule EverydayCitizen.Summaries.Writer do
 
       error ->
         error
+    end
+  end
+
+  defp part_summary(part) do
+    subject = "part:" <> Base.encode16(:crypto.hash(:sha256, part), case: :lower)
+
+    case Summaries.get_ai(:bill_chunk, subject, part) do
+      nil ->
+        with {:ok, result} <- call(:bill_chunk, part, []) do
+          {:ok, _} = Summaries.put_ai(:bill_chunk, subject, part, result)
+          {:ok, result}
+        end
+
+      # bought on an earlier attempt
+      cached ->
+        {:ok, %{summary: cached.summary, model: cached.model, input_tokens: 0, output_tokens: 0}}
     end
   end
 

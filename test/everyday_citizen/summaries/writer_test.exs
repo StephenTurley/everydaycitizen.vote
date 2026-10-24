@@ -76,6 +76,45 @@ defmodule EverydayCitizen.Summaries.WriterTest do
     assert combined =~ "<part>\n- part summary\n</part>"
   end
 
+  test "a long bill's finished parts are kept, so a retry pays only for what is left" do
+    test = self()
+    {:ok, final_fails} = Agent.start_link(fn -> true end)
+
+    Req.Test.stub(EverydayCitizen.Claude, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      [%{"content" => content}] = Jason.decode!(body)["messages"]
+      final? = String.contains?(content, "Length:")
+      send(test, {:call, if(final?, do: :final, else: :part)})
+
+      if final? and Agent.get(final_fails, & &1) do
+        Plug.Conn.send_resp(conn, 500, "")
+      else
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.send_resp(
+          200,
+          Jason.encode!(%{
+            "model" => "claude-haiku-5-5",
+            "content" => [%{"type" => "text", "text" => "- summary"}],
+            "usage" => %{"input_tokens" => 1_000, "output_tokens" => 50}
+          })
+        )
+      end
+    end)
+
+    text = String.duplicate("SEC. 1. " <> String.duplicate("word ", 20_000) <> "\n", 3)
+
+    assert {:error, _} = Writer.write(:bill, text)
+    assert_received {:call, :part}
+    assert_received {:call, :part}
+    assert_received {:call, :final}
+
+    Agent.update(final_fails, fn _ -> false end)
+    assert {:ok, %{summary: "- summary"}} = Writer.write(:bill, text)
+    assert_received {:call, :final}
+    refute_received {:call, _}
+  end
+
   test "once the budget is spent, a long bill stops before its next call" do
     stub_claude()
 

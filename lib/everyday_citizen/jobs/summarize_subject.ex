@@ -3,14 +3,16 @@ defmodule EverydayCitizen.Jobs.SummarizeSubject do
   Writes a bill's executive summary or a rep's week summary (queued by
   `EverydayCitizen.Summaries.request_ai/3` when someone views it), stores it and
   broadcasts `{:ai_summary, kind, subject, {:ok, text} | {:error, reason}}` to
-  the pages showing it. Unique per subject, so many viewers cost one summary.
+  the pages showing it. Unique per subject for as long as a job is pending or
+  running (a long bill's parts can take more than ten minutes), so many viewers
+  cost one summary.
   """
   use Oban.Worker,
     queue: :summaries,
     max_attempts: 3,
     unique: [
       keys: [:kind, :subject, :prompt_version],
-      period: 600,
+      period: :infinity,
       states: [:available, :scheduled, :executing, :retryable]
     ]
 
