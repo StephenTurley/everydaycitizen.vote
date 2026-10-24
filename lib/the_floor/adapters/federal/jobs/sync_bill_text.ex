@@ -9,7 +9,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillText do
 
   require Logger
 
-  alias TheFloor.Adapters.Federal.{HTTP, XmlText}
+  alias TheFloor.Adapters.Federal.{BillSections, HTTP, XmlText}
   alias TheFloor.Ingest
   alias TheFloor.Ingest.Records.BillVersionText
   alias TheFloor.Legislation
@@ -63,6 +63,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillText do
           xml: xml,
           xml_schema: XmlText.schema(xml),
           plain_text: text,
+          sections: BillSections.sections_or_empty(xml),
           source: source
         },
         nil

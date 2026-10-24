@@ -138,3 +138,6 @@ The app machine is 1 GB (512 MB was killed decoding `legislators-historical.json
 
 ## 2026-10-24 — Votes carry a normalized type
 `votes.classification` is one of `passage cloture amendment nomination procedural other`, set by the adapter from the roll call's question (`Federal.VoteClassifier`; procedural motions are matched before amendments, so tabling an amendment is procedural). Pages use it to pick a bill's main vote per chamber (passage there, else the latest roll call). Stored votes are retyped by the on-demand `reclassify_votes` job.
+
+## 2026-10-24 — Bill text stored split into sections
+`bill_versions.sections` (JSON) holds each version's text as titles and sections, each section's text flattened into indented blocks (level 0 section text and subsections, 1 paragraphs, down to 5 items), parsed from the stored XML (bill DTD or USLM) when text is stored. Sections quoted into existing law (`<quoted-block>`) stay inline in the quoting block. The bill page renders sections from it, and M3 summaries will attach per section. Versions stored earlier are split by the on-demand `bill_sections` job (500 per run, re-queueing itself); unparseable XML gets `[]`. Live check: 2,000 random stored versions, 0 errors, ~2.6 ms each.

@@ -17,6 +17,7 @@ defmodule TheFloor.Legislation.BillVersion do
     field :xml, :string
     field :xml_schema, :string
     field :plain_text, :string
+    field :sections, {:array, :map}
     belongs_to :bill, TheFloor.Legislation.Bill
     belongs_to :source, TheFloor.Provenance.Source
     belongs_to :text_source, TheFloor.Provenance.Source
@@ -31,7 +32,7 @@ defmodule TheFloor.Legislation.BillVersion do
 
   def text_changeset(struct, attrs) do
     struct
-    |> cast(attrs, [:xml, :xml_schema, :plain_text, :text_source_id])
+    |> cast(attrs, [:xml, :xml_schema, :plain_text, :sections, :text_source_id])
     |> validate_required([:text_source_id])
     |> validate_inclusion(:xml_schema, ~w(uslm other))
   end

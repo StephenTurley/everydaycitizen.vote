@@ -8,6 +8,7 @@ defmodule TheFloor.Adapters.Federal.Jobs do
   ingest jobs. Generic tooling reads it through the `:ingest_adapters` config.
   """
   alias TheFloor.Adapters.Federal.Jobs.{
+    BackfillBillSections,
     BackfillBillSummaries,
     Coverage,
     ReclassifyActions,
@@ -32,7 +33,8 @@ defmodule TheFloor.Adapters.Federal.Jobs do
     [
       {"reclassify_actions", ReclassifyActions, %{}},
       {"bill_summaries", BackfillBillSummaries, %{}},
-      {"reclassify_votes", ReclassifyVotes, %{}}
+      {"reclassify_votes", ReclassifyVotes, %{}},
+      {"bill_sections", BackfillBillSections, %{}}
     ]
   end
 

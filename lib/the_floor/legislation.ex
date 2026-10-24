@@ -133,4 +133,22 @@ defmodule TheFloor.Legislation do
 
     MapSet.difference(MapSet.new(bill_ids), MapSet.new(with_summary))
   end
+
+  @doc "Up to `limit` versions with stored XML and no sections yet, as `%{id, xml}`."
+  @spec versions_without_sections(pos_integer()) :: [%{id: integer(), xml: String.t()}]
+  def versions_without_sections(limit) do
+    BillVersion
+    |> where([v], not is_nil(v.xml) and is_nil(v.sections))
+    |> order_by([v], asc: v.id)
+    |> limit(^limit)
+    |> select([v], %{id: v.id, xml: v.xml})
+    |> Repo.all()
+  end
+
+  @doc "Stores a version's sections."
+  @spec put_sections(integer(), [map()]) :: :ok
+  def put_sections(version_id, sections) do
+    BillVersion |> where([v], v.id == ^version_id) |> Repo.update_all(set: [sections: sections])
+    :ok
+  end
 end

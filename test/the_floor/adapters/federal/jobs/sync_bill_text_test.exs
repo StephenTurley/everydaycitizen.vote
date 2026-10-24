@@ -81,6 +81,7 @@ defmodule TheFloor.Adapters.Federal.Jobs.SyncBillTextTest do
     assert v.xml =~ "<legis-body"
     assert v.text_source_id
     assert Legislation.versions_missing_text(10) == []
+    assert [%{"kind" => "section", "enum" => "1.", "heading" => "Short title"} | _] = v.sections
   end
 
   test "marks USLM documents as uslm" do

@@ -148,9 +148,21 @@ defmodule TheFloor.Ingest.Records do
   end
 
   defmodule BillVersionText do
-    @moduledoc "Fetched text for an existing bill version. `xml_schema` is `uslm` or `other`."
+    @moduledoc """
+    Fetched text for an existing bill version. `xml_schema` is `uslm` or `other`;
+    `sections` is the text split into sections (see the adapter's section parser).
+    """
     @enforce_keys [:jurisdiction, :bill_external_id, :code, :source]
-    defstruct [:jurisdiction, :bill_external_id, :code, :xml, :xml_schema, :plain_text, :source]
+    defstruct [
+      :jurisdiction,
+      :bill_external_id,
+      :code,
+      :xml,
+      :xml_schema,
+      :plain_text,
+      :sections,
+      :source
+    ]
   end
 
   defmodule Vote do
