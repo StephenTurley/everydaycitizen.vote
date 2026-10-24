@@ -1,0 +1,149 @@
+{
+  "pagination": {
+    "count": 9
+  },
+  "relatedBills": [
+    {
+      "congress": 119,
+      "latestAction": {
+        "actionDate": "2026-01-30",
+        "text": "Referred to the House Committee on House Administration."
+      },
+      "number": 7296,
+      "relationshipDetails": [
+        {
+          "identifiedBy": "CRS",
+          "type": "Related bill"
+        }
+      ],
+      "title": "SAVE America Act",
+      "type": "HR",
+      "url": "https://api.congress.gov/v3/bill/119/hr/7296?format=json"
+    },
+    {
+      "congress": 119,
+      "latestAction": {
+        "actionDate": "2026-01-29",
+        "text": "Read twice and referred to the Committee on Rules and Administration."
+      },
+      "number": 3752,
+      "relationshipDetails": [
+        {
+          "identifiedBy": "CRS",
+          "type": "Related bill"
+        }
+      ],
+      "title": "SAVE America Act",
+      "type": "S",
+      "url": "https://api.congress.gov/v3/bill/119/s/3752?format=json"
+    },
+    {
+      "congress": 119,
+      "latestAction": {
+        "actionDate": "2026-04-06",
+        "text": "Referred to the Committee on Appropriations, and in addition to the Committee on the Budget, for a period to be subsequently determined by the Speaker, in each case for consideration of such provisions as fall within the jurisdiction of the committee concerned."
+      },
+      "number": 8206,
+      "relationshipDetails": [
+        {
+          "identifiedBy": "CRS",
+          "type": "Related bill"
+        }
+      ],
+      "title": "Homeland Security and Further Additional Continuing Appropriations Act, 2026",
+      "type": "HR",
+      "url": "https://api.congress.gov/v3/bill/119/hr/8206?format=json"
+    },
+    {
+      "congress": 119,
+      "latestAction": {
+        "actionDate": "2026-07-29",
+        "text": "Received in the Senate."
+      },
+      "number": 8595,
+      "relationshipDetails": [
+        {
+          "identifiedBy": "CRS",
+          "type": "Related bill"
+        }
+      ],
+      "title": "Making appropriations for national security, Department of State, and related programs for the fiscal year ending September 30, 2027, and for other purposes.",
+      "type": "HR",
+      "url": "https://api.congress.gov/v3/bill/119/hr/8595?format=json"
+    },
+    {
+      "congress": 118,
+      "latestAction": {
+        "actionDate": "2024-07-23",
+        "text": "Read the second time. Placed on Senate Legislative Calendar under General Orders. Calendar No. 439."
+      },
+      "number": 8281,
+      "relationshipDetails": [
+        {
+          "identifiedBy": "CRS",
+          "type": "Cross-Congress related bill"
+        }
+      ],
+      "title": "SAVE Act",
+      "type": "HR",
+      "url": "https://api.congress.gov/v3/bill/118/hr/8281?format=json"
+    },
+    {
+      "congress": 119,
+      "latestAction": {
+        "actionDate": "2025-04-01",
+        "actionTime": "14:16:03",
+        "text": "Motion to reconsider laid on the table Agreed to without objection."
+      },
+      "number": 282,
+      "relationshipDetails": [
+        {
+          "identifiedBy": "House",
+          "type": "Related bill"
+        },
+        {
+          "identifiedBy": "House",
+          "type": "Procedurally related"
+        }
+      ],
+      "title": "Providing for consideration of the joint resolution (S.J. Res. 18) disapproving the rule submitted by the Bureau of Consumer Financial Protection relating to \"Overdraft Lending: Very Large Financial Institutions''; providing for consideration of the joint resolution (S.J. Res. 28) disapproving the rule submitted by the Bureau of Consumer Financial Protection relating to ''Defining Larger Participants of a Market for General-Use Digital Consumer Payment Applications''; providing for consideration of the bill (H.R. 1526) to amend title 28, United States Code, to limit the authority of district courts to provide injunctive relief, and for other purposes; providing for consideration of the bill (H.R. 22) to amend the National Voter Registration Act of 1993 to require proof of United States citizenship to register an individual to vote in elections for Federal office, and for other purposes; and for other purposes.",
+      "type": "HRES",
+      "url": "https://api.congress.gov/v3/bill/119/hres/282?format=json"
+    },
+    {
+      "congress": 119,
+      "latestAction": {
+        "actionDate": "2025-04-08",
+        "actionTime": "15:23:14",
+        "text": "Motion to reconsider laid on the table Agreed to without objection."
+      },
+      "number": 294,
+      "relationshipDetails": [
+        {
+          "identifiedBy": "House",
+          "type": "Procedurally related"
+        }
+      ],
+      "title": "Providing for consideration of the joint resolution (S.J. Res. 18) disapproving the rule submitted by the Bureau of Consumer Financial Protection relating to \"Overdraft Lending: Very Large Financial Institutions\"; providing for consideration of the joint resolution (S.J. Res. 28) disapproving the rule submitted by the Bureau of Consumer Financial Protection relating to \"Defining Larger Participants of a Market for General-Use Digital Consumer Payment Applications\"; providing for consideration of the bill (H.R. 1526) to amend title 28, United States Code, to limit the authority of district courts to provide injunctive relief, and for other purposes; providing for consideration of the bill (H.R. 22) to amend the National Voter Registration Act of 1993 to require proof of United States citizenship to register an individual to vote in elections for Federal office, and for other purposes; and for other purposes.",
+      "type": "HRES",
+      "url": "https://api.congress.gov/v3/bill/119/hres/294?format=json"
+    },
+    {
+      "congress": 119,
+      "latestAction": {
+        "actionDate": "2025-01-16",
+        "text": "Read twice and referred to the Committee on Rules and Administration."
+      },
+      "number": 128,
+      "relationshipDetails": [
+        {
+          "identifiedBy": "CRS",
+          "type": "Related bill"
+        }
+      ],
+      "title": "SAVE Act",
+      "type": "S",
+      "url": "https://api.congress.gov/v3/bill/119/s/128?format=json"
+    }
+  ]
+}

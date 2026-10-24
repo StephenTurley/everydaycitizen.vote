@@ -1,7 +1,9 @@
 defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBill do
   @moduledoc """
-  Syncs one bill: detail + subjects, actions, sponsors/cosponsors and text-version
-  metadata, then enqueues text fetches for versions that have no text yet.
+  Syncs one bill: detail + subjects, actions, sponsors/cosponsors, text-version
+  metadata, committee steps, related measures and amendments (with the detail of
+  agreed amendments that lack a description), then enqueues text fetches for
+  versions that have no text yet.
 
   The action and sponsorship sets replace whatever is stored, so each is written
   only from a successful, non-empty fetch of its endpoint; a failed request fails
@@ -16,6 +18,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBill do
   alias EverydayCitizen.Adapters.Federal.{BillWriter, CongressGov}
   alias EverydayCitizen.Adapters.Federal.Jobs.SyncBillText
   alias EverydayCitizen.Adapters.Federal.Normalize.Bill, as: Normalize
+  alias EverydayCitizen.Adapters.Federal.Normalize.BillContext
   alias EverydayCitizen.Legislation
 
   @impl Oban.Worker
@@ -29,6 +32,10 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBill do
          {:ok, cosponsors} <- fetch_all(base <> "/cosponsors", "cosponsors"),
          {:ok, text, text_src} <- CongressGov.get(base <> "/text", limit: 250),
          {:ok, summaries} <- fetch_all(base <> "/summaries", "summaries"),
+         {:ok, committees} <- fetch_all(base <> "/committees", "committees"),
+         {:ok, relations} <- fetch_all(base <> "/relatedbills", "relatedBills"),
+         {:ok, amendments} <- fetch_all(base <> "/amendments", "amendments"),
+         {:ok, details} <- amendment_details(elem(amendments, 0)),
          {:ok, id} <-
            BillWriter.write(
              %{
@@ -37,7 +44,10 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBill do
                actions: actions,
                cosponsors: cosponsors,
                text: {text, text_src},
-               summaries: summaries
+               summaries: summaries,
+               committees: committees,
+               relations: relations,
+               amendments: {amendments, details}
              },
              run_id
            ) do
@@ -52,6 +62,26 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBill do
     {:ok, {Enum.map(items, &elem(&1, 0)), source}}
   rescue
     e in RuntimeError -> {:error, Exception.message(e)}
+  end
+
+  # number => detail for agreed amendments the list gives no description for
+  defp amendment_details(items) do
+    items
+    |> Enum.filter(&BillContext.needs_detail?/1)
+    |> Enum.reduce_while({:ok, %{}}, fn item, {:ok, acc} ->
+      path = "/amendment/#{item["congress"]}/#{String.downcase(item["type"])}/#{item["number"]}"
+
+      case CongressGov.get(path) do
+        {:ok, %{"amendment" => detail}, _} ->
+          {:cont, {:ok, Map.put(acc, to_string(item["number"]), detail)}}
+
+        {:ok, _other, _} ->
+          {:cont, {:ok, acc}}
+
+        error ->
+          {:halt, error}
+      end
+    end)
   end
 
   defp enqueue_text(id, text, source) do

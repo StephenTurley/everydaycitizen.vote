@@ -20,7 +20,10 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBillTest do
     "/v3/bill/119/hr/22/cosponsors" => "bill_119_hr_22/cosponsors.json",
     "/v3/bill/119/hr/22/subjects" => "bill_119_hr_22/subjects.json",
     "/v3/bill/119/hr/22/text" => "bill_119_hr_22/text.json",
-    "/v3/bill/119/hr/22/summaries" => "bill_119_hr_22/summaries.json"
+    "/v3/bill/119/hr/22/summaries" => "bill_119_hr_22/summaries.json",
+    "/v3/bill/119/hr/22/committees" => "bill_119_hr_22/committees.json",
+    "/v3/bill/119/hr/22/relatedbills" => "bill_119_hr_22/relatedbills.json",
+    "/v3/bill/119/hr/22/amendments" => "bill_119_hr_22/amendments.json"
   }
 
   defp stub(failing \\ %{}) do
@@ -99,8 +102,17 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBillTest do
     assert summary.author == "Congressional Research Service"
     assert summary.source.url =~ "/bill/119/hr/22/summaries"
 
+    assert [%{kind: "referred", body_ref: "hsha00", date: ~D[2025-01-03]} | _] =
+             EverydayCitizen.Legislation.committee_activities(bill.id)
+
+    assert Enum.sort(EverydayCitizen.Legislation.related_refs(bill.id, "procedural")) ==
+             ["119-hres-282", "119-hres-294"]
+
+    assert EverydayCitizen.Legislation.amendments(bill.id) == []
+
     assert :ok = perform_job(SyncBill, args)
     assert counts() == %{bills: 1, actions: 19, sponsorships: 6, versions: 2}
+    assert length(EverydayCitizen.Legislation.committee_activities(bill.id)) == 3
   end
 
   test "enqueues text fetches for versions without text" do

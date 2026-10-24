@@ -1,0 +1,19 @@
+{
+  "amendments": [
+    {
+      "congress": 119,
+      "description": "Pursuant to the provisions of H. Res. 1438, in lieu of the amendment in the nature of a substitute recommended by the Committee on House Administration now printed in the bill, an amendment in the nature of a substitute consisting of the text of Rules Committee Print 119-38, modified by the amendment printed in part B of report 119-755, is considered adopted.",
+      "latestAction": {
+        "actionDate": "2026-07-22",
+        "text": "On agreeing to the Rules amendment (A001) Agreed to without objection."
+      },
+      "number": "267",
+      "type": "HAMDT",
+      "updateDate": "2026-07-23T08:09:23Z",
+      "url": "https://api.congress.gov/v3/amendment/119/hamdt/267?format=json"
+    }
+  ],
+  "pagination": {
+    "count": 1
+  }
+}

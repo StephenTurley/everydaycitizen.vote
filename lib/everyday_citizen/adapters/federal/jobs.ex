@@ -8,6 +8,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs do
   ingest jobs. Generic tooling reads it through the `:ingest_adapters` config.
   """
   alias EverydayCitizen.Adapters.Federal.Jobs.{
+    BackfillBillHistory,
     BackfillBillSections,
     BackfillBillSummaries,
     BackfillBillWebUrls,
@@ -39,7 +40,8 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs do
       {"reclassify_votes", ReclassifyVotes, %{}},
       {"bill_sections", BackfillBillSections, %{}},
       {"zip_districts", SyncZipDistricts, %{}},
-      {"bill_web_urls", BackfillBillWebUrls, %{}}
+      {"bill_web_urls", BackfillBillWebUrls, %{}},
+      {"bill_history", BackfillBillHistory, %{}}
     ]
   end
 
