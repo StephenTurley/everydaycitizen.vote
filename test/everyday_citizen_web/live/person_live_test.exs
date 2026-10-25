@@ -193,6 +193,8 @@ defmodule EverydayCitizenWeb.PersonLiveTest do
       assert Legislature.get_person("#{g.id}").id == g.id
       assert Legislature.get_person("#{g.id}x") == nil
       assert Legislature.get_person("abc") == nil
+      assert Legislature.get_person("99999999999999999999") == nil
+      assert Legislature.get_person("-1") == nil
     end
 
     test "sponsored_bills pages newest first and counts the total", %{ernst: e} do

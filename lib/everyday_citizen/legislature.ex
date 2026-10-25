@@ -69,13 +69,16 @@ defmodule EverydayCitizen.Legislature do
     |> Map.new()
   end
 
+  # the largest id the database can hold
+  @max_id 9_223_372_036_854_775_807
+
   @doc "A person by id, given as an integer or its decimal string; nil for anything else."
   @spec get_person(String.t() | integer()) :: Person.t() | nil
-  def get_person(id) when is_integer(id), do: Repo.get(Person, id)
+  def get_person(id) when is_integer(id) and id > 0 and id <= @max_id, do: Repo.get(Person, id)
 
   def get_person(id) when is_binary(id) do
     case Integer.parse(id) do
-      {int, ""} -> get_person(int)
+      {int, ""} when int > 0 and int <= @max_id -> get_person(int)
       _ -> nil
     end
   end
