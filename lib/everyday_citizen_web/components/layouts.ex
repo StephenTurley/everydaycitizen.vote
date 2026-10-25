@@ -12,9 +12,9 @@ defmodule EverydayCitizenWeb.Layouts do
   embed_templates "layouts/*"
 
   @doc """
-  The app shell: the header (name, "This week", "Sign in" or "Account") over a
-  phone-width column, or with `width={:full}` a column that widens to 1280px on
-  large screens for a page's desktop columns. The header always spans 1280px
+  The app shell: the header (name, the search box, "This week", "Sign in" or
+  "Account") over a phone-width column, or with `width={:full}` a column that
+  widens to 1280px on large screens for a page's desktop columns. The header always spans 1280px
   there, so every page lines up.
 
       <Layouts.app flash={@flash}>
@@ -24,6 +24,7 @@ defmodule EverydayCitizenWeb.Layouts do
   attr :flash, :map, required: true, doc: "the map of flash messages"
   attr :width, :atom, values: [:narrow, :full], default: :narrow
   attr :current_scope, :map, default: nil, doc: "the signed-in scope, if any"
+  attr :query, :string, default: "", doc: "the search box's text (never an address)"
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -39,6 +40,7 @@ defmodule EverydayCitizenWeb.Layouts do
         >
           Everyday Citizen
         </a>
+        <.search_box query={@query} />
         <div class="flex items-center gap-3 sm:gap-5 text-[13px] sm:text-sm font-medium whitespace-nowrap">
           <a href={~p"/this-week"} class="py-3 text-floor-accent hover:text-floor-accent-dark">
             This week
@@ -76,6 +78,39 @@ defmodule EverydayCitizenWeb.Layouts do
     </footer>
 
     <.flash_group flash={@flash} />
+    """
+  end
+
+  attr :query, :string, required: true
+
+  # The search box: a full-width row under the name on phones, inline between
+  # the name and the links on large screens. It posts, so the query reaches no
+  # URL until the search controller decides where it goes.
+  defp search_box(assigns) do
+    ~H"""
+    <.form
+      for={to_form(%{"q" => @query})}
+      id="site-search"
+      action={~p"/search"}
+      method="post"
+      role="search"
+      class="order-last w-full pb-3 lg:order-none lg:w-auto lg:flex-1 lg:max-w-md lg:pb-0"
+    >
+      <label class="flex items-center gap-2 px-3 py-2 rounded-md border-[1.5px] border-floor-line bg-floor-card focus-within:border-floor-accent">
+        <.icon name="hero-magnifying-glass" class="size-4 flex-none text-floor-muted" />
+        <input
+          type="search"
+          name="q"
+          id="site-search-q"
+          value={@query}
+          placeholder="Search bills and people"
+          aria-label="Search bills and people"
+          maxlength="200"
+          autocomplete="off"
+          class="min-w-0 flex-1 bg-transparent border-0 p-0 text-[15px] text-floor-ink placeholder:text-floor-muted focus:outline-none focus:ring-0"
+        />
+      </label>
+    </.form>
     """
   end
 

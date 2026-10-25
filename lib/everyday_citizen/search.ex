@@ -302,6 +302,14 @@ defmodule EverydayCitizen.Search do
     total
   end
 
+  @doc """
+  Whether the query has any words text search can use: one made only of
+  common words ("the of") or punctuation has none, so text search finds
+  nothing whatever the bills say.
+  """
+  @spec text_searchable?(Query.t()) :: boolean()
+  def text_searchable?(%Query{text: text}), do: not empty_tsquery?(text)
+
   defp empty_tsquery?(text) do
     %{rows: [[nodes]]} =
       Repo.query!("SELECT numnode(websearch_to_tsquery('english', $1))", [text])

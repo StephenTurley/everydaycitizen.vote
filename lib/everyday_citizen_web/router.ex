@@ -32,6 +32,8 @@ defmodule EverydayCitizenWeb.Router do
 
     get "/district/:district", DistrictController, :show
     post "/district", DistrictController, :create
+    # the header's search box: decides where a query goes before any URL holds it
+    post "/search", SearchController, :create
     # "Follow" while signed out: remember the page, then sign in
     get "/users/sign-in-to", UserSessionController, :sign_in_to
   end
@@ -87,6 +89,7 @@ defmodule EverydayCitizenWeb.Router do
       live "/reps/:district", RepsLive
       live "/bills/:id", BillLive
       live "/people/:id", PersonLive
+      live "/search", SearchLive
       live "/this-week", ThisWeekLive
       live "/feedback", FeedbackLive
 

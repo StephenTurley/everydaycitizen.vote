@@ -265,6 +265,11 @@ defmodule EverydayCitizen.SearchBillsTest do
     end
   end
 
+  test "text_searchable? is false for common words alone" do
+    refute Search.text_searchable?(search("the of"))
+    assert Search.text_searchable?(search("daylight time"))
+  end
+
   describe "bills_by_text/3" do
     setup do
       a = bill!("119-hr-100", "H.R. 100", "Sunshine Protection Act")

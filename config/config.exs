@@ -153,8 +153,8 @@ config :tailwind,
   ]
 
 # A visitor's address is used once to find their district and never stored or
-# logged.
-config :phoenix, :filter_parameters, ["password", "address", "street", "zip"]
+# logged. Search queries ("q") are filtered too: someone will type an address.
+config :phoenix, :filter_parameters, ["password", "address", "street", "zip", "q"]
 
 # Configure Elixir's Logger
 config :logger, :default_formatter,
