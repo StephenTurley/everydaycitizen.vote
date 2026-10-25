@@ -72,11 +72,12 @@ defmodule EverydayCitizen.Summaries.Inputs do
   and after its latest change (`<before>`, `<after>`), or an added section's
   text (`<added>`); nil for a section unchanged since the first version.
   """
-  @spec change(map(), String.t(), non_neg_integer()) :: {String.t(), String.t()} | nil
-  def change(bill, code, index) do
+  @spec change(map(), String.t(), non_neg_integer(), [map()] | nil) ::
+          {String.t(), String.t()} | nil
+  def change(bill, code, index, loaded \\ nil) do
     subject = "change:#{bill.id}:#{code}:#{index}"
 
-    case EverydayCitizen.BillHistory.change_texts(bill, code, index) do
+    case EverydayCitizen.BillHistory.change_texts(bill, code, index, loaded) do
       {:added, text} ->
         {subject, tagged("added", text)}
 
@@ -88,7 +89,11 @@ defmodule EverydayCitizen.Summaries.Inputs do
     end
   end
 
-  defp tagged(tag, paragraphs), do: "<#{tag}>\n#{Enum.join(paragraphs, "\n")}\n</#{tag}>"
+  # each side capped, so one huge rewrite can't make a huge request
+  @max_side 60_000
+
+  defp tagged(tag, paragraphs),
+    do: "<#{tag}>\n#{paragraphs |> Enum.join("\n") |> String.slice(0, @max_side)}\n</#{tag}>"
 
   @doc """
   A rep's week from Monday: `{subject, lines}`, one line per item (date, what

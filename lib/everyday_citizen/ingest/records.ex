@@ -148,7 +148,7 @@ defmodule EverydayCitizen.Ingest.Records do
   defmodule BillAmendments do
     @moduledoc """
     A bill's amendments; replaces whatever is stored. Each is `%{external_id,
-    identifier, description, latest_action, latest_action_date, url}`.
+    identifier, description, latest_action, latest_action_date, url, agreed}`.
     """
     @enforce_keys [:jurisdiction, :bill_external_id, :amendments, :source]
     defstruct [:jurisdiction, :bill_external_id, :amendments, :source]

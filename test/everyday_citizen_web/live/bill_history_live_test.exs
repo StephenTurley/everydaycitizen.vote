@@ -59,7 +59,8 @@ defmodule EverydayCitizenWeb.BillHistoryLiveTest do
           description: "Under the resolution, a substitute is considered adopted.",
           latest_action: "Agreed to without objection.",
           latest_action_date: ~D[2026-07-22],
-          url: "https://example.test/samdt/9"
+          url: "https://example.test/samdt/9",
+          agreed: true
         }
       ],
       source: @src
@@ -156,6 +157,19 @@ defmodule EverydayCitizenWeb.BillHistoryLiveTest do
                worker: EverydayCitizen.Jobs.SummarizeSubject,
                args: %{"kind" => "change"}
              )
+  end
+
+  test "a rep whose chamber hasn't voted on the change is told so", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=eh&section=2")
+
+    assert has_element?(
+             view,
+             "#origin-2 [data-rep]",
+             "The House of Representatives hasn't voted on this change."
+           )
+
+    assert has_element?(view, "#origin-2 [data-rep]", "Chuck Grassley")
+    assert has_element?(view, "#origin-2 [data-rep]", "No recorded vote on this change.")
   end
 
   test "an unchanged section has no panel", %{conn: conn} do

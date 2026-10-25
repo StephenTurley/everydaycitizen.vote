@@ -135,8 +135,10 @@ defmodule EverydayCitizen.Ingest.Writer.Legislation do
           :description,
           :latest_action,
           :latest_action_date,
-          :url
+          :url,
+          :agreed
         ])
+        |> Map.update(:agreed, false, &(&1 == true))
         |> Map.merge(%{bill_id: bill.id, source_id: source_id})
       end
     end)
@@ -293,7 +295,13 @@ defmodule EverydayCitizen.Ingest.Writer.Legislation do
         j |> rows_fun.(bill) |> Enum.map(&Map.merge(&1, %{inserted_at: now, updated_at: now}))
 
       Repo.delete_all(from x in schema, where: x.bill_id == ^bill.id)
-      {count, _} = Repo.insert_all(schema, rows)
+
+      # in batches, under the database's limit on parameters per statement
+      count =
+        rows
+        |> Enum.chunk_every(1000)
+        |> Enum.reduce(0, fn batch, n -> n + elem(Repo.insert_all(schema, batch), 0) end)
+
       {:ok, %{written: count}}
     end
   end

@@ -9,6 +9,8 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBill do
   only from a successful, non-empty fetch of its endpoint; a failed request fails
   the job (Oban retries) rather than deleting stored rows.
   """
+  require Logger
+
   use Oban.Worker,
     queue: :ingest,
     priority: 5,
@@ -35,7 +37,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBill do
          {:ok, committees} <- fetch_all(base <> "/committees", "committees"),
          {:ok, relations} <- fetch_all(base <> "/relatedbills", "relatedBills"),
          {:ok, amendments} <- fetch_all(base <> "/amendments", "amendments"),
-         {:ok, details} <- amendment_details(elem(amendments, 0)),
+         details = amendment_details(elem(amendments, 0), "#{c}"),
          {:ok, id} <-
            BillWriter.write(
              %{
@@ -64,24 +66,38 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBill do
     e in RuntimeError -> {:error, Exception.message(e)}
   end
 
-  # number => detail for agreed amendments the list gives no description for
-  defp amendment_details(items) do
-    items
-    |> Enum.filter(&BillContext.needs_detail?/1)
-    |> Enum.reduce_while({:ok, %{}}, fn item, {:ok, acc} ->
-      path = "/amendment/#{item["congress"]}/#{String.downcase(item["type"])}/#{item["number"]}"
+  # type+number => detail, for agreed amendments the list gives no description
+  # for and that aren't stored with one already; a failed detail is skipped
+  # (the amendment keeps its latest action) rather than failing the bill
+  defp amendment_details(items, congress) do
+    described = Legislation.described_amendment_ids()
 
-      case CongressGov.get(path) do
-        {:ok, %{"amendment" => detail}, _} ->
-          {:cont, {:ok, Map.put(acc, to_string(item["number"]), detail)}}
+    for item <- items,
+        BillContext.needs_detail?(item),
+        not MapSet.member?(
+          described,
+          "#{congress}-#{String.downcase(item["type"])}-#{item["number"]}"
+        ),
+        detail = fetch_detail(item),
+        detail != nil,
+        into: %{},
+        do: {BillContext.detail_key(item), detail}
+  end
 
-        {:ok, _other, _} ->
-          {:cont, {:ok, acc}}
+  defp fetch_detail(item) do
+    path = "/amendment/#{item["congress"]}/#{String.downcase(item["type"])}/#{item["number"]}"
 
-        error ->
-          {:halt, error}
-      end
-    end)
+    case CongressGov.get(path) do
+      {:ok, %{"amendment" => detail}, _} ->
+        detail
+
+      other ->
+        Logger.warning(
+          "amendment detail #{BillContext.detail_key(item)} skipped: #{inspect(other)}"
+        )
+
+        nil
+    end
   end
 
   defp enqueue_text(id, text, source) do

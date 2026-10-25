@@ -36,12 +36,16 @@ defmodule EverydayCitizen.BillHistory do
   @spec versions(map()) :: [
           %{code: String.t(), classification: String.t() | nil, date: Date.t() | nil}
         ]
-  def versions(bill), do: bill |> rows() |> Enum.map(&Map.delete(&1, :sections))
+  def versions(bill), do: bill |> version_list() |> Enum.map(&Map.delete(&1, :sections))
+
+  @doc "The bill's versions with their sections, to pass to the functions below so one request loads them once."
+  @spec load(map()) :: [map()]
+  def load(bill), do: rows(bill)
 
   @doc "Where each section of version `code` came from, by its index; `%{}` with fewer than two versions to compare."
-  @spec origins(map(), String.t()) :: %{non_neg_integer() => origin()}
-  def origins(bill, code) do
-    case lineage(bill, code) do
+  @spec origins(map(), String.t(), [map()] | nil) :: %{non_neg_integer() => origin()}
+  def origins(bill, code, loaded \\ nil) do
+    case lineage(loaded || rows(bill), code) do
       {[_, _ | _] = keyed, target} ->
         target |> Enum.with_index() |> Map.new(fn {{key, _}, i} -> {i, origin(keyed, key)} end)
 
@@ -55,10 +59,10 @@ defmodule EverydayCitizen.BillHistory do
   change: `%{from, to, paragraphs}`, each paragraph a list of `{:eq | :del | :ins,
   text}`. nil for a section never changed (or added and never changed since).
   """
-  @spec comparison(map(), String.t(), non_neg_integer()) ::
+  @spec comparison(map(), String.t(), non_neg_integer(), [map()] | nil) ::
           %{from: String.t(), to: String.t(), paragraphs: [[op()]]} | nil
-  def comparison(bill, code, index) do
-    with {[_, _ | _] = keyed, target} <- lineage(bill, code),
+  def comparison(bill, code, index, loaded \\ nil) do
+    with {[_, _ | _] = keyed, target} <- lineage(loaded || rows(bill), code),
          {key, paragraphs} <- Enum.at(target, index),
          %{changed_in: [_ | _] = changed} <- origin(keyed, key),
          to = List.last(changed),
@@ -98,7 +102,7 @@ defmodule EverydayCitizen.BillHistory do
         from_date: from,
         actions: Enum.filter(actions, &inside.(&1.date)),
         committees: Enum.filter(committees, &inside.(&1.date)),
-        amendments: Enum.filter(amendments, &inside.(&1.latest_action_date)),
+        amendments: Enum.filter(amendments, &(&1.agreed and inside.(&1.latest_action_date))),
         votes: Enum.filter(votes, &inside.(local_date(&1.voted_at))),
         related_votes: Enum.filter(related, &inside.(local_date(&1.vote.voted_at)))
       })
@@ -128,7 +132,9 @@ defmodule EverydayCitizen.BillHistory do
       |> Repo.all()
       |> Map.new()
 
-    bodies = for a <- step.committees, a.body, uniq: true, do: a.body
+    # a referral isn't the committee acting on the text; a markup or report is
+    bodies =
+      for a <- step.committees, a.body, a.kind in ["markup", "reported"], uniq: true, do: a.body
 
     member_of =
       from(m in Membership,
@@ -185,10 +191,10 @@ defmodule EverydayCitizen.BillHistory do
   written from: `{:added, paragraphs}` for a section added after the first
   version, `{:changed, before, after}` for one changed since, else nil.
   """
-  @spec change_texts(map(), String.t(), non_neg_integer()) ::
+  @spec change_texts(map(), String.t(), non_neg_integer(), [map()] | nil) ::
           {:added, [String.t()]} | {:changed, [String.t()], [String.t()]} | nil
-  def change_texts(bill, code, index) do
-    with {[_, _ | _] = keyed, target} <- lineage(bill, code),
+  def change_texts(bill, code, index, loaded \\ nil) do
+    with {[_, _ | _] = keyed, target} <- lineage(loaded || rows(bill), code),
          {key, paragraphs} <- Enum.at(target, index) do
       case origin(keyed, key) do
         %{status: :added} ->
@@ -208,8 +214,8 @@ defmodule EverydayCitizen.BillHistory do
 
   # [{code, %{key => paragraphs}}] for versions up to `code`, and `code`'s own
   # [{key, paragraphs}] in order
-  defp lineage(bill, code) do
-    rows = Enum.filter(rows(bill), &(&1.sections not in [nil, []]))
+  defp lineage(all_rows, code) do
+    rows = Enum.filter(all_rows, &(&1.sections not in [nil, []]))
 
     case Enum.find_index(rows, &(&1.code == code)) do
       nil ->
@@ -221,18 +227,48 @@ defmodule EverydayCitizen.BillHistory do
     end
   end
 
+  # A heading unique in its version is the section's key (so renumbering doesn't
+  # break it), also filed under heading@number; a heading several sections share
+  # is keyed heading@number (heading#n without numbers), so inserting one doesn't
+  # shift the others.
   defp keyed(sections) do
-    {ordered, _counts} =
-      Enum.map_reduce(sections, %{}, fn section, counts ->
-        base = key(section)
-        n = Map.get(counts, base, 0) + 1
-        {{"#{base}##{n}", Summaries.section_paragraphs(section)}, Map.put(counts, base, n)}
+    counts = Enum.frequencies_by(sections, &heading_key/1)
+
+    {ordered, _seen} =
+      Enum.map_reduce(sections, %{}, fn section, seen ->
+        base = heading_key(section)
+        n = Map.get(seen, base, 0) + 1
+        numbered = section["enum"] && "#{base}@#{section["enum"]}"
+
+        key =
+          cond do
+            counts[base] == 1 -> base
+            numbered -> numbered
+            true -> "#{base}##{n}"
+          end
+
+        {{key, Summaries.section_paragraphs(section), numbered}, Map.put(seen, base, n)}
       end)
 
-    ordered |> Map.new() |> Map.put(:ordered, ordered)
+    entries =
+      Enum.flat_map(ordered, fn {key, paragraphs, numbered} ->
+        [
+          {key, paragraphs}
+          | if(numbered && numbered != key, do: [{numbered, paragraphs}], else: [])
+        ]
+      end)
+
+    entries
+    |> Map.new()
+    |> Map.put(:ordered, Enum.map(ordered, fn {key, paragraphs, _} -> {key, paragraphs} end))
+    # each section's comparable form, worked out once per version
+    |> Map.put(
+      :normalized,
+      Map.new(entries, fn {k, paragraphs} -> {k, normalized(paragraphs)} end)
+    )
   end
 
-  defp key(section) do
+  defp heading_key(section) do
     case (section["heading"] || "") |> String.downcase() |> String.replace(~r/[^a-z]/, "") do
       "" -> "sec" <> to_string(section["enum"])
       heading -> heading
@@ -270,23 +306,35 @@ defmodule EverydayCitizen.BillHistory do
     end
   end
 
-  defp normalized(paragraphs), do: paragraphs |> clauses() |> Enum.map(&squash/1)
+  # whether two wordings differ: spaces and clause punctuation (dashes, colons,
+  # semicolons, commas) don't count, however the text is split into paragraphs
+  defp normalized(paragraphs) do
+    paragraphs
+    |> Enum.join(" ")
+    |> String.split()
+    |> Enum.join()
+    |> :binary.replace(["—", "–", ":", ";", ","], "", [:global])
+  end
 
   # whitespace, and punctuation where a clause ends ("—" before a list, ":"), don't count
   defp squash(text),
     do: text |> String.replace(~r/[\s—–:;,]+$/u, "") |> String.replace(~r/\s+/u, "")
 
   # The text split into clauses at its own numbering — "(a)", "(1)", "(A)",
-  # "(ii)" starting a clause — whatever its paragraphs, since versions of the
-  # same text are not always split the same way.
-  # after a space or punctuation; or run straight onto a word ("investments(a)Conduct")
-  # when a capitalized word follows, which a citation ("13104(f)(8)") never has
-  @clause_start ~r/(?:(?:^|(?<=[\s—–:;.]))(?=\((?:\d{1,3}|[a-z]{1,4}|[A-Z]{1,4})\)\s?[A-Z(])|(?<=[a-z])(?=\((?:\d{1,3}|[a-z]{1,4}|[A-Z]{1,4})\)[A-Z][a-z]))/u
+  # "(ii)" — within each paragraph, since versions of the same text are not
+  # always split into paragraphs the same way. A clause starts after clause
+  # punctuation (or "; and", "; or"), or run straight onto a word when a
+  # capitalized word follows ("investments(a)Conduct"); never mid-sentence, so
+  # "subsection (b)(2)" and "(EPA)" stay put.
+  @enum "\\((?:\\d{1,3}|[a-z]{1,4}|[A-Z]{1,4})\\)"
+  @clause_start Regex.compile!(
+                  "(?:(?<=[—–:;.])|(?<=; and)|(?<=; or))\\s*(?=#{@enum}\\s?[A-Za-z])|(?<=[a-z])(?=#{@enum}[A-Z][a-z])",
+                  "u"
+                )
 
   defp clauses(paragraphs) do
     paragraphs
-    |> Enum.join(" ")
-    |> String.split(@clause_start)
+    |> Enum.flat_map(&String.split(&1, @clause_start))
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
   end
@@ -322,16 +370,28 @@ defmodule EverydayCitizen.BillHistory do
   end
 
   defp merge([{:pending_del, d}, {:pending_ins, i} | rest]),
-    do: [words(Enum.join(d, " "), Enum.join(i, " ")) | merge(rest)]
+    do: passage(Enum.join(d, " "), Enum.join(i, " ")) ++ merge(rest)
 
   defp merge([{:pending_del, d} | rest]), do: Enum.map(d, &[{:del, &1}]) ++ merge(rest)
   defp merge([{:pending_ins, i} | rest]), do: Enum.map(i, &[{:ins, &1}]) ++ merge(rest)
   defp merge([paragraph | rest]), do: [paragraph | merge(rest)]
   defp merge([]), do: []
 
-  defp words(a, b) do
-    tokens(a)
-    |> List.myers_difference(tokens(b))
+  # word marks cost the product of the two lengths, so a long rewrite is shown
+  # as its old and new wording whole
+  @max_tokens 3_000
+
+  defp passage(a, b) do
+    {ta, tb} = {tokens(a), tokens(b)}
+
+    if length(ta) + length(tb) > @max_tokens,
+      do: [[{:del, a}], [{:ins, b}]],
+      else: [words(ta, tb)]
+  end
+
+  defp words(a, b) when is_list(a) do
+    a
+    |> List.myers_difference(b)
     |> Enum.map(fn {op, toks} -> {op, Enum.join(toks)} end)
     |> join_spaces()
   end
@@ -344,6 +404,15 @@ defmodule EverydayCitizen.BillHistory do
 
   defp join_spaces([x | rest]), do: [x | join_spaces(rest)]
   defp join_spaces([]), do: []
+
+  defp version_list(%{id: bill_id}) do
+    from(v in BillVersion,
+      where: v.bill_id == ^bill_id,
+      order_by: [asc_nulls_last: v.date, asc: v.id],
+      select: %{code: v.code, classification: v.classification, date: v.date}
+    )
+    |> Repo.all()
+  end
 
   defp rows(%{id: bill_id}) do
     from(v in BillVersion,

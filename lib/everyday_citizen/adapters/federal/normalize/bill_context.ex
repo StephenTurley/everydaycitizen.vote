@@ -65,9 +65,17 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.BillContext do
 
   @doc "Whether an amendment list item needs its detail: agreed to, with no description of its own."
   @spec needs_detail?(map()) :: boolean()
-  def needs_detail?(item) do
-    blank?(item["description"]) and blank?(item["purpose"]) and
-      (get_in(item, ["latestAction", "text"]) || "") =~ ~r/agreed to|adopted/i
+  def needs_detail?(item),
+    do: blank?(item["description"]) and blank?(item["purpose"]) and agreed?(item)
+
+  @doc "The key a fetched detail is filed under: type and number (\"SAMDT6835\")."
+  @spec detail_key(map()) :: String.t()
+  def detail_key(item), do: "#{item["type"]}#{item["number"]}"
+
+  # "agreed to", "adopted", "considered as adopted", but not "not agreed to"
+  defp agreed?(item) do
+    text = get_in(item, ["latestAction", "text"]) || ""
+    text =~ ~r/agreed to|adopted/i and not (text =~ ~r/not agreed to|not adopted/i)
   end
 
   @spec amendments([map()], %{String.t() => map()}, String.t(), SourceRef.t()) ::
@@ -75,7 +83,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.BillContext do
   def amendments(items, details, bill_external_id, source) do
     amendments =
       for %{"type" => type, "number" => number} = item <- items, type in ["HAMDT", "SAMDT"] do
-        detail = Map.get(details, to_string(number), %{})
+        detail = Map.get(details, detail_key(item), %{})
         action = item["latestAction"] || %{}
 
         %{
@@ -89,7 +97,8 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.BillContext do
           latest_action: action["text"],
           latest_action_date: date(action["actionDate"]),
           url:
-            "#{@site}/amendment/#{item["congress"]}th-congress/#{if type == "HAMDT", do: "house", else: "senate"}-amendment/#{number}"
+            "#{@site}/amendment/#{ordinal(item["congress"])}-congress/#{if type == "HAMDT", do: "house", else: "senate"}-amendment/#{number}",
+          agreed: agreed?(item)
         }
       end
 
@@ -102,6 +111,22 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.BillContext do
   end
 
   defp blank?(value), do: value in [nil, ""]
+
+  # 119 → "119th", 121 → "121st", 122 → "122nd", 113 → "113th"
+  defp ordinal(n) when is_integer(n) do
+    suffix =
+      cond do
+        rem(n, 100) in 11..13 -> "th"
+        rem(n, 10) == 1 -> "st"
+        rem(n, 10) == 2 -> "nd"
+        rem(n, 10) == 3 -> "rd"
+        true -> "th"
+      end
+
+    "#{n}#{suffix}"
+  end
+
+  defp ordinal(n), do: n |> to_string() |> String.to_integer() |> ordinal()
 
   defp date(nil), do: nil
 

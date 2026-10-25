@@ -36,6 +36,20 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.BillContextTest do
     assert amdt.latest_action =~ "Agreed to without objection"
     assert amdt.latest_action_date == ~D[2026-07-22]
     assert amdt.url == "https://www.congress.gov/amendment/119th-congress/house-amendment/267"
+    assert amdt.agreed
+  end
+
+  test "an amendment not agreed to is kept but marked so" do
+    item = %{
+      "congress" => 121,
+      "type" => "HAMDT",
+      "number" => "5",
+      "latestAction" => %{"text" => "Failed of passage."}
+    }
+
+    %BillAmendments{amendments: [a]} = BillContext.amendments([item], %{}, "121-hr-1", src())
+    refute a.agreed
+    assert a.url == "https://www.congress.gov/amendment/121st-congress/house-amendment/5"
   end
 
   test "a detail is wanted only for an agreed amendment without a description" do
@@ -56,7 +70,10 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.BillContextTest do
     %BillAmendments{amendments: [a]} =
       BillContext.amendments(
         [item],
-        %{"6835" => %{"purpose" => "To improve the bill."}},
+        %{
+          "SAMDT6835" => %{"purpose" => "To improve the bill."},
+          "HAMDT6835" => %{"purpose" => "Wrong one."}
+        },
         "119-s-4668",
         src()
       )

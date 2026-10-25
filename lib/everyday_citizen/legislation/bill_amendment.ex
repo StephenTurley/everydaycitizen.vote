@@ -11,6 +11,8 @@ defmodule EverydayCitizen.Legislation.BillAmendment do
     field :latest_action, :string
     field :latest_action_date, :date
     field :url, :string
+    # agreed to (adopted), so it may have changed the text
+    field :agreed, :boolean, default: false
     belongs_to :bill, EverydayCitizen.Legislation.Bill
     belongs_to :source, EverydayCitizen.Provenance.Source
     timestamps(type: :utc_datetime_usec)

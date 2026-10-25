@@ -157,7 +157,9 @@ defmodule EverydayCitizenWeb.BillHistoryComponents do
           </span>
           <span :for={body <- rep.committees}>Sits on {body.name}, which acted on this change.</span>
           <span :if={rep.votes == [] and rep.committees == []} class="text-floor-muted">
-            No recorded part in this change.
+            {if rep.chamber_voted,
+              do: "No recorded vote on this change.",
+              else: "The #{rep.body.name} hasn't voted on this change."}
           </span>
         </div>
       </div>

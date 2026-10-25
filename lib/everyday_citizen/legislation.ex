@@ -252,4 +252,15 @@ defmodule EverydayCitizen.Legislation do
     )
     |> Repo.all()
   end
+
+  @doc "External ids of stored amendments that already have a description."
+  @spec described_amendment_ids() :: MapSet.t(String.t())
+  def described_amendment_ids do
+    from(a in EverydayCitizen.Legislation.BillAmendment,
+      where: not is_nil(a.description) and a.description != "",
+      select: a.external_id
+    )
+    |> Repo.all()
+    |> MapSet.new()
+  end
 end

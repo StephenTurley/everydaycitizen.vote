@@ -70,7 +70,17 @@ defmodule EverydayCitizen.BillHistoryStepsTest do
           description: "In the nature of a substitute.",
           latest_action: "Agreed to by voice vote.",
           latest_action_date: ~D[2026-01-19],
-          url: "https://example.test/samdt/1"
+          url: "https://example.test/samdt/1",
+          agreed: true
+        },
+        %{
+          external_id: "119-samdt-2",
+          identifier: "S.Amdt. 2",
+          description: "To strike everything.",
+          latest_action: "Not agreed to.",
+          latest_action_date: ~D[2026-01-19],
+          url: "https://example.test/samdt/2",
+          agreed: false
         }
       ],
       source: @src
@@ -106,6 +116,7 @@ defmodule EverydayCitizen.BillHistoryStepsTest do
     assert [%{kind: "markup", body: %{name: "Senate Committee on the Judiciary"}}] =
              second.committees
 
+    # only amendments that were agreed to produced the text
     assert [%{identifier: "S.Amdt. 1"}] = second.amendments
     assert [%{identifier: "Roll Call 7"}] = second.votes
     assert [%{ref: "119-sres-10", vote: %{identifier: "Roll Call 6"}}] = second.related_votes
@@ -123,6 +134,10 @@ defmodule EverydayCitizen.BillHistoryStepsTest do
     assert grassley.person.id == g.id
     assert [{%{identifier: "Roll Call 7"}, "yea"}] = grassley.votes
     assert [%{name: "Senate Committee on the Judiciary"}] = grassley.committees
+
+    # a referral is not the committee acting on the text
+    first = List.first(BillHistory.steps(bill))
+    assert [%{committees: []}] = BillHistory.involvement(first, [g])
 
     assert [{%{identifier: "Roll Call 6"}, "yea"}, {%{identifier: "Roll Call 7"}, "nay"}] =
              ernst.votes

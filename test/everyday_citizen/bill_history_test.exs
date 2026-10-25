@@ -138,4 +138,59 @@ defmodule EverydayCitizen.BillHistoryTest do
     assert [{:eq, "(a)Conduct. No purchase, see section 13104(f)(8)."}] in paragraphs
     assert Enum.any?(paragraphs, &({:del, "Old"} in &1))
   end
+
+  test "a huge changed passage is compared without word marks, quickly", %{bill: bill} do
+    words = fn seed -> Enum.map_join(1..6000, " ", &"w#{rem(&1 * seed, 997)}") end
+    one = fn text -> [section("2.", "Big", [%{"level" => 0, "text" => text}])] end
+    version!(bill, "pcs", ~D[2026-08-06], [short() | one.(words.(7))])
+    version!(bill, "rfs", ~D[2026-08-07], [short() | one.(words.(11))])
+
+    {micros, %{paragraphs: paragraphs}} =
+      :timer.tc(fn -> BillHistory.comparison(bill, "rfs", 1) end)
+
+    assert micros < 1_000_000
+    assert [[{:del, _}], [{:ins, _}]] = paragraphs
+  end
+
+  test "sections sharing a heading are matched by heading and number, so an insert doesn't shift them",
+       %{bill: bill} do
+    defs = fn enum, text -> section(enum, "Definitions", [%{"level" => 0, "text" => text}]) end
+    version!(bill, "pcs", ~D[2026-08-06], [short(), defs.("101.", "A."), defs.("201.", "B.")])
+
+    version!(bill, "rfs", ~D[2026-08-07], [
+      short(),
+      defs.("101.", "A."),
+      defs.("150.", "New."),
+      defs.("201.", "B.")
+    ])
+
+    origins = BillHistory.origins(bill, "rfs")
+    assert origins[1].status == :added and origins[1].added_in == "pcs"
+    assert origins[2] == %{status: :added, added_in: "rfs", changed_in: []}
+    assert origins[3].changed_in == []
+  end
+
+  test "amending text splits at its own clauses, lowercase too, but not inside citations", %{
+    bill: bill
+  } do
+    para = fn text -> %{"level" => 0, "text" => text} end
+
+    amend = fn last ->
+      [
+        section("2.", "Amendments", [
+          para.(
+            "Section 5 is amended— (1) in subsection (b)(2), by striking (EPA) and inserting Agency; and (2) #{last}"
+          )
+        ])
+      ]
+    end
+
+    version!(bill, "pcs", ~D[2026-08-06], [short() | amend.("by adding at the end a rule.")])
+    version!(bill, "rfs", ~D[2026-08-07], [short() | amend.("by adding at the end a new rule.")])
+
+    %{paragraphs: paragraphs} = BillHistory.comparison(bill, "rfs", 1)
+    assert [{:eq, "Section 5 is amended—"}] in paragraphs
+
+    assert [{:eq, "(1) in subsection (b)(2), by striking (EPA) and inserting Agency; and"}] in paragraphs
+  end
 end
