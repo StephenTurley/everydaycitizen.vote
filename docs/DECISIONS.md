@@ -246,3 +246,6 @@ The database is never rebuilt, so internal ids are stable, and the page then sho
 
 ## 2026-10-25 — Search pages are noindex
 Result pages are endless combinations of queries with thin content; they stay out of search engines while bill and person pages remain indexable.
+
+## 2026-10-25 — Search: stricter address rule, a search limit, and crash reports without page state
+Found in the final review. Any query starting with a street number that contains a street word anywhere is an address ("1 way forward" included, erring toward address as the spec says). So are a ZIP or 9-digit ZIP+4 anywhere in a query, PO Box spellings, and a five-digit "bill number" no stored bill has (a state and ZIP such as "IA 50309"); Unicode spaces are normalized first. Searches are limited to 60 a minute per visitor; a search runs once the page is connected, so the visitor's IP is known. Sentry's `before_send` drops a crashing process's state and last message and strips query strings from URLs, so a LiveView crash can't carry a search. `<details>` keep their open state across LiveView updates. A query of only excluded words ("-tax") is not searched, since it can't use the index. The release command may run for 30 minutes so the text index can build.
