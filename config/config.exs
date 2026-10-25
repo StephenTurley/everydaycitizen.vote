@@ -114,7 +114,10 @@ config :everyday_citizen, Oban,
 # Errors, crashes and failed jobs go to Sentry (inert without SENTRY_DSN).
 # Oban: failed jobs become issues. Only the coverage job reports its runs to
 # Sentry's Crons page (EverydayCitizen.SentryCrons); the plan allows one monitor.
+# Every event loses a crashed process's state and every URL's query string
+# first (EverydayCitizenWeb.SentryScrub): they can hold what a visitor typed.
 config :sentry,
+  before_send: {EverydayCitizenWeb.SentryScrub, :before_send},
   integrations: [oban: [capture_errors: true, cron: [enabled: false]]],
   in_app_otp_apps: [:everyday_citizen]
 
