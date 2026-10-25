@@ -25,12 +25,24 @@ defmodule EverydayCitizen.Summaries do
   the law is marked `[Inserted into the law: … ]`.
   """
   @spec section_text(map()) :: String.t()
-  def section_text(%{"blocks" => blocks} = section) do
+  def section_text(%{"blocks" => _} = section) do
     heading =
       Enum.join(Enum.reject(["Sec. #{section["enum"]}", section["heading"]], &blank?/1), " ")
 
-    Enum.join([heading | Enum.flat_map(blocks, &block_lines/1)], "\n")
+    Enum.join([heading | section_paragraphs(section)], "\n")
   end
+
+  @doc "How many summaries one visitor may ask for in an hour."
+  @spec visitor_limit() :: pos_integer()
+  def visitor_limit,
+    do: Application.fetch_env!(:everyday_citizen, :summaries)[:visitor_limit] || 30
+
+  @doc "A section's paragraphs, one per block (quoted law bracketed), without its heading."
+  @spec section_paragraphs(map()) :: [String.t()]
+  def section_paragraphs(%{"blocks" => blocks}) when is_list(blocks),
+    do: Enum.flat_map(blocks, &block_lines/1)
+
+  def section_paragraphs(_heading_only), do: []
 
   defp block_lines(%{"quote" => quote}),
     do: ["[Inserted into the law:"] ++ Enum.flat_map(quote, &block_lines/1) ++ ["]"]

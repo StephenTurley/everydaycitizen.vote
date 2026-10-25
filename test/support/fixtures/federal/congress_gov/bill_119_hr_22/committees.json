@@ -1,0 +1,28 @@
+{
+  "committees": [
+    {
+      "activities": [
+        {
+          "date": "2025-04-10T15:17:00Z",
+          "name": "Unknown"
+        },
+        {
+          "date": "2025-04-10T14:30:49Z",
+          "name": "Unknown"
+        },
+        {
+          "date": "2025-01-03T16:00:35Z",
+          "name": "Referred To"
+        }
+      ],
+      "chamber": "House",
+      "name": "Committee on House Administration",
+      "systemCode": "hsha00",
+      "type": "Standing",
+      "url": "https://api.congress.gov/v3/committee/house/hsha00?format=json"
+    }
+  ],
+  "pagination": {
+    "count": 1
+  }
+}

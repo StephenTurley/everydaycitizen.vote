@@ -1,6 +1,6 @@
 defmodule EverydayCitizen.Feedback.Report do
   @moduledoc """
-  A reader's report about an AI summary (kind `section`, `bill` or `rep_week`,
+  A reader's report about an AI summary (kind `section`, `bill`, `rep_week` or `change`,
   with the summary's subject, prompt version and text as shown) or about the
   site (`site`): a reason, an optional note, the page, and the account when
   signed in. No address or IP is kept.
@@ -8,7 +8,7 @@ defmodule EverydayCitizen.Feedback.Report do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @kinds ~w(section bill rep_week site)
+  @kinds ~w(section bill rep_week change site)
   @reasons ~w(inaccurate unclear missing one_sided other)
 
   schema "feedback_reports" do

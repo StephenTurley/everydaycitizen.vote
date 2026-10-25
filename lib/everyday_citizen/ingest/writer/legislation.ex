@@ -24,7 +24,19 @@ defmodule EverydayCitizen.Ingest.Writer.Legislation do
 
   alias EverydayCitizen.Ingest.Records
   alias EverydayCitizen.Ingest.Writer.Support
-  alias EverydayCitizen.Legislation.{Bill, BillAction, BillSummary, BillVersion, Sponsorship}
+
+  alias EverydayCitizen.Legislation.{
+    Bill,
+    BillAction,
+    BillAmendment,
+    BillCommitteeActivity,
+    BillRelation,
+    BillSummary,
+    BillVersion,
+    Sponsorship
+  }
+
+  alias EverydayCitizen.Legislature.Body
   alias EverydayCitizen.Legislature.Session
   alias EverydayCitizen.Repo
 
@@ -84,6 +96,52 @@ defmodule EverydayCitizen.Ingest.Writer.Legislation do
       delete_others(BillSummary, bill.id, ids)
       {:ok, %{written: length(ids)}}
     end
+  end
+
+  defp do_write(%Records.BillCommittees{} = r, source_id) do
+    replace_set(r, BillCommitteeActivity, fn j, bill ->
+      for a <- r.activities do
+        %{
+          bill_id: bill.id,
+          body_id: body_id(j.id, a.body_external_id),
+          body_ref: a.body_external_id,
+          kind: a.kind,
+          date: a.date,
+          source_id: source_id
+        }
+      end
+    end)
+  end
+
+  defp do_write(%Records.BillRelations{} = r, source_id) do
+    replace_set(r, BillRelation, fn _j, bill ->
+      for rel <- r.relations,
+          do: %{
+            bill_id: bill.id,
+            related_ref: rel.bill_external_id,
+            kind: rel.kind,
+            source_id: source_id
+          }
+    end)
+  end
+
+  defp do_write(%Records.BillAmendments{} = r, source_id) do
+    replace_set(r, BillAmendment, fn _j, bill ->
+      for a <- r.amendments do
+        a
+        |> Map.take([
+          :external_id,
+          :identifier,
+          :description,
+          :latest_action,
+          :latest_action_date,
+          :url,
+          :agreed
+        ])
+        |> Map.update(:agreed, false, &(&1 == true))
+        |> Map.merge(%{bill_id: bill.id, source_id: source_id})
+      end
+    end)
   end
 
   defp do_write(%Records.Sponsorships{} = r, source_id) do
@@ -224,5 +282,37 @@ defmodule EverydayCitizen.Ingest.Writer.Legislation do
 
   defp delete_others(schema, bill_id, keep_ids) do
     Repo.delete_all(from r in schema, where: r.bill_id == ^bill_id and r.id not in ^keep_ids)
+  end
+
+  # A set with no natural key (committee steps, relations, amendments): the
+  # bill's rows are replaced wholesale.
+  defp replace_set(r, schema, rows_fun) do
+    with {:ok, j} <- jurisdiction(r.jurisdiction),
+         {:ok, bill} <- bill(j, r.bill_external_id) do
+      now = DateTime.utc_now()
+
+      rows =
+        j |> rows_fun.(bill) |> Enum.map(&Map.merge(&1, %{inserted_at: now, updated_at: now}))
+
+      Repo.delete_all(from x in schema, where: x.bill_id == ^bill.id)
+
+      # in batches, under the database's limit on parameters per statement
+      count =
+        rows
+        |> Enum.chunk_every(1000)
+        |> Enum.reduce(0, fn batch, n -> n + elem(Repo.insert_all(schema, batch), 0) end)
+
+      {:ok, %{written: count}}
+    end
+  end
+
+  defp body_id(_jurisdiction_id, nil), do: nil
+
+  defp body_id(jurisdiction_id, external_id) do
+    Repo.one(
+      from b in Body,
+        where: b.jurisdiction_id == ^jurisdiction_id and b.external_id == ^external_id,
+        select: b.id
+    )
   end
 end

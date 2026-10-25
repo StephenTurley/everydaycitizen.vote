@@ -36,8 +36,9 @@ defmodule EverydayCitizen.Summaries.Writer do
     end)
   end
 
-  @spec write(:bill | :rep_week, String.t()) :: {:ok, result()} | {:error, term()}
+  @spec write(:bill | :rep_week | :change, String.t()) :: {:ok, result()} | {:error, term()}
   def write(:rep_week, input), do: call(:rep_week, input, [])
+  def write(:change, input), do: call(:change, input, [])
 
   def write(:bill, text) do
     {name, cap} = band(text)

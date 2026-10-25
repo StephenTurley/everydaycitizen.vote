@@ -75,3 +75,6 @@ config :everyday_citizen, :federal_req_options,
   plug: {Req.Test, EverydayCitizen.Federal},
   retry_delay: 0,
   retry_log_level: false
+
+# every test visitor shares one address; the per-visitor limit is not under test
+config :everyday_citizen, :summaries, visitor_limit: 100_000

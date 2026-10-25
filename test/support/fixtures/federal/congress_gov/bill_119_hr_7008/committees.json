@@ -1,0 +1,36 @@
+{
+  "committees": [
+    {
+      "activities": [
+        {
+          "date": "2026-07-22T20:44:29Z",
+          "name": "Unknown"
+        },
+        {
+          "date": "2026-07-22T19:14:17Z",
+          "name": "Unknown"
+        },
+        {
+          "date": "2026-02-03T18:47:34Z",
+          "name": "Reported By"
+        },
+        {
+          "date": "2026-01-14T17:00:00Z",
+          "name": "Markup By"
+        },
+        {
+          "date": "2026-01-12T17:02:35Z",
+          "name": "Referred To"
+        }
+      ],
+      "chamber": "House",
+      "name": "Committee on House Administration",
+      "systemCode": "hsha00",
+      "type": "Standing",
+      "url": "https://api.congress.gov/v3/committee/house/hsha00?format=json"
+    }
+  ],
+  "pagination": {
+    "count": 1
+  }
+}

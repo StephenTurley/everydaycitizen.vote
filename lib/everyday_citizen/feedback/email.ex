@@ -8,6 +8,7 @@ defmodule EverydayCitizen.Feedback.Email do
     "section" => "section summary",
     "bill" => "bill summary",
     "rep_week" => "week summary",
+    "change" => "change explanation",
     "site" => "site"
   }
 

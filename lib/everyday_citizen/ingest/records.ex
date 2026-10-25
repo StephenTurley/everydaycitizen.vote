@@ -125,6 +125,36 @@ defmodule EverydayCitizen.Ingest.Records do
     defstruct [:jurisdiction, :bill_external_id, :actions, :source]
   end
 
+  defmodule BillCommittees do
+    @moduledoc """
+    A bill's committee steps; replaces whatever is stored. Each is
+    `%{body_external_id, kind, date}`, kind one of `referred markup reported other`.
+    """
+    @enforce_keys [:jurisdiction, :bill_external_id, :activities, :source]
+    defstruct [:jurisdiction, :bill_external_id, :activities, :source]
+    @type t :: %__MODULE__{}
+  end
+
+  defmodule BillRelations do
+    @moduledoc """
+    Measures related to a bill; replaces whatever is stored. Each is
+    `%{bill_external_id, kind}`, kind `procedural` (governs how it is taken up) or `related`.
+    """
+    @enforce_keys [:jurisdiction, :bill_external_id, :relations, :source]
+    defstruct [:jurisdiction, :bill_external_id, :relations, :source]
+    @type t :: %__MODULE__{}
+  end
+
+  defmodule BillAmendments do
+    @moduledoc """
+    A bill's amendments; replaces whatever is stored. Each is `%{external_id,
+    identifier, description, latest_action, latest_action_date, url, agreed}`.
+    """
+    @enforce_keys [:jurisdiction, :bill_external_id, :amendments, :source]
+    defstruct [:jurisdiction, :bill_external_id, :amendments, :source]
+    @type t :: %__MODULE__{}
+  end
+
   defmodule BillSummaries do
     @moduledoc """
     The complete set of a bill's official summaries by one author; replaces whatever

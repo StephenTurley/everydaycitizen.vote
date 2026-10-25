@@ -53,7 +53,47 @@ defmodule EverydayCitizen.Summaries.Inputs do
     end
   end
 
+  def input("change", "change:" <> rest) do
+    with [id, code, index] <- String.split(rest, ":"),
+         {bill_id, ""} <- Integer.parse(id),
+         {i, ""} <- Integer.parse(index),
+         %{} = bill <- Repo.get(EverydayCitizen.Legislation.Bill, bill_id),
+         {_subject, input} <- change(bill, code, i) do
+      input
+    else
+      _ -> nil
+    end
+  end
+
   def input(_kind, _subject), do: nil
+
+  @doc """
+  A section's change in a version, as `{subject, input}`: its wording before
+  and after its latest change (`<before>`, `<after>`), or an added section's
+  text (`<added>`); nil for a section unchanged since the first version.
+  """
+  @spec change(map(), String.t(), non_neg_integer(), [map()] | nil) ::
+          {String.t(), String.t()} | nil
+  def change(bill, code, index, loaded \\ nil) do
+    subject = "change:#{bill.id}:#{code}:#{index}"
+
+    case EverydayCitizen.BillHistory.change_texts(bill, code, index, loaded) do
+      {:added, text} ->
+        {subject, tagged("added", text)}
+
+      {:changed, before, after_} ->
+        {subject, tagged("before", before) <> "\n" <> tagged("after", after_)}
+
+      nil ->
+        nil
+    end
+  end
+
+  # each side capped, so one huge rewrite can't make a huge request
+  @max_side 60_000
+
+  defp tagged(tag, paragraphs),
+    do: "<#{tag}>\n#{paragraphs |> Enum.join("\n") |> String.slice(0, @max_side)}\n</#{tag}>"
 
   @doc """
   A rep's week from Monday: `{subject, lines}`, one line per item (date, what

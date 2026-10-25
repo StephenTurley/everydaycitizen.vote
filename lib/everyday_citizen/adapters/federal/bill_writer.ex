@@ -11,6 +11,7 @@ defmodule EverydayCitizen.Adapters.Federal.BillWriter do
   require Logger
 
   alias EverydayCitizen.Adapters.Federal.Normalize.Bill, as: Normalize
+  alias EverydayCitizen.Adapters.Federal.Normalize.BillContext
   alias EverydayCitizen.Ingest
 
   @type part(t) :: {t, EverydayCitizen.Ingest.Records.SourceRef.t() | nil}
@@ -20,7 +21,10 @@ defmodule EverydayCitizen.Adapters.Federal.BillWriter do
           required(:actions) => part([map()]),
           required(:cosponsors) => part([map()]),
           required(:text) => part(map()),
-          optional(:summaries) => part([map()])
+          optional(:summaries) => part([map()]),
+          optional(:committees) => part([map()]),
+          optional(:relations) => part([map()]),
+          optional(:amendments) => {part([map()]), %{String.t() => map()}}
         }
 
   @doc "Writes the bill and its parts; returns its external id."
@@ -35,7 +39,8 @@ defmodule EverydayCitizen.Adapters.Federal.BillWriter do
            :ok <- write_actions(parts.actions, id, run_id),
            :ok <- write_sponsorships(detail, detail_src, parts.cosponsors, id, run_id),
            :ok <- write_versions(parts.text, id, run_id),
-           :ok <- write_summaries(Map.get(parts, :summaries, {[], nil}), id, run_id) do
+           :ok <- write_summaries(Map.get(parts, :summaries, {[], nil}), id, run_id),
+           :ok <- write_context(parts, id, run_id) do
         {:ok, id}
       end
     end)
@@ -63,6 +68,28 @@ defmodule EverydayCitizen.Adapters.Federal.BillWriter do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  # Committee steps, related measures and amendments; like actions, an empty
+  # list (which has no response source) writes nothing.
+  defp write_context(parts, id, run_id) do
+    {amendments, details} = Map.get(parts, :amendments, {{[], nil}, %{}})
+
+    [
+      {Map.get(parts, :committees, {[], nil}), &BillContext.committees(&1, id, &2)},
+      {Map.get(parts, :relations, {[], nil}), &BillContext.relations(&1, id, &2)},
+      {amendments, &BillContext.amendments(&1, details, id, &2)}
+    ]
+    |> Enum.reduce_while(:ok, fn
+      {{[], _}, _build}, :ok ->
+        {:cont, :ok}
+
+      {{items, source}, build}, :ok ->
+        case write_record(build.(items, source), run_id) do
+          :ok -> {:cont, :ok}
+          error -> {:halt, error}
+        end
+    end)
   end
 
   # Like actions: an empty list writes nothing rather than deleting stored rows.

@@ -10,11 +10,12 @@ defmodule EverydayCitizenWeb.BillLive do
   """
   use EverydayCitizenWeb, :live_view
 
-  alias EverydayCitizen.{BillPage, Follows, RateLimit, Reps, Summaries}
+  alias EverydayCitizen.{BillHistory, BillPage, Follows, RateLimit, Reps, Summaries}
   alias EverydayCitizen.Summaries.{Claude, Inputs}
 
+  import EverydayCitizenWeb.BillHistoryComponents
+
   @repo_url "https://github.com/StephenTurley/everydaycitizen.vote/blob/main/"
-  @visitor_limit 30
   @hour :timer.hours(1)
 
   @impl true
@@ -33,7 +34,14 @@ defmodule EverydayCitizenWeb.BillLive do
            remote_ip: EverydayCitizenWeb.RemoteIp.from_socket(socket),
            crawler: EverydayCitizenWeb.Crawler.crawler?(socket),
            summaries: %{},
-           summary_topics: []
+           summary_topics: [],
+           history_steps: nil,
+           history_rows: nil,
+           origins: %{},
+           origins_code: nil,
+           version_dates: %{},
+           change_summary: nil,
+           change_topic: nil
          )
          |> load_bill_summary()}
 
@@ -65,7 +73,11 @@ defmodule EverydayCitizenWeb.BillLive do
     socket =
       socket
       |> assign(version: version, sections: Enum.with_index(sections), open: open)
+      |> load_history()
       |> load_summaries()
+      |> load_change_summary()
+      # the versions' sections are only needed during this request
+      |> assign(:history_rows, nil)
 
     {:noreply, socket}
   end
@@ -73,6 +85,16 @@ defmodule EverydayCitizenWeb.BillLive do
   @impl true
   def handle_info({:section_summary, index, {:ok, text}}, socket),
     do: {:noreply, update(socket, :summaries, &Map.put(&1, index, {:ok, text}))}
+
+  def handle_info({:ai_summary, "change", subject, result}, socket) do
+    case socket.assigns.change_summary do
+      {^subject, _state} ->
+        {:noreply, assign(socket, :change_summary, {subject, ai_state(result)})}
+
+      _other ->
+        {:noreply, socket}
+    end
+  end
 
   def handle_info({:ai_summary, "bill", subject, result}, socket) do
     case socket.assigns.bill_summary do
@@ -86,6 +108,141 @@ defmodule EverydayCitizenWeb.BillLive do
 
   def handle_info({:section_summary, index, {:error, _}}, socket),
     do: {:noreply, update(socket, :summaries, &Map.put(&1, index, :unavailable))}
+
+  # Where each section of the version came from (worked out again only when the
+  # version changes); for an opened section that changed or was added, the
+  # steps that touched it and the reps' part. All versions' sections are read
+  # at most once per request, and not at all for an unchanged section.
+  defp load_history(socket) do
+    {socket, rows} = assign_origins(socket)
+    assign_opened(assign(socket, history: nil, history_rows: nil), rows)
+  end
+
+  # origins for the version, kept while the version stays the same; returns the
+  # versions' sections when it had to read them
+  defp assign_origins(%{assigns: %{page: page, version: version}} = socket) do
+    code = version && version.code
+
+    cond do
+      is_nil(code) ->
+        {assign(socket, origins: %{}, origins_code: nil), nil}
+
+      socket.assigns.origins_code == code ->
+        {socket, nil}
+
+      true ->
+        rows = BillHistory.load(page.bill)
+
+        {assign(socket,
+           origins: BillHistory.origins(page.bill, code, rows),
+           origins_code: code,
+           version_dates: Map.new(BillHistory.versions(page.bill), &{&1.code, &1.date})
+         ), rows}
+    end
+  end
+
+  defp assign_opened(%{assigns: %{page: page, open: open}} = socket, rows) do
+    case is_integer(open) && socket.assigns.origins[open] do
+      %{status: status} = origin when status != :original ->
+        rows = rows || BillHistory.load(page.bill)
+        steps = socket.assigns.history_steps || BillHistory.steps(page.bill)
+
+        assign(socket,
+          history_steps: steps,
+          history_rows: rows,
+          history: %{
+            index: open,
+            origin: origin,
+            steps: steps,
+            involvement: involvement(change_steps(origin, steps), page.reps),
+            comparison: BillHistory.comparison(page.bill, socket.assigns.origins_code, open, rows)
+          }
+        )
+
+      _ ->
+        socket
+    end
+  end
+
+  # the steps that changed a section (not the version it started in, unless added there)
+  defp change_steps(%{status: status, added_in: added_in, changed_in: changed}, steps) do
+    codes = if(status == :added, do: [added_in], else: []) ++ changed
+    Enum.filter(steps, &(&1.code in codes))
+  end
+
+  # each rep's votes and committees across the steps, and whether their chamber
+  # voted in them at all
+  defp involvement(_steps, []), do: []
+
+  defp involvement(steps, reps) do
+    people = Enum.map(reps, & &1.person)
+    per_step = Enum.map(steps, &BillHistory.involvement(&1, people))
+
+    chambers =
+      for step <- steps,
+          vote <- step.votes ++ Enum.map(step.related_votes, & &1.vote),
+          into: MapSet.new(),
+          do: vote.body_id
+
+    for {rep, i} <- Enum.with_index(reps) do
+      parts = Enum.map(per_step, &Enum.at(&1, i))
+
+      %{
+        person: rep.person,
+        body: rep.body,
+        chamber_voted: MapSet.member?(chambers, rep.body.id),
+        votes: parts |> Enum.flat_map(& &1.votes) |> Enum.uniq_by(fn {v, _} -> v.id end),
+        committees: parts |> Enum.flat_map(& &1.committees) |> Enum.uniq_by(& &1.id)
+      }
+    end
+  end
+
+  # The opened change's explanation: cached, or asked for once the page is live
+  # (not by crawlers); none for an unchanged section.
+  defp load_change_summary(socket) do
+    if topic = socket.assigns.change_topic,
+      do: Phoenix.PubSub.unsubscribe(EverydayCitizen.PubSub, topic)
+
+    socket = assign(socket, change_summary: nil, change_topic: nil)
+
+    with %{index: i} <- socket.assigns.history,
+         true <- Claude.enabled?(),
+         {subject, input} <-
+           Inputs.change(socket.assigns.page.bill, socket.assigns.version.code, i) do
+      change_summary_state(socket, subject, input)
+    else
+      _ -> socket
+    end
+  end
+
+  defp change_summary_state(socket, subject, input) do
+    cond do
+      summary = Summaries.get_ai(:change, subject, input) ->
+        assign(socket, :change_summary, {subject, {:ok, summary.summary}})
+
+      socket.assigns.crawler ->
+        socket
+
+      not connected?(socket) ->
+        assign(socket, :change_summary, {subject, :loading})
+
+      true ->
+        topic = Summaries.ai_topic(:change, subject)
+        Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, topic)
+
+        state =
+          if RateLimit.hit(
+               {:summaries, socket.assigns.remote_ip},
+               Summaries.visitor_limit(),
+               @hour
+             ) ==
+               :limited,
+             do: :limited,
+             else: requested(Summaries.request_ai(:change, subject, input))
+
+        assign(socket, change_summary: {subject, state}, change_topic: topic)
+    end
+  end
 
   # The bill's executive summary: cached, or asked for once the page is live
   # (listening first, so one finished in between is not missed).
@@ -115,7 +272,7 @@ defmodule EverydayCitizenWeb.BillLive do
       true ->
         Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, Summaries.ai_topic(:bill, subject))
 
-        if RateLimit.hit({:summaries, socket.assigns.remote_ip}, @visitor_limit, @hour) ==
+        if RateLimit.hit({:summaries, socket.assigns.remote_ip}, Summaries.visitor_limit(), @hour) ==
              :limited,
            do: :limited,
            else: requested(Summaries.request_ai(:bill, subject, input))
@@ -186,7 +343,8 @@ defmodule EverydayCitizenWeb.BillLive do
       not live? ->
         :loading
 
-      RateLimit.hit({:summaries, socket.assigns.remote_ip}, @visitor_limit, @hour) == :limited ->
+      RateLimit.hit({:summaries, socket.assigns.remote_ip}, Summaries.visitor_limit(), @hour) ==
+          :limited ->
         :limited
 
       true ->
@@ -601,12 +759,39 @@ defmodule EverydayCitizenWeb.BillLive do
                     class="flex justify-between items-center gap-2 px-4 lg:px-7 py-3.5 text-floor-ink"
                     aria-expanded={to_string(open?(@open, i))}
                   >
-                    <span class="text-[15px] lg:text-[16px]">
-                      <strong :if={entry["enum"]} class="font-semibold">Sec. {entry["enum"]}</strong>
-                      {entry["heading"]}
+                    <span class="flex flex-col gap-1">
+                      <span class="text-[15px] lg:text-[16px]">
+                        <strong :if={entry["enum"]} class="font-semibold">Sec. {entry["enum"]}</strong>
+                        {entry["heading"]}
+                      </span>
+                      <.origin_tag origin={@origins[i]} dates={@version_dates} />
                     </span>
                     <span aria-hidden="true" class="text-floor-muted">{toggle(open?(@open, i))}</span>
                   </.link>
+                  <.origin_panel
+                    :if={@history && @history.index == i}
+                    index={i}
+                    origin={@history.origin}
+                    steps={@history.steps}
+                    involvement={@history.involvement}
+                    comparison={@history.comparison}
+                  >
+                    <:explanation>
+                      <.ai_box
+                        :if={@change_summary}
+                        id={"change-summary-#{i}"}
+                        title="In plain English: what this change does"
+                        source={
+                          if @history.origin.status == :added,
+                            do: "the section's text below",
+                            else: "the two versions below"
+                        }
+                        state={elem(@change_summary, 1)}
+                        prompt_url={@repo_url <> Claude.prompt_path(:change)}
+                        report={report(assigns, :change, elem(@change_summary, 0))}
+                      />
+                    </:explanation>
+                  </.origin_panel>
                   <.section_summary
                     :if={open?(@open, i) and Map.has_key?(@summaries, i)}
                     index={i}

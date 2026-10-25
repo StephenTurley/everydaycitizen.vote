@@ -19,7 +19,7 @@ defmodule EverydayCitizen.Jobs.SummarizeSubject do
   alias EverydayCitizen.Summaries
   alias EverydayCitizen.Summaries.{Inputs, Writer}
 
-  @kinds %{"bill" => :bill, "rep_week" => :rep_week}
+  @kinds %{"bill" => :bill, "rep_week" => :rep_week, "change" => :change}
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"kind" => kind, "subject" => subject}} = job) do

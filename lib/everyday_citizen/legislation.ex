@@ -206,4 +206,61 @@ defmodule EverydayCitizen.Legislation do
     |> Repo.all()
     |> Map.new(&{&1.bill_id, &1})
   end
+
+  @doc "A bill's committee steps, oldest first, with each committee preloaded when stored."
+  @spec committee_activities(integer()) :: [EverydayCitizen.Legislation.BillCommitteeActivity.t()]
+  def committee_activities(bill_id) do
+    from(a in EverydayCitizen.Legislation.BillCommitteeActivity,
+      where: a.bill_id == ^bill_id,
+      order_by: [asc_nulls_last: a.date, asc: a.id],
+      preload: :body
+    )
+    |> Repo.all()
+  end
+
+  @doc "The external ids of a bill's related measures of one kind (`procedural` or `related`)."
+  @spec related_refs(integer(), String.t()) :: [String.t()]
+  def related_refs(bill_id, kind) do
+    from(r in EverydayCitizen.Legislation.BillRelation,
+      where: r.bill_id == ^bill_id and r.kind == ^kind,
+      select: r.related_ref
+    )
+    |> Repo.all()
+  end
+
+  @doc "A bill's amendments, by latest action date."
+  @spec amendments(integer()) :: [EverydayCitizen.Legislation.BillAmendment.t()]
+  def amendments(bill_id) do
+    from(a in EverydayCitizen.Legislation.BillAmendment,
+      where: a.bill_id == ^bill_id,
+      order_by: [asc_nulls_last: a.latest_action_date, asc: a.id]
+    )
+    |> Repo.all()
+  end
+
+  @doc "External ids of the jurisdiction's bills with two or more text versions."
+  @spec multi_version_bill_ids(String.t()) :: [String.t()]
+  def multi_version_bill_ids(jurisdiction_key) do
+    from(b in Bill,
+      join: j in assoc(b, :jurisdiction),
+      join: v in BillVersion,
+      on: v.bill_id == b.id,
+      where: j.key == ^jurisdiction_key,
+      group_by: b.external_id,
+      having: count(v.id) >= 2,
+      select: b.external_id
+    )
+    |> Repo.all()
+  end
+
+  @doc "External ids of stored amendments that already have a description."
+  @spec described_amendment_ids() :: MapSet.t(String.t())
+  def described_amendment_ids do
+    from(a in EverydayCitizen.Legislation.BillAmendment,
+      where: not is_nil(a.description) and a.description != "",
+      select: a.external_id
+    )
+    |> Repo.all()
+    |> MapSet.new()
+  end
 end
