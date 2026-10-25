@@ -145,6 +145,7 @@ defmodule EverydayCitizenWeb.FloorComponents do
   attr :source, :string, required: true
   attr :state, :any, required: true
   attr :prompt_url, :string, required: true
+  attr :clamp, :boolean, default: false, doc: "on phones, cut the summary to two lines"
 
   attr :report, :map,
     default: nil,
@@ -169,12 +170,21 @@ defmodule EverydayCitizenWeb.FloorComponents do
       </p>
       <%= case @state do %>
         <% {:ok, text} -> %>
-          <div class="text-[15px] leading-relaxed text-floor-ink flex flex-col gap-2">
+          <%!-- clamped, the parts' boxes give way on phones so the two-line
+               clamp counts their lines --%>
+          <div class={[
+            "text-[15px] leading-relaxed text-floor-ink",
+            if(@clamp,
+              do: "max-lg:line-clamp-2 lg:flex lg:flex-col lg:gap-2",
+              else: "flex flex-col gap-2"
+            )
+          ]}>
             <div
               :for={{heading, parts} <- summary_sections(text)}
               data-part={heading == "For example" && "example"}
               class={[
                 "flex flex-col gap-1.5",
+                @clamp && "max-lg:contents",
                 heading == "For example" &&
                   "mt-1 px-3 py-2.5 rounded-lg border border-dashed border-floor-line bg-floor-card"
               ]}

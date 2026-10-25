@@ -12,6 +12,7 @@ defmodule EverydayCitizenWeb.BillLive do
 
   alias EverydayCitizen.{BillHistory, BillPage, Follows, RateLimit, Reps, Summaries}
   alias EverydayCitizen.Summaries.{Claude, Inputs}
+  alias EverydayCitizenWeb.AiBillSummary
 
   import EverydayCitizenWeb.BillHistoryComponents
 
@@ -90,7 +91,7 @@ defmodule EverydayCitizenWeb.BillLive do
   def handle_info({:ai_summary, "change", subject, result}, socket) do
     case socket.assigns.change_summary do
       {^subject, _state} ->
-        {:noreply, assign(socket, :change_summary, {subject, ai_state(result)})}
+        {:noreply, assign(socket, :change_summary, {subject, AiBillSummary.result_state(result)})}
 
       _other ->
         {:noreply, socket}
@@ -99,8 +100,11 @@ defmodule EverydayCitizenWeb.BillLive do
 
   def handle_info({:ai_summary, "bill", subject, result}, socket) do
     case socket.assigns.bill_summary do
-      {^subject, _state} -> {:noreply, assign(socket, :bill_summary, {subject, ai_state(result)})}
-      _other -> {:noreply, socket}
+      {^subject, _state} ->
+        {:noreply, assign(socket, :bill_summary, {subject, AiBillSummary.result_state(result)})}
+
+      _other ->
+        {:noreply, socket}
     end
   end
 
@@ -239,50 +243,15 @@ defmodule EverydayCitizenWeb.BillLive do
              ) ==
                :limited,
              do: :limited,
-             else: requested(Summaries.request_ai(:change, subject, input))
+             else: AiBillSummary.requested(Summaries.request_ai(:change, subject, input))
 
         assign(socket, change_summary: {subject, state}, change_topic: topic)
     end
   end
 
-  # The bill's executive summary: cached, or asked for once the page is live
-  # (listening first, so one finished in between is not missed).
-  defp load_bill_summary(socket) do
-    with true <- Claude.enabled?(),
-         {subject, input} <- Inputs.bill(socket.assigns.page.bill) do
-      case bill_summary_state(socket, subject, input) do
-        :none -> assign(socket, :bill_summary, nil)
-        state -> assign(socket, :bill_summary, {subject, state})
-      end
-    else
-      _ -> assign(socket, :bill_summary, nil)
-    end
-  end
-
-  defp bill_summary_state(socket, subject, input) do
-    cond do
-      summary = Summaries.get_ai(:bill, subject, input) ->
-        {:ok, summary.summary}
-
-      socket.assigns.crawler ->
-        :none
-
-      not connected?(socket) ->
-        :loading
-
-      true ->
-        Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, Summaries.ai_topic(:bill, subject))
-
-        if RateLimit.hit({:summaries, socket.assigns.remote_ip}, Summaries.visitor_limit(), @hour) ==
-             :limited,
-           do: :limited,
-           else: requested(Summaries.request_ai(:bill, subject, input))
-    end
-  end
-
-  defp ai_state({:ok, text}), do: {:ok, text}
-  defp ai_state({:error, :paused}), do: :paused
-  defp ai_state({:error, _}), do: :unavailable
+  # The bill's executive summary (see `AiBillSummary`).
+  defp load_bill_summary(socket),
+    do: assign(socket, :bill_summary, AiBillSummary.load(socket, socket.assigns.page.bill))
 
   # The summaries to show for the open section(s). Pages stop listening for the
   # sections they showed before (another version or section).
@@ -349,7 +318,7 @@ defmodule EverydayCitizenWeb.BillLive do
         :limited
 
       true ->
-        requested(Summaries.request(version_id, i, text))
+        AiBillSummary.requested(Summaries.request(version_id, i, text))
     end
   end
 
@@ -359,10 +328,6 @@ defmodule EverydayCitizenWeb.BillLive do
     Phoenix.PubSub.unsubscribe(EverydayCitizen.PubSub, topic)
     socket
   end
-
-  defp requested({:cached, summary}), do: {:ok, summary.summary}
-  defp requested(:queued), do: :loading
-  defp requested(other), do: other
 
   @impl true
   def handle_event("toggle_follow", _params, socket) do

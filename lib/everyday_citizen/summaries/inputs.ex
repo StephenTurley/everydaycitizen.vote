@@ -28,6 +28,24 @@ defmodule EverydayCitizen.Summaries.Inputs do
     end
   end
 
+  @doc """
+  Each bill's subject as `bill/1` names it, keyed by bill id, in one query that
+  reads only the version codes, never the text (bills without text are left out).
+  """
+  @spec bill_subjects([integer()]) :: %{integer() => String.t()}
+  def bill_subjects([]), do: %{}
+
+  def bill_subjects(bill_ids) do
+    Repo.all(
+      from v in BillVersion,
+        where: v.bill_id in ^bill_ids and not is_nil(v.plain_text) and v.plain_text != "",
+        distinct: v.bill_id,
+        order_by: [asc: v.bill_id, desc_nulls_last: v.date, desc: v.id],
+        select: {v.bill_id, v.code}
+    )
+    |> Map.new(fn {bill_id, code} -> {bill_id, "bill:#{bill_id}:#{code}"} end)
+  end
+
   @doc "The input for a subject, rebuilt from what is stored now (nil if none)."
   @spec input(String.t(), String.t()) :: String.t() | nil
   def input("bill", "bill:" <> rest) do

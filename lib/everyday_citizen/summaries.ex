@@ -200,6 +200,24 @@ defmodule EverydayCitizen.Summaries do
   end
 
   @doc """
+  The cached summaries of these subjects under the current prompt version,
+  keyed by subject, in one query and without checking them against their text
+  (for subjects that name a version whose text does not change).
+  """
+  @spec cached_ai(atom(), [String.t()]) :: %{String.t() => AiSummary.t()}
+  def cached_ai(_kind, []), do: %{}
+
+  def cached_ai(kind, subjects) do
+    Repo.all(
+      from s in AiSummary,
+        where:
+          s.kind == ^to_string(kind) and s.subject in ^subjects and
+            s.prompt_version == ^prompt_version(kind)
+    )
+    |> Map.new(&{&1.subject, &1})
+  end
+
+  @doc """
   A bill or week summary someone is viewing: the cached one, or one queued job
   per subject that writes it and broadcasts on `ai_topic/2`. Not queued without
   credentials or once today's budget is spent.

@@ -61,4 +61,20 @@ defmodule EverydayCitizenWeb.AiBoxTest do
     for heading <- ["## Who this affects", "## Words to know", "## For example"],
         do: assert(prompt =~ heading)
   end
+
+  test "clamped, the summary is cut to two lines on phones only" do
+    clamped =
+      render_component(&FloorComponents.ai_box/1,
+        id: "law-summary",
+        title: "In plain English",
+        source: "the bill",
+        state: {:ok, "One.\n\nTwo."},
+        prompt_url: "https://example.org/prompt",
+        clamp: true
+      )
+
+    assert clamped =~ "max-lg:line-clamp-2"
+    assert clamped =~ "max-lg:contents"
+    refute box("One.") =~ "line-clamp"
+  end
 end
