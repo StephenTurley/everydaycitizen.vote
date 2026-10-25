@@ -16,6 +16,45 @@ defmodule EverydayCitizen.Search.QueryTest do
         do: assert(Query.classify(q) == :address, q)
   end
 
+  test "unusual spaces count as spaces, so an address with them is still an address" do
+    for q <- [
+          "123\u00A0Main\u00A0St",
+          "123\u00A0N\u00A0Main",
+          "50309\u00A0",
+          "\u00A050309",
+          "50309\u200B",
+          "\uFEFF50309",
+          "123\u2003Main\u2003St"
+        ],
+        do: assert(Query.classify(q) == :address, inspect(q))
+  end
+
+  test "a ZIP code anywhere in the query makes it an address" do
+    for q <- ["Des Moines IA 50309", "my zip 50309", "50309-1234 Des Moines"],
+        do: assert(Query.classify(q) == :address, q)
+  end
+
+  test "a PO box is an address" do
+    for q <- ["PO Box 12", "P.O. Box 12", "p o box 12", "po box 7"],
+        do: assert(Query.classify(q) == :address, q)
+  end
+
+  test "a five-digit bill number is a search, not a ZIP code" do
+    assert {:search, %{id_key: "hr10000"}} = Query.classify("hr10000")
+    assert {:search, %{id_key: "hr10000"}} = Query.classify("H.R. 10000")
+    assert {:search, %{id_key: "hres10000"}} = Query.classify("H. Res. 10000")
+  end
+
+  test "numbers beside ordinary words stay searches" do
+    for q <- ["1 way forward", "22 ways", "12 N", "22 states", "H.R. 22", "hr22", "2025 tax"],
+        do: assert({:search, _} = Query.classify(q), q)
+  end
+
+  test "the search text has its spaces normalized" do
+    assert {:search, %{text: "daylight saving time"}} =
+             Query.classify("\u00A0daylight\u200B\u00A0saving\u2003time\uFEFF")
+  end
+
   test "bill numbers, names, phrases and bare numbers are searches" do
     assert {:search, %{id_key: "hr22"}} = Query.classify("H.R. 22")
     assert {:search, %{id_key: "hr22"}} = Query.classify("hr22")

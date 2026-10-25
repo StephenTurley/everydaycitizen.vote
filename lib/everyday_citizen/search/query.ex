@@ -22,16 +22,31 @@ defmodule EverydayCitizen.Search.Query do
                    pl place hwy highway pkwy parkway cir circle ter terrace trl trail pike
                    apt unit suite ste box route rte)
 
-  @zip ~r/^\d{5}(-\d{4})?$/
-  @street_start ~r/^\d{1,6}[a-z]?\s+\S/i
-  @street_word ~r/\b(?:#{Enum.join(@street_words, "|")})\b/i
-  @directional ~r/^\d{1,6}\s+(n|s|e|w|north|south|east|west)\s/i
+  # every kind of Unicode space, the zero-width ones included
+  @spaces ~r/[\s\p{Z}\x{200B}\x{FEFF}]+/u
+  @zip ~r/\b\d{5}(-\d{4})?\b/u
+  @po_box ~r/\bp\.?\s?o\.?\s+box\b/iu
+  @street_start ~r/^\d{1,6}[a-z]?\s\S/iu
+  # a street word after the street's name ("123 Main St"), not right after the
+  # number ("1 way forward")
+  @street_word ~r/^\d{1,6}[a-z]?\s.*\S\s(?:#{Enum.join(@street_words, "|")})\b/iu
+  # a numbered road or box ("77 Route 9")
+  @numbered_road ~r/\b(?:#{Enum.join(@street_words, "|")})\s\d/iu
+  # the whole query is one number with its letters: "hr10000", "H.R. 10000",
+  # "H. Res. 10000"; words without periods ("my zip 50309") are not
+  @bill_number ~r/^(?:[a-z]+\.\s?)*[a-z]+\.?\s?\d{1,5}$/iu
+  @directional ~r/^\d{1,6}\s(n|s|e|w|north|south|east|west)\s/iu
 
   @doc "Classifies a raw query."
   def classify(nil), do: :empty
 
   def classify(raw) when is_binary(raw) do
-    text = raw |> String.split() |> Enum.join(" ") |> String.slice(0, @max_length)
+    text =
+      raw
+      |> String.replace(@spaces, " ")
+      |> String.trim()
+      |> String.slice(0, @max_length)
+      |> String.trim_trailing()
 
     cond do
       String.length(text) < 2 -> :empty
@@ -50,8 +65,8 @@ defmodule EverydayCitizen.Search.Query do
     |> String.downcase()
     |> String.replace(~r/[^\p{L}\p{N}]+/u, " ")
     |> String.trim()
-    |> String.replace(~r/ of [0-9]{4}$/, "")
-    |> String.replace(~r/ act$/, "")
+    |> String.replace(~r/ of [0-9]{4}$/u, "")
+    |> String.replace(~r/ act$/u, "")
     |> String.trim()
   end
 
@@ -60,18 +75,22 @@ defmodule EverydayCitizen.Search.Query do
       text: text,
       key: name_key(text),
       id_key: id_key(text),
-      number: if(text =~ ~r/^\d{1,5}$/, do: text)
+      number: if(text =~ ~r/^[0-9]{1,5}$/u, do: text)
     }
   end
 
   defp id_key(text) do
     squeezed = text |> String.downcase() |> String.replace(~r/[^\p{L}\p{N}]+/u, "")
-    if squeezed =~ ~r/^[a-z]{1,8}\d{1,5}$/, do: squeezed
+    if squeezed =~ ~r/^[a-z]{1,8}[0-9]{1,5}$/u, do: squeezed
   end
 
+  # A ZIP code anywhere makes the query an address, unless the whole query is
+  # a bill number ("H.R. 10000").
   defp address?(text) do
-    text =~ @zip or
-      (text =~ @street_start and (String.contains?(text, ",") or text =~ @street_word)) or
-      text =~ @directional
+    (text =~ @zip and not (text =~ @bill_number and id_key(text) != nil)) or
+      text =~ @po_box or
+      text =~ @directional or
+      (text =~ @street_start and
+         (String.contains?(text, ",") or text =~ @street_word or text =~ @numbered_road))
   end
 end
