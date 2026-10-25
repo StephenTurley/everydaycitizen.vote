@@ -543,6 +543,22 @@ defmodule EverydayCitizenWeb.BillLiveTest do
       assert EverydayCitizen.Repo.aggregate(EverydayCitizen.Feedback.Report, :count) == 5
     end
 
+    test "the plain-English summary comes before the official summary on every screen", %{
+      conn: conn,
+      bill: bill
+    } do
+      {subject, input} = EverydayCitizen.Summaries.Inputs.bill(bill)
+
+      {:ok, _} =
+        EverydayCitizen.Summaries.put_ai(:bill, subject, input, %{summary: "S.", model: "m"})
+
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+      # phones lay sections out by order-*; lg by lg:order-*
+      assert has_element?(view, "section.order-3.lg\\:order-1 #bill-summary")
+      assert has_element?(view, "section[aria-label='Official summary'].order-4.lg\\:order-3")
+      assert has_element?(view, "section[aria-label='Text of the bill'].order-5.lg\\:order-2")
+    end
+
     test "without one, the page asks for it and shows it when it lands", %{conn: conn, bill: bill} do
       {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
       assert has_element?(view, "#bill-summary", "Writing a plain-English summary")

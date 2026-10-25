@@ -646,7 +646,7 @@ defmodule EverydayCitizenWeb.BillLive do
             </.card>
           </section>
 
-          <section aria-label="Votes on this bill" class="order-5 pb-5 lg:pb-0 flex flex-col gap-2.5">
+          <section aria-label="Votes on this bill" class="order-6 pb-5 lg:pb-0 flex flex-col gap-2.5">
             <h2 class="m-0 text-[18px] lg:text-[17px] font-bold">Votes</h2>
             <p :if={@page.votes == []} class="m-0 text-[15px] text-floor-muted">
               No roll-call votes yet.
@@ -661,7 +661,7 @@ defmodule EverydayCitizenWeb.BillLive do
             </.card>
           </section>
 
-          <footer class="order-6 pb-4 flex flex-col gap-2">
+          <footer class="order-7 pb-4 flex flex-col gap-2">
             <a
               href={@page.bill.web_url || @page.bill.source.url}
               class="self-start text-[14px] font-semibold text-floor-accent py-1"
@@ -671,7 +671,23 @@ defmodule EverydayCitizenWeb.BillLive do
         </aside>
 
         <div class="contents lg:flex lg:flex-col lg:gap-6 lg:col-start-1 xl:col-start-2 lg:row-start-1 lg:min-w-0">
-          <section aria-label="Official summary" class="order-3 lg:order-2 pb-5 flex flex-col gap-2.5">
+          <section
+            :if={match?({_, _}, @bill_summary)}
+            aria-label="In plain English"
+            class="order-3 lg:order-1 pb-5 lg:pb-0"
+          >
+            <.ai_box
+              id="bill-summary"
+              class="bg-floor-card border border-floor-line"
+              title="In plain English: what this bill does"
+              source={bill_summary_source(elem(@bill_summary, 0), @version, @page.versions)}
+              state={elem(@bill_summary, 1)}
+              prompt_url={@repo_url <> Claude.prompt_path(:bill)}
+              report={report(assigns, :bill, elem(@bill_summary, 0))}
+            />
+          </section>
+
+          <section aria-label="Official summary" class="order-4 lg:order-3 pb-5 flex flex-col gap-2.5">
             <h2 class="m-0 text-[18px] lg:text-[22px] font-bold">Official summary</h2>
             <p :if={!@page.summary} class="m-0 text-[15px] text-floor-muted">
               No official summary yet.
@@ -686,19 +702,8 @@ defmodule EverydayCitizenWeb.BillLive do
 
           <section
             aria-label="Text of the bill"
-            class="order-4 lg:order-1 pb-5 flex flex-col gap-3 lg:gap-4"
+            class="order-5 lg:order-2 pb-5 flex flex-col gap-3 lg:gap-4"
           >
-            <%= if match?({_, _}, @bill_summary) do %>
-              <.ai_box
-                id="bill-summary"
-                class="bg-floor-card border border-floor-line"
-                title="In plain English: what this bill does"
-                source={bill_summary_source(elem(@bill_summary, 0), @version, @page.versions)}
-                state={elem(@bill_summary, 1)}
-                prompt_url={@repo_url <> Claude.prompt_path(:bill)}
-                report={report(assigns, :bill, elem(@bill_summary, 0))}
-              />
-            <% end %>
             <h2 class="m-0 text-[18px] lg:text-[22px] font-bold">Text of the bill</h2>
             <p :if={@page.versions == []} class="m-0 text-[15px] text-floor-muted">
               No text published yet.
