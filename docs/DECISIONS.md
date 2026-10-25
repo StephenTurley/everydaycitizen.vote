@@ -252,3 +252,6 @@ Found in the final review. Any query starting with a street number that contains
 
 ## 2026-10-25 — Home page: summaries matched by subject, a partial index for new laws
 The home page shows a law's cached plain-English summary by kind, subject (which names the bill version) and prompt version, without reading or re-hashing the bill's text, and does no summary work before the live connection; a partial index on `bill_actions (bill_id, date) WHERE classification = 'became_law'` serves the new-laws list.
+
+## 2026-10-25 — The container starts as root only to open Fly's Machine API socket
+Federated sign-in to Claude failed with EACCES: the app runs as `nobody`, and Fly makes `/.fly/api` (the only way a machine gets its OIDC token without a stored secret) root-only. Fly's docs say nothing on non-root access; a community thread suggests giving the app's group write access. The image's entrypoint (`rel/overlays/bin/as_app`) does that and then runs the command as `nobody` via `setpriv`, so the app itself never runs as root. Chosen by the owner over storing a Fly API token or keeping the 30-day Anthropic key.

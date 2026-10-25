@@ -108,11 +108,9 @@ ENV MIX_ENV="prod"
 # Only copy the final release from the build stage
 COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/everyday_citizen ./
 
-USER nobody
-
-# If using an environment that doesn't automatically reap zombie processes, it is
-# advised to add an init process such as tini via `apt-get install`
-# above and adding an entrypoint. See https://github.com/krallin/tini for details
-# ENTRYPOINT ["/tini", "--"]
+# The container starts as root; `as_app` opens Fly's Machine API socket to the
+# app's group (for Claude sign-in by OIDC) and then runs the command as nobody.
+# It wraps the release command (`/app/bin/migrate`) too, which replaces CMD.
+ENTRYPOINT ["/app/bin/as_app"]
 
 CMD ["/app/bin/server"]

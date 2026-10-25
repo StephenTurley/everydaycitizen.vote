@@ -1,0 +1,14 @@
+#!/bin/sh
+# Starts the given command as `nobody`, the app's user. The container starts as
+# root only so that, on Fly, the app's group can write to the Machine API
+# socket: the app asks it for an OIDC identity token to sign in to Claude
+# (Workload Identity Federation), and Fly makes the socket root-only. Nothing
+# else is done as root. Without the socket (locally), it only drops to nobody.
+set -eu
+
+if [ -S /.fly/api ]; then
+  chgrp nogroup /.fly/api
+  chmod g+w /.fly/api
+fi
+
+exec setpriv --reuid=nobody --regid=nogroup --clear-groups -- "$@"
