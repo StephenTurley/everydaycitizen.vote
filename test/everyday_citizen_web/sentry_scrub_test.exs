@@ -87,6 +87,45 @@ defmodule EverydayCitizenWeb.SentryScrubTest do
       assert SentryScrub.before_send(event) == event
     end
 
+    test "anything but an event passes through unchanged" do
+      transaction = %Sentry.Transaction{
+        event_id: "e",
+        span_id: "s",
+        start_timestamp: 1,
+        timestamp: 2,
+        transaction: "/search?q=50309"
+      }
+
+      assert SentryScrub.before_send(transaction) == transaction
+      assert SentryScrub.before_send(:other) == :other
+    end
+
+    test "odd terms in extras never stop the event, and risky extras still go" do
+      event = %{
+        crash_event()
+        | extra:
+            Map.merge(crash_event().extra, %{
+              "improper" => [1 | "https://x.test/a?q=1"],
+              "tuple" => {:ok, "https://x.test/b?q=2"},
+              "pid" => self(),
+              # invalid UTF-8: the URL regex cannot read it, so it is dropped
+              "unreadable" => <<"https://x.test/c?q=3", 0xFF>>
+            })
+      }
+
+      scrubbed = SentryScrub.before_send(event)
+      assert %Sentry.Event{} = scrubbed
+      refute Map.has_key?(scrubbed.extra, :genserver_state)
+      refute Map.has_key?(scrubbed.extra, :last_message)
+      refute inspect(scrubbed) =~ "q=1"
+      refute inspect(scrubbed) =~ "q=2"
+      refute inspect(scrubbed) =~ "Main"
+      assert scrubbed.extra["pid"] == self()
+      refute Map.has_key?(scrubbed.extra, "unreadable")
+      assert scrubbed.extra["note"] == "kept as is"
+      assert scrubbed.request.url == "https://everydaycitizen.vote/search"
+    end
+
     test "is the before_send callback in every environment" do
       assert Application.get_env(:sentry, :before_send) == {SentryScrub, :before_send}
     end

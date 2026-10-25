@@ -19,30 +19,58 @@ defmodule EverydayCitizenWeb.SentryScrub do
   @doc """
   Sentry's `before_send` callback: drops a crashed process's state and last
   message from the event's extras, and the query string from every URL in its
-  extras and request. Everything else is sent as it came.
+  extras and request. Everything else is sent as it came, and anything that
+  is not an event (a transaction) passes through. A value that cannot be
+  scrubbed is dropped rather than sent, and the event still goes.
   """
-  @spec before_send(Sentry.Event.t()) :: Sentry.Event.t()
+  @spec before_send(term()) :: term()
   def before_send(%Sentry.Event{} = event) do
-    %{
-      event
-      | extra: event.extra |> Map.drop(@process_extras) |> strip_queries(),
-        request: scrub_request(event.request)
-    }
+    extra =
+      event.extra
+      |> Map.drop(@process_extras)
+      |> Enum.flat_map(fn {key, value} ->
+        case safely_strip(value) do
+          {:ok, scrubbed} -> [{key, scrubbed}]
+          :error -> []
+        end
+      end)
+      |> Map.new()
+
+    %{event | extra: extra, request: scrub_request(event.request)}
   end
+
+  def before_send(other), do: other
 
   defp scrub_request(nil), do: nil
 
   defp scrub_request(request) do
     %{
       request
-      | url: strip_queries(request.url),
+      | url: scrubbed_or_nil(request.url),
         query_string: nil,
-        headers: strip_queries(request.headers)
+        headers: scrubbed_or_nil(request.headers)
     }
   end
 
+  defp scrubbed_or_nil(value) do
+    case safely_strip(value) do
+      {:ok, scrubbed} -> scrubbed
+      :error -> nil
+    end
+  end
+
+  defp safely_strip(value) do
+    {:ok, strip_queries(value)}
+  rescue
+    _ -> :error
+  end
+
   defp strip_queries(value) when is_binary(value), do: Regex.replace(@url_query, value, "\\1")
-  defp strip_queries(value) when is_list(value), do: Enum.map(value, &strip_queries/1)
+  # walks improper lists too: the tail of [a | b] may be a string
+  defp strip_queries([head | tail]), do: [strip_queries(head) | strip_queries(tail)]
+
+  defp strip_queries(value) when is_tuple(value),
+    do: value |> Tuple.to_list() |> strip_queries() |> List.to_tuple()
 
   defp strip_queries(value) when is_map(value) and not is_struct(value),
     do: Map.new(value, fn {k, v} -> {k, strip_queries(v)} end)

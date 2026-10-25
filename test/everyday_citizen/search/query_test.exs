@@ -30,12 +30,29 @@ defmodule EverydayCitizen.Search.QueryTest do
   end
 
   test "a ZIP code anywhere in the query makes it an address" do
-    for q <- ["Des Moines IA 50309", "my zip 50309", "50309-1234 Des Moines"],
+    for q <- [
+          "Des Moines IA 50309",
+          "my zip 50309",
+          "50309-1234 Des Moines",
+          "503091234",
+          "IA 503091234"
+        ],
         do: assert(Query.classify(q) == :address, q)
   end
 
   test "a PO box is an address" do
-    for q <- ["PO Box 12", "P.O. Box 12", "p o box 12", "po box 7"],
+    for q <- ["PO Box 12", "P.O. Box 12", "p o box 12", "po box 7", "P.O.Box 12", "pobox 12"],
+        do: assert(Query.classify(q) == :address, q)
+  end
+
+  test "a street number with a street word anywhere after it is an address" do
+    for q <- [
+          "10 Avenue of the Americas",
+          "123 Avenue B",
+          "200 Ave C",
+          "1 Court Square",
+          "1 way forward"
+        ],
         do: assert(Query.classify(q) == :address, q)
   end
 
@@ -46,7 +63,7 @@ defmodule EverydayCitizen.Search.QueryTest do
   end
 
   test "numbers beside ordinary words stay searches" do
-    for q <- ["1 way forward", "22 ways", "12 N", "22 states", "H.R. 22", "hr22", "2025 tax"],
+    for q <- ["22 ways", "12 N", "22 states", "H.R. 22", "hr22", "2025 tax"],
         do: assert({:search, _} = Query.classify(q), q)
   end
 

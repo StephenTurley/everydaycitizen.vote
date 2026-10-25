@@ -24,14 +24,13 @@ defmodule EverydayCitizen.Search.Query do
 
   # every kind of Unicode space, the zero-width ones included
   @spaces ~r/[\s\p{Z}\x{200B}\x{FEFF}]+/u
-  @zip ~r/\b\d{5}(-\d{4})?\b/u
-  @po_box ~r/\bp\.?\s?o\.?\s+box\b/iu
+  # a ZIP code, ZIP+4, or ZIP+4 without its hyphen
+  @zip ~r/\b(?:\d{5}(-\d{4})?|\d{9})\b/u
+  @po_box ~r/\bp\.?\s*o\.?\s*box\b/iu
   @street_start ~r/^\d{1,6}[a-z]?\s\S/iu
-  # a street word after the street's name ("123 Main St"), not right after the
-  # number ("1 way forward")
-  @street_word ~r/^\d{1,6}[a-z]?\s.*\S\s(?:#{Enum.join(@street_words, "|")})\b/iu
-  # a numbered road or box ("77 Route 9")
-  @numbered_road ~r/\b(?:#{Enum.join(@street_words, "|")})\s\d/iu
+  # anywhere after the street number, so "1 way forward" counts too: the rule
+  # errs toward address
+  @street_word ~r/\b(?:#{Enum.join(@street_words, "|")})\b/iu
   # the whole query is one number with its letters: "hr10000", "H.R. 10000",
   # "H. Res. 10000"; words without periods ("my zip 50309") are not
   @bill_number ~r/^(?:[a-z]+\.\s?)*[a-z]+\.?\s?\d{1,5}$/iu
@@ -91,6 +90,6 @@ defmodule EverydayCitizen.Search.Query do
       text =~ @po_box or
       text =~ @directional or
       (text =~ @street_start and
-         (String.contains?(text, ",") or text =~ @street_word or text =~ @numbered_road))
+         (String.contains?(text, ",") or text =~ @street_word))
   end
 end
