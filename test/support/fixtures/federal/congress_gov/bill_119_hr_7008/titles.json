@@ -1,0 +1,77 @@
+{
+    "pagination": {
+        "count": 7
+    },
+    "request": {
+        "billNumber": "7008",
+        "billType": "hr",
+        "billUrl": "https://api.congress.gov/v3/bill/119/hr/7008?format=json",
+        "congress": "119",
+        "contentType": "application/json",
+        "format": "json"
+    },
+    "titles": [
+        {
+            "billTextVersionCode": "PCS",
+            "billTextVersionName": "Placed on Calendar Senate",
+            "chamberCode": "S",
+            "chamberName": "Senate",
+            "title": "Stop Insider Trading Act",
+            "titleType": "Short Title(s) from PCS (Placed on Senate Calendar) bill text",
+            "titleTypeCode": 152,
+            "updateDate": "2026-08-08T03:23:23Z"
+        },
+        {
+            "billTextVersionCode": "EH",
+            "billTextVersionName": "Engrossed in House",
+            "chamberCode": "H",
+            "chamberName": "House",
+            "title": "Stop Insider Trading Act",
+            "titleType": "Short Title(s) as Passed House",
+            "titleTypeCode": 104,
+            "updateDate": "2026-07-24T03:38:21Z"
+        },
+        {
+            "billTextVersionCode": "EH",
+            "billTextVersionName": "Engrossed in House",
+            "chamberCode": "H",
+            "chamberName": "House",
+            "title": "To amend chapter 131 of title 5 to require certain restrictions on stocks for Members of Congress and their spouses and dependents, and for other purposes.",
+            "titleType": "Official Title from EH (Engrossed in House) bill text",
+            "titleTypeCode": 259,
+            "updateDate": "2026-07-24T03:38:21Z"
+        },
+        {
+            "billTextVersionCode": "RH",
+            "billTextVersionName": "Reported in House",
+            "chamberCode": "H",
+            "chamberName": "House",
+            "title": "Stop Insider Trading Act",
+            "titleType": "Short Title(s) as Reported to House",
+            "titleTypeCode": 102,
+            "updateDate": "2026-02-04T04:23:15Z"
+        },
+        {
+            "billTextVersionCode": "IH",
+            "billTextVersionName": "Introduced in House",
+            "title": "Stop Insider Trading Act",
+            "titleType": "Short Title(s) as Introduced",
+            "titleTypeCode": 101,
+            "updateDate": "2026-01-13T09:23:43Z"
+        },
+        {
+            "title": "Stop Insider Trading Act",
+            "titleType": "Display Title",
+            "titleTypeCode": 45,
+            "updateDate": "2026-01-13T09:23:43Z"
+        },
+        {
+            "billTextVersionCode": "IH",
+            "billTextVersionName": "Introduced in House",
+            "title": "To amend chapter 131 of title 5 to require certain restrictions on stocks for Members of Congress and their spouses and dependents, and for other purposes.",
+            "titleType": "Official Title as Introduced",
+            "titleTypeCode": 6,
+            "updateDate": "2026-01-13T09:18:34Z"
+        }
+    ]
+}
