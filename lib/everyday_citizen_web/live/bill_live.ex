@@ -417,13 +417,23 @@ defmodule EverydayCitizenWeb.BillLive do
   defp option_label("absent"), do: "Not voting"
 
   attr :person, :map, required: true
-  attr :class, :string, default: "text-floor-ink"
+  attr :class, :string, default: nil
 
   defp person_link(assigns) do
     ~H"""
-    <.link navigate={~p"/people/#{@person.id}"} class={[@class, "hover:underline"]}>
+    <.link navigate={~p"/people/#{@person.id}"} class={["text-floor-accent hover:underline", @class]}>
       {@person.name}
     </.link>
+    """
+  end
+
+  # ▸ when a <details> is closed, ▾ when open; its <details> carries `group`.
+  defp disclosure_mark(assigns) do
+    ~H"""
+    <span aria-hidden="true" class="inline-block w-4 group-open:hidden">▸</span><span
+      aria-hidden="true"
+      class="hidden w-4 group-open:inline-block"
+    >▾</span>
     """
   end
 
@@ -542,18 +552,21 @@ defmodule EverydayCitizenWeb.BillLive do
             class="flex flex-col gap-1 text-[14px] lg:text-[15px] text-floor-muted"
           >
             <p class="m-0">
-              Sponsor: <.person_link person={@page.sponsor} class="text-floor-ink-2" />
+              Sponsor: <.person_link person={@page.sponsor} />
               <span :if={@page.cosponsors == []}>· {cosponsors(@page.cosponsor_count)}</span>
             </p>
             <details
               :if={@page.cosponsors != []}
               id="cosponsors"
+              class="group"
               phx-mounted={JS.ignore_attributes(["open"])}
             >
-              <summary class="cursor-pointer py-1">{cosponsors(@page.cosponsor_count)}</summary>
+              <summary class="list-none cursor-pointer py-1 text-floor-accent font-medium [&::-webkit-details-marker]:hidden">
+                <.disclosure_mark />{cosponsors(@page.cosponsor_count)}
+              </summary>
               <ul class="m-0 mt-1 p-0 list-none flex flex-col gap-1">
                 <li :for={person <- @page.cosponsors}>
-                  <.person_link person={person} class="text-floor-ink-2" />
+                  <.person_link person={person} />
                 </li>
               </ul>
             </details>
@@ -708,15 +721,15 @@ defmodule EverydayCitizenWeb.BillLive do
               <.term_note id={"term-#{vote.id}"} question={vote.question} />
               <details
                 id={"vote-positions-#{vote.id}"}
-                class="mt-1.5"
+                class="group mt-1.5"
                 phx-mounted={JS.ignore_attributes(["open"])}
               >
                 <summary
                   phx-click="positions"
                   phx-value-vote={vote.id}
-                  class="cursor-pointer py-1 text-[13px] font-semibold text-floor-accent"
+                  class="list-none cursor-pointer py-1 text-[13px] font-semibold text-floor-accent [&::-webkit-details-marker]:hidden"
                 >
-                  Who voted how
+                  <.disclosure_mark />Who voted how
                 </summary>
                 <div
                   :for={{option, people} <- Map.get(@positions, vote.id, [])}

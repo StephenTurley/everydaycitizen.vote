@@ -157,7 +157,7 @@ defmodule EverydayCitizenWeb.BillHistoryComponents do
           class="flex flex-col gap-1 text-[14px] text-floor-ink-2"
         >
           <span class="font-semibold text-floor-ink">
-            <.link navigate={~p"/people/#{rep.person.id}"} class="hover:underline">
+            <.link navigate={~p"/people/#{rep.person.id}"} class="text-floor-accent hover:underline">
               {rep.person.name}
             </.link>
           </span>

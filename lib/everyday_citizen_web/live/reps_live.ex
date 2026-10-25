@@ -100,7 +100,7 @@ defmodule EverydayCitizenWeb.RepsLive do
               <div class="flex flex-col gap-1">
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <h1 class="m-0 text-[24px] lg:text-[32px] leading-tight font-bold tracking-tight">
-                    <.link navigate={~p"/people/#{@rep.person.id}"} class="text-floor-ink">
+                    <.link navigate={~p"/people/#{@rep.person.id}"} class="text-floor-accent">
                       {@rep.person.name}
                     </.link>
                   </h1>
