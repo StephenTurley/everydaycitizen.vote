@@ -270,6 +270,13 @@ defmodule EverydayCitizen.SearchBillsTest do
     assert Search.text_searchable?(search("daylight time"))
   end
 
+  test "text_searchable? is false for a query of only excluded words" do
+    refute Search.text_searchable?(search("-tax"))
+    refute Search.text_searchable?(search("a<->b"))
+    refute Search.text_searchable?(search("-tax -credit"))
+    assert Search.text_searchable?(search("tax -credit"))
+  end
+
   describe "bills_by_text/3" do
     setup do
       a = bill!("119-hr-100", "H.R. 100", "Sunshine Protection Act")
@@ -356,6 +363,32 @@ defmodule EverydayCitizen.SearchBillsTest do
 
       assert %{results: [%{stage: :law, bill: %{external_id: "119-hr-499"}}, _], total: 2} =
                Search.bills_by_text(search("lighthouse"), [], 1, cap: 2)
+    end
+
+    test "a query of only excluded words runs no text search" do
+      # "-tax" alone would match every bill without the word: a scan of every text
+      for q <- ["-tax", "a<->b"],
+          do:
+            assert(
+              %{results: [], total: 0, more?: false} = Search.bills_by_text(search(q), [], 1)
+            )
+    end
+
+    test "a search that runs past its timeout finds nothing" do
+      # a long text, so the search takes longer than the 1 ms allowed
+      bill = bill!("119-hr-500", "H.R. 500", "Long Act")
+
+      version!(
+        bill,
+        "ih",
+        ~D[2026-01-03],
+        String.duplicate("Daylight saving time rules. ", 20_000)
+      )
+
+      assert %{results: [], total: 0, more?: false} =
+               Search.bills_by_text(search("daylight saving time"), [], 1, timeout_ms: 1)
+
+      assert %{total: 2} = Search.bills_by_text(search("daylight saving time"), [], 1)
     end
 
     test "a query of only stopwords finds nothing" do

@@ -242,15 +242,17 @@ defmodule EverydayCitizen.Search do
     end
   end
 
+  # The query's words with phrase operators made AND: a phrase check would
+  # rebuild the tsvector of every candidate's full text, which takes seconds on
+  # multi-MB bills.
+  @text_query "regexp_replace(websearch_to_tsquery('english', $1)::text, '<[0-9]+>|<->', '&', 'g')::tsquery"
+
   # The latest version of each matching bill, furthest along first, capped.
-  # Phrase operators become AND: a phrase check would rebuild the tsvector of
-  # every candidate's full text, which takes seconds on multi-MB bills.
   @text_hits """
   SELECT hit.bill_id, hit.id, #{@stage_rank} AS stage, b.introduced_on
   FROM bill_versions hit JOIN bills b ON b.id = hit.bill_id
   WHERE hit.plain_text IS NOT NULL
-    AND to_tsvector('english', hit.plain_text) @@
-        regexp_replace(websearch_to_tsquery('english', $1)::text, '<[0-9]+>|<->', '&', 'g')::tsquery
+    AND to_tsvector('english', hit.plain_text) @@ #{@text_query}
     AND NOT (hit.bill_id = ANY ($2))
     AND hit.id = (
       SELECT l.id FROM bill_versions l
@@ -305,16 +307,17 @@ defmodule EverydayCitizen.Search do
   @doc """
   Whether the query has any words text search can use: one made only of
   common words ("the of") or punctuation has none, so text search finds
-  nothing whatever the bills say.
+  nothing whatever the bills say. Nor does one made only of excluded words
+  ("-tax"): it matches nearly every bill and no index can narrow it, so it
+  would read every text.
   """
   @spec text_searchable?(Query.t()) :: boolean()
   def text_searchable?(%Query{text: text}), do: not empty_tsquery?(text)
 
+  # querytree is '' for no words and 'T' when nothing the index can use is left
   defp empty_tsquery?(text) do
-    %{rows: [[nodes]]} =
-      Repo.query!("SELECT numnode(websearch_to_tsquery('english', $1))", [text])
-
-    nodes == 0
+    %{rows: [[tree]]} = Repo.query!("SELECT querytree(#{@text_query})", [text])
+    tree in ["", "T"]
   end
 
   # the summary the bill page shows above the text, if one is cached
