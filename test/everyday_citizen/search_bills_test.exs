@@ -375,20 +375,32 @@ defmodule EverydayCitizen.SearchBillsTest do
     end
 
     test "a search that runs past its timeout finds nothing" do
-      # a long text, so the search takes longer than the 1 ms allowed
       bill = bill!("119-hr-500", "H.R. 500", "Long Act")
+      version!(bill, "ih", ~D[2026-01-03], "Daylight saving time rules.")
+      assert %{total: 2} = Search.bills_by_text(search("daylight saving time"), [], 1)
 
-      version!(
-        bill,
-        "ih",
-        ~D[2026-01-03],
-        String.duplicate("Daylight saving time rules. ", 20_000)
+      # thousands more matches, so ranking them takes longer than the 1 ms allowed
+      Repo.query!(
+        """
+        WITH copies AS (
+          SELECT n, nextval('bills_id_seq') AS id FROM generate_series(1, 3000) n
+        ), new_bills AS (
+          INSERT INTO bills
+          SELECT (jsonb_populate_record(b, jsonb_build_object(
+            'id', c.id, 'external_id', 'copy-' || c.n, 'identifier', 'H.R. ' || (1000 + c.n)))).*
+          FROM bills b, copies c WHERE b.id = $1
+          RETURNING id
+        )
+        INSERT INTO bill_versions
+        SELECT (jsonb_populate_record(v, jsonb_build_object(
+          'id', nextval('bill_versions_id_seq'), 'bill_id', nb.id))).*
+        FROM bill_versions v, new_bills nb WHERE v.bill_id = $1
+        """,
+        [bill.id]
       )
 
       assert %{results: [], total: 0, more?: false} =
                Search.bills_by_text(search("daylight saving time"), [], 1, timeout_ms: 1)
-
-      assert %{total: 2} = Search.bills_by_text(search("daylight saving time"), [], 1)
     end
 
     test "a query of only stopwords finds nothing" do
