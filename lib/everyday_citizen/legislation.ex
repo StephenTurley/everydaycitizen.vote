@@ -217,6 +217,30 @@ defmodule EverydayCitizen.Legislation do
     }
   end
 
+  @doc """
+  The bills that became law most recently: `limit` of them after skipping
+  `offset`, each with the date of its latest `became_law` action, newest first
+  (ties by newest bill).
+  """
+  @spec recent_laws(pos_integer(), non_neg_integer()) :: [%{bill: Bill.t(), date: Date.t()}]
+  def recent_laws(limit, offset) do
+    latest =
+      from a in BillAction,
+        where: a.classification == "became_law" and not is_nil(a.date),
+        group_by: a.bill_id,
+        select: %{bill_id: a.bill_id, date: max(a.date)}
+
+    from(b in Bill,
+      join: l in subquery(latest),
+      on: l.bill_id == b.id,
+      order_by: [desc: l.date, desc: b.id],
+      limit: ^limit,
+      offset: ^offset,
+      select: %{bill: b, date: l.date}
+    )
+    |> Repo.all()
+  end
+
   @doc "Each bill's latest action (highest position), keyed by bill id."
   @spec latest_actions([integer()]) :: %{integer() => BillAction.t()}
   def latest_actions([]), do: %{}

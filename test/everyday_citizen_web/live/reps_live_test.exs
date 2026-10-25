@@ -266,19 +266,17 @@ defmodule EverydayCitizenWeb.RepsLiveTest do
     assert html =~ "Nothing on the record for this week."
   end
 
-  test "home says what you will find and links to this week", %{conn: conn} do
+  test "home leads with the news and links to this week", %{conn: conn} do
     {:ok, view, html} = live(conn, ~p"/")
-
-    for heading <- ["How they voted", "What they introduced", "The text itself"],
-        do: assert(html =~ heading)
-
-    assert has_element?(view, ~s(a[href="/this-week"]), "See what's scheduled this week")
+    assert html =~ "New laws"
+    assert html =~ "Coming up for a vote"
+    assert has_element?(view, ~s(a[href="/this-week"]), "This week's schedule")
   end
 
   test "pages carry the site's name in the header and the title", %{conn: conn} do
     {:ok, view, html} = live(conn, ~p"/")
     assert has_element?(view, ~s(header a[href="/"]), "Everyday Citizen")
-    assert html =~ "Find your representatives · Everyday Citizen"
+    assert html =~ "New laws and your representatives · Everyday Citizen"
     refute html =~ "The Floor"
   end
 

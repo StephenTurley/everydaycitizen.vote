@@ -56,6 +56,33 @@ defmodule EverydayCitizen.Calendar do
     |> Enum.map(fn {date, events} -> %{date: date, events: events} end)
   end
 
+  @doc """
+  What is coming up on the floor from `now`: `items`, the first `limit` floor
+  events with bills linked (earliest first, with their body and bills), and
+  `next`, the earliest floor event with or without bills (nil if none).
+  """
+  @spec upcoming_floor(pos_integer(), DateTime.t()) :: %{
+          items: [Event.t()],
+          next: Event.t() | nil
+        }
+  def upcoming_floor(limit, now \\ DateTime.utc_now()) do
+    upcoming =
+      Event
+      |> where([e], e.classification == "floor" and e.start_at >= ^now)
+      |> order_by([e], asc: e.start_at, asc: e.id)
+
+    with_bills = from eb in EventBill, select: eb.event_id
+
+    items =
+      upcoming
+      |> where([e], e.id in subquery(with_bills))
+      |> limit(^limit)
+      |> preload([:body, event_bills: :bill])
+      |> Repo.all()
+
+    %{items: items, next: upcoming |> limit(1) |> Repo.one()}
+  end
+
   defp for_bills(query, nil), do: query
 
   defp for_bills(query, bills) do
