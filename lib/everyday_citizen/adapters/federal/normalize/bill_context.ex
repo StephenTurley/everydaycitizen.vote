@@ -13,7 +13,14 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.BillContext do
       from the detail fetched when `needs_detail?/1`), latest action and page.
   """
   alias EverydayCitizen.Adapters.Federal.BillId
-  alias EverydayCitizen.Ingest.Records.{BillAmendments, BillCommittees, BillRelations, SourceRef}
+
+  alias EverydayCitizen.Ingest.Records.{
+    BillAmendments,
+    BillCommittees,
+    BillRelations,
+    BillTitles,
+    SourceRef
+  }
 
   @site "https://www.congress.gov"
   @kinds %{"Referred To" => "referred", "Markup By" => "markup", "Reported By" => "reported"}
@@ -61,6 +68,40 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.BillContext do
       relations: Enum.uniq(relations),
       source: source
     }
+  end
+
+  @doc """
+  Titles (`/bill/.../titles`) by kind, checked in order: "for portions" is `part`,
+  "Popular" `popular`, "Short Title" `short`, "Official Title" `official`. Display
+  titles are dropped (the bill holds its own); duplicates are removed.
+  """
+  @spec titles([map()], String.t(), SourceRef.t()) :: BillTitles.t()
+  def titles(items, bill_external_id, source) do
+    titles =
+      for item <- items,
+          kind = title_kind(item["titleType"] || ""),
+          kind != nil,
+          title = item["title"],
+          is_binary(title) do
+        %{title: title, kind: kind}
+      end
+
+    %BillTitles{
+      jurisdiction: "federal",
+      bill_external_id: bill_external_id,
+      titles: Enum.uniq(titles),
+      source: source
+    }
+  end
+
+  defp title_kind(type) do
+    cond do
+      type =~ "for portions" -> "part"
+      type =~ "Popular" -> "popular"
+      type =~ "Short Title" -> "short"
+      type =~ "Official Title" -> "official"
+      true -> nil
+    end
   end
 
   @doc "Whether an amendment list item needs its detail: agreed to, with no description of its own."

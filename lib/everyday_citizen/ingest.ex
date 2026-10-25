@@ -19,6 +19,7 @@ defmodule EverydayCitizen.Ingest do
   def write(%Records.BillSummaries{} = r, run_id), do: Writer.Legislation.write(r, run_id)
   def write(%Records.BillCommittees{} = r, run_id), do: Writer.Legislation.write(r, run_id)
   def write(%Records.BillRelations{} = r, run_id), do: Writer.Legislation.write(r, run_id)
+  def write(%Records.BillTitles{} = r, run_id), do: Writer.Legislation.write(r, run_id)
   def write(%Records.BillAmendments{} = r, run_id), do: Writer.Legislation.write(r, run_id)
   def write(%Records.Sponsorships{} = r, run_id), do: Writer.Legislation.write(r, run_id)
   def write(%Records.BillVersion{} = r, run_id), do: Writer.Legislation.write(r, run_id)

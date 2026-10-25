@@ -26,6 +26,22 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.BillContextTest do
     assert %{bill_external_id: "119-s-4134", kind: "related"} in rels
   end
 
+  test "titles keeps official, short, popular and part titles, drops display ones, dedupes" do
+    items =
+      "test/support/fixtures/federal/congress_gov/bill_119_hr_1/titles.json"
+      |> File.read!()
+      |> Jason.decode!()
+      |> Map.fetch!("titles")
+
+    r = BillContext.titles(items, "119-hr-1", src())
+    assert %{title: "One Big Beautiful Bill Act", kind: "popular"} in r.titles
+    assert %{title: "One Big Beautiful Bill Act", kind: "short"} in r.titles
+    assert %{title: "FEHB Protection Act of 2025", kind: "part"} in r.titles
+    assert Enum.any?(r.titles, &(&1.kind == "official"))
+    assert r.titles == Enum.uniq(r.titles)
+    refute Enum.any?(r.titles, &(&1.kind not in ~w(official short popular part)))
+  end
+
   test "amendments keep their official description, latest action and page" do
     %BillAmendments{amendments: [amdt]} =
       BillContext.amendments(json("amendments")["amendments"], %{}, "119-hr-7008", src())

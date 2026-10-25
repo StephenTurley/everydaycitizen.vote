@@ -1,7 +1,7 @@
 defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBill do
   @moduledoc """
   Syncs one bill: detail + subjects, actions, sponsors/cosponsors, text-version
-  metadata, committee steps, related measures and amendments (with the detail of
+  metadata, committee steps, related measures, titles and amendments (with the detail of
   agreed amendments that lack a description), then enqueues text fetches for
   versions that have no text yet.
 
@@ -36,6 +36,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBill do
          {:ok, summaries} <- fetch_all(base <> "/summaries", "summaries"),
          {:ok, committees} <- fetch_all(base <> "/committees", "committees"),
          {:ok, relations} <- fetch_all(base <> "/relatedbills", "relatedBills"),
+         {:ok, titles} <- fetch_all(base <> "/titles", "titles"),
          {:ok, amendments} <- fetch_all(base <> "/amendments", "amendments"),
          details = amendment_details(elem(amendments, 0), "#{c}"),
          {:ok, id} <-
@@ -49,6 +50,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBill do
                summaries: summaries,
                committees: committees,
                relations: relations,
+               titles: titles,
                amendments: {amendments, details}
              },
              run_id
