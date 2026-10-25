@@ -673,6 +673,36 @@ defmodule EverydayCitizenWeb.BillLiveTest do
            )
   end
 
+  test "every folded part keeps its open state through LiveView patches", %{conn: conn} do
+    {:ok, _} =
+      Ingest.write(
+        %Records.BillSummaries{
+          jurisdiction: "federal",
+          bill_external_id: "119-s-5",
+          author: "Congressional Research Service",
+          summaries: [
+            %{
+              version_code: "is",
+              action_date: ~D[2026-01-06],
+              action_description: "Introduced",
+              html: "<p>This bill requires detention.</p>",
+              updated_at_source: ~U[2026-01-07 00:00:00Z]
+            }
+          ],
+          source: @src
+        },
+        nil
+      )
+
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+    html = view |> element("summary[phx-click=positions]") |> render_click()
+    ids = assert_details_keep_open(html, 3)
+
+    assert "cosponsors" in ids
+    assert "official-summary" in ids
+    assert Enum.any?(ids, &String.starts_with?(&1, "vote-positions-"))
+  end
+
   test "a bill with no text shows no executive summary", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
     refute has_element?(view, "#bill-summary")

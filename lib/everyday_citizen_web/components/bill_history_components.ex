@@ -8,6 +8,8 @@ defmodule EverydayCitizenWeb.BillHistoryComponents do
   """
   use Phoenix.Component
 
+  alias Phoenix.LiveView.JS
+
   use Phoenix.VerifiedRoutes,
     endpoint: EverydayCitizenWeb.Endpoint,
     router: EverydayCitizenWeb.Router
@@ -172,7 +174,12 @@ defmodule EverydayCitizenWeb.BillHistoryComponents do
         </div>
       </div>
 
-      <details :if={considered_adopted?(@shown)} class="text-[13px] text-floor-ink-2">
+      <details
+        :if={considered_adopted?(@shown)}
+        id={"origin-#{@index}-considered-adopted"}
+        class="text-[13px] text-floor-ink-2"
+        phx-mounted={JS.ignore_attributes(["open"])}
+      >
         <summary class="cursor-pointer text-floor-muted">
           What does "considered adopted" mean?
         </summary>
@@ -182,7 +189,9 @@ defmodule EverydayCitizenWeb.BillHistoryComponents do
       </details>
       <details
         :if={Enum.any?(@shown, fn s -> Enum.any?(s.committees, &(&1.kind == "markup")) end)}
+        id={"origin-#{@index}-markup"}
         class="text-[13px] text-floor-ink-2"
+        phx-mounted={JS.ignore_attributes(["open"])}
       >
         <summary class="cursor-pointer text-floor-muted">What is a markup?</summary>
         <p class="m-0 mt-1">

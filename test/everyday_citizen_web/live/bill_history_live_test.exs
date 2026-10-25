@@ -109,6 +109,7 @@ defmodule EverydayCitizenWeb.BillHistoryLiveTest do
 
     assert has_element?(view, ~s(#origin-2 a[href="https://example.test/samdt/9"]))
     assert has_element?(view, "#origin-2 details summary", "considered adopted")
+    assert [_ | _] = assert_details_keep_open(render(view))
     assert has_element?(view, "#origin-2", "Roll Call 60")
     assert has_element?(view, "#origin-2 [data-rep]", "Joni Ernst")
     assert has_element?(view, "#origin-2 [data-rep]", "Yea")

@@ -545,7 +545,11 @@ defmodule EverydayCitizenWeb.BillLive do
               Sponsor: <.person_link person={@page.sponsor} class="text-floor-ink-2" />
               <span :if={@page.cosponsors == []}>· {cosponsors(@page.cosponsor_count)}</span>
             </p>
-            <details :if={@page.cosponsors != []} id="cosponsors">
+            <details
+              :if={@page.cosponsors != []}
+              id="cosponsors"
+              phx-mounted={JS.ignore_attributes(["open"])}
+            >
               <summary class="cursor-pointer py-1">{cosponsors(@page.cosponsor_count)}</summary>
               <ul class="m-0 mt-1 p-0 list-none flex flex-col gap-1">
                 <li :for={person <- @page.cosponsors}>
@@ -701,8 +705,12 @@ defmodule EverydayCitizenWeb.BillLive do
               <span class="text-[13px] text-floor-muted">{vote.body.name} · {vote.identifier} · {vote_date(
                 vote
               )}</span>
-              <.term_note question={vote.question} />
-              <details id={"vote-positions-#{vote.id}"} class="mt-1.5">
+              <.term_note id={"term-#{vote.id}"} question={vote.question} />
+              <details
+                id={"vote-positions-#{vote.id}"}
+                class="mt-1.5"
+                phx-mounted={JS.ignore_attributes(["open"])}
+              >
                 <summary
                   phx-click="positions"
                   phx-value-vote={vote.id}
@@ -757,7 +765,11 @@ defmodule EverydayCitizenWeb.BillLive do
           <section aria-label="Official summary" class="order-4 lg:order-3 pb-5 flex flex-col gap-2.5">
             <%= if @page.summary do %>
               <%!-- folded by default: the plain-English summary above comes first --%>
-              <details class="group flex flex-col gap-2.5">
+              <details
+                id="official-summary"
+                class="group flex flex-col gap-2.5"
+                phx-mounted={JS.ignore_attributes(["open"])}
+              >
                 <summary class="list-none cursor-pointer flex items-center justify-between gap-3 py-1">
                   <span class="flex flex-col gap-0.5">
                     <h2 class="m-0 text-[18px] lg:text-[22px] font-bold">Official summary</h2>

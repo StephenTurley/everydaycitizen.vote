@@ -253,6 +253,7 @@ defmodule EverydayCitizenWeb.RepsLiveTest do
     assert render(view) =~ "On the Cloture Motion"
     assert has_element?(view, "details summary", "What is cloture?")
     assert has_element?(view, "details", "end debate")
+    assert [_ | _] = assert_details_keep_open(render(view))
   end
 
   test "items link to their bill pages", %{conn: conn, grassley: g} do

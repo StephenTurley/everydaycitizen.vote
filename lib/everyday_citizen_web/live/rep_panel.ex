@@ -338,7 +338,7 @@ defmodule EverydayCitizenWeb.RepPanel do
       <p class="m-0 text-[14px] text-floor-ink-2">
         {if @item.bill || @item.vote.description, do: question_prefix(@item.vote)}{result(@item.vote)}
       </p>
-      <.term_note question={@item.vote.question} />
+      <.term_note id={"term-#{@item.vote.id}"} question={@item.vote.question} />
     </.card>
     """
   end
