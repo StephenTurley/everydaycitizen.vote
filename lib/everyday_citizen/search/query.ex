@@ -9,6 +9,13 @@ defmodule EverydayCitizen.Search.Query do
 
   defstruct [:text, :key, :id_key, :number]
 
+  @type t :: %__MODULE__{
+          text: String.t(),
+          key: String.t(),
+          id_key: String.t() | nil,
+          number: String.t() | nil
+        }
+
   @max_length 200
 
   @street_words ~w(st street ave avenue rd road dr drive ln lane blvd boulevard way ct court
