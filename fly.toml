@@ -13,6 +13,9 @@ kill_timeout = "60s"
   # boots, while the old one is still serving: migrations must work with both
   # the old and the new code (docs/ops/deploys.md).
   release_command = "/app/bin/migrate"
+  # A migration that builds the bill text search index can run for many
+  # minutes; Fly's default would kill it first.
+  release_command_timeout = "30m"
   # Boot a new machine beside the old one, wait for its health checks, move
   # traffic, then stop the old one. No downtime; needs the checks below.
   strategy = "bluegreen"

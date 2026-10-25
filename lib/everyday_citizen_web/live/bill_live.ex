@@ -34,6 +34,7 @@ defmodule EverydayCitizenWeb.BillLive do
            remote_ip: EverydayCitizenWeb.RemoteIp.from_socket(socket),
            crawler: EverydayCitizenWeb.Crawler.crawler?(socket),
            summaries: %{},
+           positions: %{},
            summary_topics: [],
            history_steps: nil,
            history_rows: nil,
@@ -369,6 +370,17 @@ defmodule EverydayCitizenWeb.BillLive do
      EverydayCitizenWeb.FollowToggle.toggle(socket, {:bill, socket.assigns.page.bill.id})}
   end
 
+  # Roll calls have hundreds of names, so each is read when first opened.
+  def handle_event("positions", %{"vote" => vote_id}, socket) do
+    with {id, ""} <- Integer.parse(vote_id),
+         true <- Enum.any?(socket.assigns.page.votes, &(&1.id == id)),
+         false <- Map.has_key?(socket.assigns.positions, id) do
+      {:noreply, update(socket, :positions, &Map.put(&1, id, BillPage.vote_positions(id)))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
   def handle_event("version", %{"version" => code}, socket) do
     {:noreply,
      push_patch(socket, to: ~p"/bills/#{socket.assigns.page.bill.external_id}?#{[version: code]}")}
@@ -398,6 +410,22 @@ defmodule EverydayCitizenWeb.BillLive do
 
   defp vote_date(vote),
     do: vote.voted_at |> DateTime.shift_zone!("America/New_York") |> DateTime.to_date() |> date()
+
+  defp option_label("yea"), do: "Yea"
+  defp option_label("nay"), do: "Nay"
+  defp option_label("present"), do: "Present"
+  defp option_label("absent"), do: "Not voting"
+
+  attr :person, :map, required: true
+  attr :class, :string, default: "text-floor-ink"
+
+  defp person_link(assigns) do
+    ~H"""
+    <.link navigate={~p"/people/#{@person.id}"} class={[@class, "hover:underline"]}>
+      {@person.name}
+    </.link>
+    """
+  end
 
   defp cosponsors(1), do: "1 cosponsor"
   defp cosponsors(n), do: "#{n} cosponsors"
@@ -509,9 +537,27 @@ defmodule EverydayCitizenWeb.BillLive do
           {@page.bill.title}
         </h1>
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <p :if={@page.sponsor} class="m-0 text-[14px] lg:text-[15px] text-floor-muted">
-            Sponsor: {@page.sponsor.name} · {cosponsors(@page.cosponsor_count)}
-          </p>
+          <div
+            :if={@page.sponsor}
+            class="flex flex-col gap-1 text-[14px] lg:text-[15px] text-floor-muted"
+          >
+            <p class="m-0">
+              Sponsor: <.person_link person={@page.sponsor} class="text-floor-ink-2" />
+              <span :if={@page.cosponsors == []}>· {cosponsors(@page.cosponsor_count)}</span>
+            </p>
+            <details
+              :if={@page.cosponsors != []}
+              id="cosponsors"
+              phx-mounted={JS.ignore_attributes(["open"])}
+            >
+              <summary class="cursor-pointer py-1">{cosponsors(@page.cosponsor_count)}</summary>
+              <ul class="m-0 mt-1 p-0 list-none flex flex-col gap-1">
+                <li :for={person <- @page.cosponsors}>
+                  <.person_link person={person} class="text-floor-ink-2" />
+                </li>
+              </ul>
+            </details>
+          </div>
           <.follow_button
             id="follow-bill"
             label="Follow this bill"
@@ -638,7 +684,9 @@ defmodule EverydayCitizenWeb.BillLive do
               <h2 class="m-0 text-[18px] lg:text-[17px] font-bold">Your reps on this bill</h2>
               <div :for={rep <- @page.reps} class="flex items-center justify-between gap-2">
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[15px] lg:text-[14px] font-semibold">{rep.person.name}</span>
+                  <span class="text-[15px] lg:text-[14px] font-semibold"><.person_link person={
+                    rep.person
+                  } /></span>
                   <span :if={note = rep_note(rep)} class="text-[13px] text-floor-muted">{note}</span>
                 </div>
                 <.vote_chip option={rep.state} />
@@ -657,7 +705,34 @@ defmodule EverydayCitizenWeb.BillLive do
               <span class="text-[13px] text-floor-muted">{vote.body.name} · {vote.identifier} · {vote_date(
                 vote
               )}</span>
-              <.term_note question={vote.question} />
+              <.term_note id={"term-#{vote.id}"} question={vote.question} />
+              <details
+                id={"vote-positions-#{vote.id}"}
+                class="mt-1.5"
+                phx-mounted={JS.ignore_attributes(["open"])}
+              >
+                <summary
+                  phx-click="positions"
+                  phx-value-vote={vote.id}
+                  class="cursor-pointer py-1 text-[13px] font-semibold text-floor-accent"
+                >
+                  Who voted how
+                </summary>
+                <div
+                  :for={{option, people} <- Map.get(@positions, vote.id, [])}
+                  class="mt-2 flex flex-col gap-1"
+                >
+                  <span class="text-[12px] font-semibold uppercase tracking-wide text-floor-muted">
+                    {option_label(option)} · {length(people)}
+                  </span>
+                  <ul
+                    id={"vote-positions-list-#{vote.id}-#{option}"}
+                    class="m-0 p-0 list-none columns-2 gap-4 text-[14px]"
+                  >
+                    <li :for={person <- people}><.person_link person={person} /></li>
+                  </ul>
+                </div>
+              </details>
             </.card>
           </section>
 
@@ -690,7 +765,11 @@ defmodule EverydayCitizenWeb.BillLive do
           <section aria-label="Official summary" class="order-4 lg:order-3 pb-5 flex flex-col gap-2.5">
             <%= if @page.summary do %>
               <%!-- folded by default: the plain-English summary above comes first --%>
-              <details class="group flex flex-col gap-2.5">
+              <details
+                id="official-summary"
+                class="group flex flex-col gap-2.5"
+                phx-mounted={JS.ignore_attributes(["open"])}
+              >
                 <summary class="list-none cursor-pointer flex items-center justify-between gap-3 py-1">
                   <span class="flex flex-col gap-0.5">
                     <h2 class="m-0 text-[18px] lg:text-[22px] font-bold">Official summary</h2>

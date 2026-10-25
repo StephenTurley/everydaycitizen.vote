@@ -145,6 +145,16 @@ defmodule EverydayCitizen.Ingest.Records do
     @type t :: %__MODULE__{}
   end
 
+  defmodule BillTitles do
+    @moduledoc """
+    Every title a bill goes by; replaces whatever is stored. Each is `%{title, kind}`,
+    kind one of `official short popular part`.
+    """
+    @enforce_keys [:jurisdiction, :bill_external_id, :titles, :source]
+    defstruct [:jurisdiction, :bill_external_id, :titles, :source]
+    @type t :: %__MODULE__{}
+  end
+
   defmodule BillAmendments do
     @moduledoc """
     A bill's amendments; replaces whatever is stored. Each is `%{external_id,

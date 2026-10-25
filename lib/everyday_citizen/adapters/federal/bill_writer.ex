@@ -24,6 +24,7 @@ defmodule EverydayCitizen.Adapters.Federal.BillWriter do
           optional(:summaries) => part([map()]),
           optional(:committees) => part([map()]),
           optional(:relations) => part([map()]),
+          optional(:titles) => part([map()]),
           optional(:amendments) => {part([map()]), %{String.t() => map()}}
         }
 
@@ -70,7 +71,7 @@ defmodule EverydayCitizen.Adapters.Federal.BillWriter do
     end
   end
 
-  # Committee steps, related measures and amendments; like actions, an empty
+  # Committee steps, related measures, titles and amendments; like actions, an empty
   # list (which has no response source) writes nothing.
   defp write_context(parts, id, run_id) do
     {amendments, details} = Map.get(parts, :amendments, {{[], nil}, %{}})
@@ -78,6 +79,7 @@ defmodule EverydayCitizen.Adapters.Federal.BillWriter do
     [
       {Map.get(parts, :committees, {[], nil}), &BillContext.committees(&1, id, &2)},
       {Map.get(parts, :relations, {[], nil}), &BillContext.relations(&1, id, &2)},
+      {Map.get(parts, :titles, {[], nil}), &BillContext.titles(&1, id, &2)},
       {amendments, &BillContext.amendments(&1, details, id, &2)}
     ]
     |> Enum.reduce_while(:ok, fn

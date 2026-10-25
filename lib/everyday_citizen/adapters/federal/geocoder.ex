@@ -10,6 +10,7 @@ defmodule EverydayCitizen.Adapters.Federal.Geocoder do
   @behaviour EverydayCitizen.Reps.Locator
 
   alias EverydayCitizen.Adapters.Federal.HTTP
+  alias EverydayCitizen.Adapters.Federal.States
 
   @url "https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress"
 
@@ -42,6 +43,51 @@ defmodule EverydayCitizen.Adapters.Federal.Geocoder do
       [_, state, _] -> [{"senate", state}, {"house", key}]
       _ -> []
     end
+  end
+
+  # A full name in any case, or a postal code only as typed in capitals ("IN"
+  # and "OR" are words too). The District and territories have no Senate seat.
+  @impl true
+  def place(query) do
+    query = String.trim(query)
+
+    case States.by_name(query) || States.by_code(query) do
+      {code, name, _possessive} -> {:ok, %{name: name, seats: seats(code)}}
+      nil -> :error
+    end
+  end
+
+  defp seats(code) do
+    house = {"house", {:prefix, code <> "-"}}
+    if code in ~w(DC AS GU MP PR VI), do: [house], else: [{"senate", {:exact, code}}, house]
+  end
+
+  @impl true
+  def district_label(key) do
+    with [_, code | rest] <- Regex.run(~r/^([A-Z]{2})(?:-(AL|\d{1,2}))?$/, key),
+         district = List.first(rest),
+         {_, name, possessive} <- States.by_code(code) do
+      case district do
+        nil -> name
+        "AL" -> "#{name} at large"
+        n -> "#{possessive} #{ordinal(String.to_integer(n))} district"
+      end
+    else
+      _ -> key
+    end
+  end
+
+  defp ordinal(n) do
+    suffix =
+      cond do
+        rem(n, 100) in 11..13 -> "th"
+        rem(n, 10) == 1 -> "st"
+        rem(n, 10) == 2 -> "nd"
+        rem(n, 10) == 3 -> "rd"
+        true -> "th"
+      end
+
+    "#{n}#{suffix}"
   end
 
   # A missing layer means the service changed (vintage, layer name): unavailable,

@@ -6,7 +6,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBillTest do
   alias EverydayCitizen.Adapters.Federal.Jobs.{SyncBill, SyncBills, SyncBillText, SyncCongress}
   alias EverydayCitizen.Ingest
   alias EverydayCitizen.Ingest.Records.{Person, SourceRef}
-  alias EverydayCitizen.Legislation.{Bill, BillAction, BillVersion, Sponsorship}
+  alias EverydayCitizen.Legislation.{Bill, BillAction, BillTitle, BillVersion, Sponsorship}
   alias EverydayCitizen.Repo
 
   @dir "test/support/fixtures/federal/congress_gov"
@@ -23,6 +23,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBillTest do
     "/v3/bill/119/hr/22/summaries" => "bill_119_hr_22/summaries.json",
     "/v3/bill/119/hr/22/committees" => "bill_119_hr_22/committees.json",
     "/v3/bill/119/hr/22/relatedbills" => "bill_119_hr_22/relatedbills.json",
+    "/v3/bill/119/hr/22/titles" => "bill_119_hr_22/titles.json",
     "/v3/bill/119/hr/22/amendments" => "bill_119_hr_22/amendments.json"
   }
 
@@ -113,6 +114,15 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBillTest do
     assert :ok = perform_job(SyncBill, args)
     assert counts() == %{bills: 1, actions: 19, sponsorships: 6, versions: 2}
     assert length(EverydayCitizen.Legislation.committee_activities(bill.id)) == 3
+  end
+
+  test "sync stores the bill's titles" do
+    stub()
+    assert :ok = perform_job(SyncBill, @args)
+
+    assert "Safeguard American Voter Eligibility Act" in Repo.all(
+             from t in BillTitle, select: t.title
+           )
   end
 
   test "enqueues text fetches for versions without text" do

@@ -135,6 +135,31 @@ defmodule EverydayCitizenWeb.BillLiveTest do
     assert html =~ ~s(href="https://www.congress.gov/x")
   end
 
+  test "the sponsor and cosponsors link to their pages", %{
+    conn: conn,
+    ernst: ernst,
+    grassley: grassley
+  } do
+    {:ok, view, _} = live(conn, ~p"/bills/119-s-5")
+    assert has_element?(view, ~s(a[href="/people/#{ernst.id}"]), "Joni Ernst")
+    assert has_element?(view, ~s(details a[href="/people/#{grassley.id}"]), "Chuck Grassley")
+  end
+
+  test "who voted how loads on opening and links every name", %{
+    conn: conn,
+    ernst: ernst,
+    grassley: grassley
+  } do
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+    refute has_element?(view, ~s([id^=vote-positions-list] a[href="/people/#{grassley.id}"]))
+
+    html = view |> element("summary[phx-click=positions]") |> render_click()
+    assert html =~ ~s(href="/people/#{ernst.id}")
+    assert has_element?(view, ~s(a[href="/people/#{grassley.id}"]), "Chuck Grassley")
+    assert html =~ "Yea"
+    assert html =~ "Nay"
+  end
+
   test "the bill links its official page, else its source record", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
     assert has_element?(view, ~s(a[href="https://www.congress.gov/x"]), "Official page")
@@ -646,6 +671,36 @@ defmodule EverydayCitizenWeb.BillLiveTest do
              "section[aria-label='Official summary'] details",
              "This bill requires detention."
            )
+  end
+
+  test "every folded part keeps its open state through LiveView patches", %{conn: conn} do
+    {:ok, _} =
+      Ingest.write(
+        %Records.BillSummaries{
+          jurisdiction: "federal",
+          bill_external_id: "119-s-5",
+          author: "Congressional Research Service",
+          summaries: [
+            %{
+              version_code: "is",
+              action_date: ~D[2026-01-06],
+              action_description: "Introduced",
+              html: "<p>This bill requires detention.</p>",
+              updated_at_source: ~U[2026-01-07 00:00:00Z]
+            }
+          ],
+          source: @src
+        },
+        nil
+      )
+
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+    html = view |> element("summary[phx-click=positions]") |> render_click()
+    ids = assert_details_keep_open(html, 3)
+
+    assert "cosponsors" in ids
+    assert "official-summary" in ids
+    assert Enum.any?(ids, &String.starts_with?(&1, "vote-positions-"))
   end
 
   test "a bill with no text shows no executive summary", %{conn: conn} do

@@ -17,6 +17,12 @@ defmodule EverydayCitizenWeb.UnsubscribeControllerTest do
     assert Repo.reload!(user).digest_enabled
   end
 
+  # this pipeline has no CSRF protection, so a search form here could not post
+  test "the unsubscribe pages carry no search box", %{conn: conn, token: token} do
+    refute conn |> get(~p"/unsubscribe/#{token}") |> html_response(200) =~ "site-search"
+    refute conn |> post(~p"/unsubscribe/#{token}") |> html_response(200) =~ "site-search"
+  end
+
   test "confirming turns it off, without signing in", %{conn: conn, user: user, token: token} do
     html = conn |> post(~p"/unsubscribe/#{token}") |> html_response(200)
     assert html =~ "won't get the daily email"

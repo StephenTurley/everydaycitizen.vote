@@ -22,7 +22,7 @@ defmodule EverydayCitizen.BillPage do
 
   alias EverydayCitizen.Legislation
   alias EverydayCitizen.Legislation.{BillAction, BillVersion, Sponsorship}
-  alias EverydayCitizen.Legislature.Body
+  alias EverydayCitizen.Legislature.{Body, Person}
   alias EverydayCitizen.Repo
   alias EverydayCitizen.Votes.{Vote, VotePosition}
 
@@ -59,6 +59,7 @@ defmodule EverydayCitizen.BillPage do
       sponsor:
         sponsorships |> Enum.find(&(&1.classification == "primary")) |> then(&(&1 && &1.person)),
       cosponsor_count: Enum.count(sponsorships, &(&1.classification == "cosponsor")),
+      cosponsors: cosponsors(sponsorships),
       steps: steps(bill, actions),
       latest_action: List.last(actions),
       reps: Enum.map(reps, &rep_state(&1, sponsorships, votes)),
@@ -74,6 +75,32 @@ defmodule EverydayCitizen.BillPage do
         ),
       votes: votes
     }
+  end
+
+  # by when they signed on, then by name
+  defp cosponsors(sponsorships) do
+    sponsorships
+    |> Enum.filter(&(&1.classification == "cosponsor"))
+    |> Enum.sort_by(&{&1.date || ~D[9999-12-31], &1.person.name})
+    |> Enum.map(& &1.person)
+  end
+
+  @options ~w(yea nay present absent)
+
+  @doc "Who voted how on a roll call: `{option, people}` groups in yea, nay, present, not voting order, by name."
+  @spec vote_positions(integer()) :: [{String.t(), [Person.t()]}]
+  def vote_positions(vote_id) do
+    by_option =
+      from(p in VotePosition,
+        join: person in assoc(p, :person),
+        where: p.vote_id == ^vote_id,
+        order_by: [person.name, person.id],
+        select: {p.option, person}
+      )
+      |> Repo.all()
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    for option <- @options, people = by_option[option], do: {option, people}
   end
 
   @doc "The sections of one of the bill's versions (`[]` when not split yet)."

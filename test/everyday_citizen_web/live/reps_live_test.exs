@@ -89,6 +89,15 @@ defmodule EverydayCitizenWeb.RepsLiveTest do
     assert html =~ "Sen." or html =~ "Senate"
   end
 
+  test "the selected rep's name links to their page, and the district is in words", %{
+    conn: conn,
+    miller_meeks: m
+  } do
+    {:ok, view, html} = live(conn, ~p"/reps/IA-1?rep=#{m.id}")
+    assert has_element?(view, ~s(h1 a[href="/people/#{m.id}"]), "Mariannette Miller-Meeks")
+    assert html =~ "Iowa&#39;s 1st district"
+  end
+
   test "picking a rep opens their latest week; another week and a filter patch the page", %{
     conn: conn,
     ernst: e
@@ -244,6 +253,7 @@ defmodule EverydayCitizenWeb.RepsLiveTest do
     assert render(view) =~ "On the Cloture Motion"
     assert has_element?(view, "details summary", "What is cloture?")
     assert has_element?(view, "details", "end debate")
+    assert [_ | _] = assert_details_keep_open(render(view))
   end
 
   test "items link to their bill pages", %{conn: conn, grassley: g} do

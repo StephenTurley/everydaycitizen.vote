@@ -6,6 +6,8 @@ defmodule EverydayCitizenWeb.FloorComponents do
   """
   use Phoenix.Component
 
+  alias Phoenix.LiveView.JS
+
   @doc "A white card with the hairline border."
   attr :class, :any, default: nil
   attr :rest, :global
@@ -263,6 +265,7 @@ defmodule EverydayCitizenWeb.FloorComponents do
      "A vote on whether to confirm a person nominated to a public office, such as a judge or an agency head."}
   ]
 
+  attr :id, :string, required: true
   attr :question, :string, default: nil
 
   @doc """
@@ -280,7 +283,12 @@ defmodule EverydayCitizenWeb.FloorComponents do
       )
 
     ~H"""
-    <details :if={@term} class="text-[13px] text-floor-ink-2">
+    <details
+      :if={@term}
+      id={@id}
+      class="text-[13px] text-floor-ink-2"
+      phx-mounted={JS.ignore_attributes(["open"])}
+    >
       <summary class="cursor-pointer text-floor-muted">{elem(@term, 1)}</summary>
       <p class="m-0 mt-1">{elem(@term, 2)}</p>
     </details>

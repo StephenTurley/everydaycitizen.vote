@@ -2,7 +2,7 @@ defmodule EverydayCitizen.Legislation do
   @moduledoc "Queries over bills, actions, sponsorships and text versions."
   import Ecto.Query
 
-  alias EverydayCitizen.Legislation.{Bill, BillAction, BillSummary, BillVersion}
+  alias EverydayCitizen.Legislation.{Bill, BillAction, BillSummary, BillVersion, Sponsorship}
   alias EverydayCitizen.Legislature.Jurisdiction
   alias EverydayCitizen.Repo
 
@@ -181,6 +181,42 @@ defmodule EverydayCitizen.Legislation do
     :ok
   end
 
+  @doc """
+  Bills a person sponsors (`"primary"`) or cosponsors (`"cosponsor"`), not
+  withdrawn, newest introduced first, each with its latest action; `total`
+  counts them all. Options: `:limit` (10) and `:offset` (0).
+  """
+  @spec sponsored_bills(integer(), String.t(), keyword()) :: %{
+          bills: [%{bill: Bill.t(), latest: BillAction.t() | nil}],
+          total: non_neg_integer()
+        }
+  def sponsored_bills(person_id, classification, opts)
+      when classification in ["primary", "cosponsor"] do
+    query =
+      from(s in Sponsorship,
+        join: b in Bill,
+        on: b.id == s.bill_id,
+        where:
+          s.person_id == ^person_id and s.classification == ^classification and
+            is_nil(s.withdrawn_on)
+      )
+
+    bills =
+      query
+      |> order_by([_s, b], desc_nulls_last: b.introduced_on, desc: b.id)
+      |> limit(^Keyword.get(opts, :limit, 10))
+      |> offset(^Keyword.get(opts, :offset, 0))
+      |> select([_s, b], b)
+      |> Repo.all()
+
+    latest = latest_actions(Enum.map(bills, & &1.id))
+
+    %{
+      bills: Enum.map(bills, &%{bill: &1, latest: latest[&1.id]}),
+      total: Repo.aggregate(query, :count)
+    }
+  end
+
   @doc "Each bill's latest action (highest position), keyed by bill id."
   @spec latest_actions([integer()]) :: %{integer() => BillAction.t()}
   def latest_actions([]), do: %{}
@@ -248,6 +284,22 @@ defmodule EverydayCitizen.Legislation do
       where: j.key == ^jurisdiction_key,
       group_by: b.external_id,
       having: count(v.id) >= 2,
+      select: b.external_id
+    )
+    |> Repo.all()
+  end
+
+  @doc "External ids of the jurisdiction's bills that have no stored titles yet."
+  @spec bill_external_ids_without_titles(String.t()) :: [String.t()]
+  def bill_external_ids_without_titles(jurisdiction_key) do
+    from(b in Bill,
+      as: :bill,
+      join: j in assoc(b, :jurisdiction),
+      where: j.key == ^jurisdiction_key,
+      where:
+        not exists(
+          from t in EverydayCitizen.Legislation.BillTitle, where: t.bill_id == parent_as(:bill).id
+        ),
       select: b.external_id
     )
     |> Repo.all()

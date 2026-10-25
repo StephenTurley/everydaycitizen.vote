@@ -32,6 +32,7 @@ defmodule EverydayCitizen.Ingest.Writer.Legislation do
     BillCommitteeActivity,
     BillRelation,
     BillSummary,
+    BillTitle,
     BillVersion,
     Sponsorship
   }
@@ -122,6 +123,13 @@ defmodule EverydayCitizen.Ingest.Writer.Legislation do
             kind: rel.kind,
             source_id: source_id
           }
+    end)
+  end
+
+  defp do_write(%Records.BillTitles{} = r, source_id) do
+    replace_set(r, BillTitle, fn _j, bill ->
+      for t <- r.titles,
+          do: %{bill_id: bill.id, title: t.title, kind: t.kind, source_id: source_id}
     end)
   end
 

@@ -37,6 +37,36 @@ defmodule EverydayCitizenWeb.ConnCase do
   end
 
   @doc """
+  Asserts `html` has at least `count` `<details>` elements and that each has an
+  id and keeps its `open` attribute through LiveView patches
+  (`JS.ignore_attributes(["open"])` on mount). Returns the ids.
+  """
+  def assert_details_keep_open(html, count \\ 1) do
+    details = html |> LazyHTML.from_document() |> LazyHTML.query("details")
+    ids = LazyHTML.attribute(details, "id")
+    mounted = LazyHTML.attribute(details, "phx-mounted")
+
+    ExUnit.Assertions.assert(length(ids) >= count, "expected #{count}+ details with ids")
+
+    ExUnit.Assertions.assert(
+      length(ids) == length(Enum.to_list(details)),
+      "a details lacks an id"
+    )
+
+    ExUnit.Assertions.assert(length(Enum.uniq(ids)) == length(ids), "details ids repeat")
+    ExUnit.Assertions.assert(length(mounted) == length(ids), "a details lacks phx-mounted")
+
+    for js <- mounted do
+      ExUnit.Assertions.assert(
+        ["ignore_attrs", %{"attrs" => ["open"]}] in Jason.decode!(js),
+        "phx-mounted does not ignore open: #{js}"
+      )
+    end
+
+    ids
+  end
+
+  @doc """
   Setup helper that registers and logs in users.
 
       setup :register_and_log_in_user

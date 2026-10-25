@@ -225,3 +225,27 @@ At the owner's direction (H.R. 7008's voter photo ID section arrived in a Rules 
 
 ## 2026-10-25 — Tests never reach outside services
 Every HTTP request goes through a Req.Test plug in tests and mail through Swoosh's test adapter; `NoNetworkTest` fails if app code makes a request without one of the stubbable settings (owner's rule).
+
+## 2026-10-25 — Bills keep every title they go by
+A bill is searched by the names people use, and the single stored title misses most of them, so `bill_titles` holds each title with its kind (`official`, `short`, `popular`, and `part` for the titles of a bill's parts) and the usual provenance; the title the bill page shows is unchanged. The nightly bill sync fetches titles, and a one-off backfill fills the stored bills. The backfill runs one at a time on its own `backfill` queue so the nightly jobs keep their request budget, and a re-run enqueues only bills with no titles yet, so it resumes rather than doubling the load (Oban's unique option is ignored by `insert_all`).
+
+## 2026-10-25 — One rule for comparing names
+Title and person-name matching all go through the database function `ec_name_key` (case, punctuation, a trailing "Act" or "of <year>" ignored), so the search, its indexes and its ranking agree on what "the same name" means and a rule change is made in one place.
+
+## 2026-10-25 — Bill text is searched with an expression index, latest version picked at query time
+A full-text GIN expression index over `bill_versions.plain_text` adds no duplicate column (production has about 2 GB free and goes read-only near full) and needs no maintenance as versions arrive; the query picks each bill's latest version that has text. Quoted phrases match all their words rather than the exact phrase (a phrase query measured 6.2 s on a public endpoint), and text searches time out at 3 seconds. The match set is capped at 1,000 before ranking, ordered so the cap keeps the furthest-along bills (became law, passed a chamber, roll call, reported, introduced).
+
+## 2026-10-25 — Places and district labels come from the locator adapter
+Search must know that "Ohio" or a postal code names a place and how to label a district, without the domain knowing which legislature it is, so both are callbacks on `Reps.Locator`, implemented by the adapter beside the geocoder. When a query names a place, that place's members are listed first, ahead of bill matches (a text search for "iowa" otherwise buried the state's members under about 270 bills).
+
+## 2026-10-25 — Search is a POST, and addresses never reach the URL
+Addresses and ZIP codes are never stored, logged or put in URLs, so the search box posts, classifies the query (erring toward treating it as an address), and sends addresses to the reps flow without keeping them; the results page for ordinary queries is a shareable `/search?q=`. A hand-typed address in the URL is cleared from it by redirecting to `/search` with no query, and the Sentry referer header drops its query string. The box is hidden on mail-link pages (unsubscribe), which are reached from email and have no CSRF-protected pipeline; adding one was not worth a search box there.
+
+## 2026-10-25 — People are at /people/:id on internal ids
+The database is never rebuilt, so internal ids are stable, and the page then shows no external ids, which keeps the page free of source-specific identifiers. Person pages are indexed.
+
+## 2026-10-25 — Search pages are noindex
+Result pages are endless combinations of queries with thin content; they stay out of search engines while bill and person pages remain indexable.
+
+## 2026-10-25 — Search: stricter address rule, a search limit, and crash reports without page state
+Found in the final review. Any query starting with a street number that contains a street word anywhere is an address ("1 way forward" included, erring toward address as the spec says). So are a ZIP or 9-digit ZIP+4 anywhere in a query, PO Box spellings, and a five-digit "bill number" no stored bill has (a state and ZIP such as "IA 50309"); Unicode spaces are normalized first. Searches are limited to 60 a minute per visitor; a search runs once the page is connected, so the visitor's IP is known. Sentry's `before_send` drops a crashing process's state and last message and strips query strings from URLs, so a LiveView crash can't carry a search. `<details>` keep their open state across LiveView updates. A query of only excluded words ("-tax") is not searched, since it can't use the index. The release command may run for 30 minutes so the text index can build.

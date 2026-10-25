@@ -60,6 +60,7 @@ defmodule EverydayCitizenWeb.Endpoint do
   plug Sentry.PlugContext,
     body_scrubber: {EverydayCitizenWeb.SentryScrub, :nothing},
     cookie_scrubber: {EverydayCitizenWeb.SentryScrub, :nothing},
+    header_scrubber: {EverydayCitizenWeb.SentryScrub, :headers},
     url_scrubber: {EverydayCitizenWeb.SentryScrub, :url}
 
   plug Plug.MethodOverride

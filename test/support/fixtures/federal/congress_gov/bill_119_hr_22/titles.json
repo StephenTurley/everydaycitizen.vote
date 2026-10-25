@@ -1,0 +1,75 @@
+{
+    "pagination": {
+        "count": 7
+    },
+    "request": {
+        "billNumber": "22",
+        "billType": "hr",
+        "billUrl": "https://api.congress.gov/v3/bill/119/hr/22?format=json",
+        "congress": "119",
+        "contentType": "application/json",
+        "format": "json"
+    },
+    "titles": [
+        {
+            "billTextVersionCode": "EH",
+            "billTextVersionName": "Engrossed in House",
+            "chamberCode": "H",
+            "chamberName": "House",
+            "title": "To amend the National Voter Registration Act of 1993 to require proof of United States citizenship to register an individual to vote in elections for Federal office, and for other purposes.",
+            "titleType": "Official Title from EH (Engrossed in House) bill text",
+            "titleTypeCode": 259,
+            "updateDate": "2026-07-11T03:23:18Z"
+        },
+        {
+            "billTextVersionCode": "EH",
+            "billTextVersionName": "Engrossed in House",
+            "chamberCode": "H",
+            "chamberName": "House",
+            "title": "SAVE Act",
+            "titleType": "Short Title(s) as Passed House",
+            "titleTypeCode": 104,
+            "updateDate": "2025-04-11T02:23:14Z"
+        },
+        {
+            "billTextVersionCode": "EH",
+            "billTextVersionName": "Engrossed in House",
+            "chamberCode": "H",
+            "chamberName": "House",
+            "title": "Safeguard American Voter Eligibility Act",
+            "titleType": "Short Title(s) as Passed House",
+            "titleTypeCode": 104,
+            "updateDate": "2025-04-11T02:23:14Z"
+        },
+        {
+            "title": "SAVE Act",
+            "titleType": "Display Title",
+            "titleTypeCode": 45,
+            "updateDate": "2025-04-03T13:59:07Z"
+        },
+        {
+            "billTextVersionCode": "IH",
+            "billTextVersionName": "Introduced in House",
+            "title": "SAVE Act",
+            "titleType": "Short Title(s) as Introduced",
+            "titleTypeCode": 101,
+            "updateDate": "2025-02-04T05:38:17Z"
+        },
+        {
+            "billTextVersionCode": "IH",
+            "billTextVersionName": "Introduced in House",
+            "title": "Safeguard American Voter Eligibility Act",
+            "titleType": "Short Title(s) as Introduced",
+            "titleTypeCode": 101,
+            "updateDate": "2025-02-04T05:38:17Z"
+        },
+        {
+            "billTextVersionCode": "IH",
+            "billTextVersionName": "Introduced in House",
+            "title": "To amend the National Voter Registration Act of 1993 to require proof of United States citizenship to register an individual to vote in elections for Federal office, and for other purposes.",
+            "titleType": "Official Title as Introduced",
+            "titleTypeCode": 6,
+            "updateDate": "2025-02-04T05:33:23Z"
+        }
+    ]
+}

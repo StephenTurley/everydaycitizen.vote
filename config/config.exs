@@ -72,6 +72,10 @@ config :everyday_citizen, :summaries,
     long_prompt_tokens: 100_000
   }
 
+# Searches one visitor may run in a minute (EverydayCitizenWeb.SearchLive):
+# each runs about 20 queries, some of them heavy.
+config :everyday_citizen, :search, per_minute: 60
+
 # WebAuthn relying party (passkeys). Dev values; test.exs and runtime.exs (prod)
 # override. The origin must match the browser's address bar exactly.
 config :everyday_citizen, :webauthn,
@@ -83,8 +87,9 @@ config :everyday_citizen, Oban,
   # a deploy stops the old machine: running jobs get 25 s to finish
   shutdown_grace_period: :timer.seconds(25),
   repo: EverydayCitizen.Repo,
+  # backfill: one-off per-bill re-syncs, one at a time so they never starve ingest
   # bulk: the first-run bulk load's chunk jobs (Federal.BulkBatch)
-  queues: [ingest: 4, text: 2, bulk: 4, mail: 2, summaries: 2],
+  queues: [ingest: 4, text: 2, bulk: 4, mail: 2, summaries: 2, backfill: 1],
   plugins: [
     # Rescue jobs left executing by a crashed node; prune finished jobs after a week.
     # rescue_after must exceed every worker's timeout (the bulk bill and text
@@ -113,7 +118,10 @@ config :everyday_citizen, Oban,
 # Errors, crashes and failed jobs go to Sentry (inert without SENTRY_DSN).
 # Oban: failed jobs become issues. Only the coverage job reports its runs to
 # Sentry's Crons page (EverydayCitizen.SentryCrons); the plan allows one monitor.
+# Every event loses a crashed process's state and every URL's query string
+# first (EverydayCitizenWeb.SentryScrub): they can hold what a visitor typed.
 config :sentry,
+  before_send: {EverydayCitizenWeb.SentryScrub, :before_send},
   integrations: [oban: [capture_errors: true, cron: [enabled: false]]],
   in_app_otp_apps: [:everyday_citizen]
 
@@ -152,8 +160,8 @@ config :tailwind,
   ]
 
 # A visitor's address is used once to find their district and never stored or
-# logged.
-config :phoenix, :filter_parameters, ["password", "address", "street", "zip"]
+# logged. Search queries ("q") are filtered too: someone will type an address.
+config :phoenix, :filter_parameters, ["password", "address", "street", "zip", "q"]
 
 # Configure Elixir's Logger
 config :logger, :default_formatter,
