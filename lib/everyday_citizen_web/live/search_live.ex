@@ -67,8 +67,15 @@ defmodule EverydayCitizenWeb.SearchLive do
     end
   end
 
-  # a hand-made URL can carry q as a list or map; that is nothing typed
-  defp classify(q) when is_binary(q), do: Query.classify(q)
+  # a hand-made URL can carry q as a list or map; that is nothing typed. A
+  # state and ZIP shaped like a bill number no bill has is an address.
+  defp classify(q) when is_binary(q) do
+    case Query.classify(q) do
+      {:search, query} = search -> if Search.address_like?(query), do: :address, else: search
+      other -> other
+    end
+  end
+
   defp classify(_q), do: :empty
 
   # The static render runs no query: it would be a search no per-visitor limit

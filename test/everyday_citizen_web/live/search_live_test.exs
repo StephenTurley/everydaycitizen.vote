@@ -151,6 +151,26 @@ defmodule EverydayCitizenWeb.SearchLiveTest do
     refute html =~ "Search for a bill"
   end
 
+  test "a state and ZIP code with no such bill is handled as an address", %{conn: conn} do
+    for q <- ["IA 50309", "ia50309"] do
+      assert {:error, {_kind, %{to: "/search"}}} = result = live(conn, ~p"/search?q=#{q}")
+      {:ok, _view, html} = follow_redirect(result, conn)
+      assert html =~ "looks like an address"
+      refute html =~ "50309"
+    end
+
+    {:ok, view, _html} = live(conn, ~p"/search?q=laken riley")
+    render_patch(view, ~p"/search?q=IA 50309")
+    assert_patched(view, "/search")
+    assert render(view) =~ "looks like an address"
+  end
+
+  test "a five-digit bill number that is stored is searched", %{conn: conn} do
+    bill!("119-hr-10545", "H.R. 10545", "A Long-Numbered Act")
+    {:ok, view, _html} = live(conn, ~p"/search?q=hr10545")
+    assert has_element?(view, ~s(a[href="/bills/119-hr-10545"]))
+  end
+
   test "an address patched in on a live page also leaves the address bar", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/search?q=laken riley")
     render_patch(view, ~p"/search?q=123 Main St")

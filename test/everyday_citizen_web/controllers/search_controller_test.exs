@@ -19,6 +19,33 @@ defmodule EverydayCitizenWeb.SearchControllerTest do
     assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "looks like an address"
   end
 
+  test "a state and ZIP code is an address when no bill has that number", %{conn: conn} do
+    for q <- ["IA 50309", "ia50309"] do
+      conn = post(conn, ~p"/search", %{"q" => q})
+      assert redirected_to(conn) == "/", q
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "looks like an address"
+    end
+  end
+
+  test "a five-digit bill number that is stored goes straight to the bill", %{conn: conn} do
+    {:ok, _} =
+      EverydayCitizen.Ingest.write(
+        %EverydayCitizen.Ingest.Records.Bill{
+          jurisdiction: "federal",
+          session_identifier: "119",
+          external_id: "119-hr-10545",
+          identifier: "H.R. 10545",
+          classification: "bill",
+          title: "A Long-Numbered Act",
+          introduced_on: ~D[2026-01-03],
+          source: EverydayCitizen.Ingest.Records.SourceRef.new("https://x.test/b", "b")
+        },
+        nil
+      )
+
+    assert redirected_to(post(conn, ~p"/search", %{"q" => "hr10545"})) == "/bills/119-hr-10545"
+  end
+
   test "a bill number goes straight to the bill", %{conn: conn} do
     assert redirected_to(post(conn, ~p"/search", %{"q" => "s5"})) == "/bills/119-s-5"
   end

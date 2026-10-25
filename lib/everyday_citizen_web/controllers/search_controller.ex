@@ -2,7 +2,8 @@ defmodule EverydayCitizenWeb.SearchController do
   @moduledoc """
   Where the header's search box posts. It decides where a query goes before
   any URL holds it: nothing typed goes back to the page it came from, an
-  address or ZIP code goes to the find-your-reps lookup on the home page
+  address or ZIP code (or a state and ZIP that no bill's number matches, see
+  `Search.address_like?/1`) goes to the find-your-reps lookup on the home page
   (without the query), a bill's own number goes straight to that bill, and
   anything else opens the results page.
   """
@@ -22,15 +23,22 @@ defmodule EverydayCitizenWeb.SearchController do
         redirect(conn, to: back(conn))
 
       :address ->
-        conn |> put_flash(:info, @address_message) |> redirect(to: ~p"/")
+        to_address_lookup(conn)
 
       {:search, query} ->
-        case Search.bill_by_number(query) do
-          {:one, bill} -> redirect(conn, to: ~p"/bills/#{bill.external_id}")
-          _ -> redirect(conn, to: ~p"/search?#{[q: query.text]}")
-        end
+        if Search.address_like?(query), do: to_address_lookup(conn), else: to_search(conn, query)
     end
   end
+
+  defp to_search(conn, query) do
+    case Search.bill_by_number(query) do
+      {:one, bill} -> redirect(conn, to: ~p"/bills/#{bill.external_id}")
+      _ -> redirect(conn, to: ~p"/search?#{[q: query.text]}")
+    end
+  end
+
+  defp to_address_lookup(conn),
+    do: conn |> put_flash(:info, @address_message) |> redirect(to: ~p"/")
 
   # the referring page on this site, or the home page
   defp back(conn) do

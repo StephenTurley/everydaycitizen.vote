@@ -79,6 +79,19 @@ defmodule EverydayCitizen.Search do
   def bill_by_number(%Query{}), do: :none
 
   @doc """
+  Whether a query that looks like a five-digit bill number ("ia50309", "IA
+  50309") is really a place and a ZIP code: it is, unless a stored bill has
+  that number. Such a query is then handled as an address, never searched or
+  put in a URL.
+  """
+  @spec address_like?(Query.t()) :: boolean()
+  def address_like?(%Query{id_key: id_key} = query) when is_binary(id_key) do
+    id_key =~ ~r/^[a-z]{1,8}[0-9]{5}$/u and bill_by_number(query) == :none
+  end
+
+  def address_like?(%Query{}), do: false
+
+  @doc """
   Bills whose titles match the query's name key, best first, each once with
   the title that matched and its cached AI summary text (never a new one).
   """
