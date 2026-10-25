@@ -54,6 +54,49 @@ defmodule EverydayCitizen.Summaries.WriterTest do
     assert_in_delta Summaries.spent_today_usd(), 0.000125, 0.000001
   end
 
+  defp stub_reply(text) do
+    Req.Test.stub(EverydayCitizen.Claude, fn conn ->
+      conn
+      |> Plug.Conn.put_resp_content_type("application/json")
+      |> Plug.Conn.send_resp(
+        200,
+        Jason.encode!(%{
+          "model" => "claude-haiku-5-5",
+          "content" => [%{"type" => "text", "text" => text}],
+          "usage" => %{"input_tokens" => 1_000, "output_tokens" => 50}
+        })
+      )
+    end)
+  end
+
+  # seen in production: the model sometimes restates the length note first
+  test "a first line that restates the length is dropped from a bill summary" do
+    for echo <- [
+          "Length: medium (3 to 5 sentences or up to 5 bullet points for the summary).",
+          "The summary itself is medium length: up to 5 bullet points or 3 to 5 sentences.",
+          "The summary itself, with no heading, is short: 2 to 3 sentences."
+        ] do
+      stub_reply(
+        echo <> "\n\nThis bill would warn members.\n\n## Who this affects\n- Members: warned."
+      )
+
+      assert {:ok,
+              %{
+                summary:
+                  "This bill would warn members.\n\n## Who this affects\n- Members: warned."
+              }} =
+               Writer.write(:bill, "SEC. 1. Short text.")
+    end
+  end
+
+  test "a summary that only mentions sentences or length is kept whole" do
+    text =
+      "The bill limits the length of a sentence to 5 years.\n\nIt applies to 3 to 5 sentences a year."
+
+    stub_reply(text)
+    assert {:ok, %{summary: ^text}} = Writer.write(:bill, "SEC. 1. Short text.")
+  end
+
   test "a very long bill is summarized part by part at section breaks, then combined" do
     stub_claude()
     section = "SEC. 1. " <> String.duplicate("word ", 20_000) <> "\n"

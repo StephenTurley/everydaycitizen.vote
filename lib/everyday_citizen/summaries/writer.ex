@@ -18,6 +18,8 @@ defmodule EverydayCitizen.Summaries.Writer do
   @bands [{10_000, "short", 900}, {60_000, "medium", 1200}, {250_000, "long", 1600}]
   # a line that starts a section or a larger part: where a long bill is split
   @break ~r/^\s*(SEC\.|Sec\.|SECTION|Section|TITLE|Title|DIVISION|Division|SUBTITLE|Subtitle)\b/
+  # a first line restating the length note ("Length: medium (3 to 5 sentences…)")
+  @length_echo ~r/\A(?=[^\n]*\b(length|summary itself)\b)[^\n]*\b\d+ (to \d+ )?(sentences|bullet points)\b[^\n]*\n\s*\n/i
 
   @type result :: %{
           summary: String.t(),
@@ -44,10 +46,20 @@ defmodule EverydayCitizen.Summaries.Writer do
     {name, cap} = band(text)
     opts = [note: "Length: #{name}", max_tokens: cap]
 
-    if String.length(text) <= @max_part,
-      do: call(:bill, text, opts),
-      else: write_in_parts(text, opts)
+    result =
+      if String.length(text) <= @max_part,
+        do: call(:bill, text, opts),
+        else: write_in_parts(text, opts)
+
+    with {:ok, %{summary: summary} = written} <- result do
+      {:ok, %{written | summary: drop_length_echo(summary)}}
+    end
   end
+
+  @doc false
+  # The model sometimes starts by restating the length it was given; that line
+  # is not part of the summary.
+  def drop_length_echo(summary), do: String.replace(summary, @length_echo, "")
 
   defp write_in_parts(text, opts) do
     text
