@@ -78,3 +78,4 @@ config :everyday_citizen, :federal_req_options,
 
 # every test visitor shares one address; the per-visitor limit is not under test
 config :everyday_citizen, :summaries, visitor_limit: 100_000
+config :everyday_citizen, :search, per_minute: 100_000

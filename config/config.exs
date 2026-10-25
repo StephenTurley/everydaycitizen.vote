@@ -72,6 +72,10 @@ config :everyday_citizen, :summaries,
     long_prompt_tokens: 100_000
   }
 
+# Searches one visitor may run in a minute (EverydayCitizenWeb.SearchLive):
+# each runs about 20 queries, some of them heavy.
+config :everyday_citizen, :search, per_minute: 60
+
 # WebAuthn relying party (passkeys). Dev values; test.exs and runtime.exs (prod)
 # override. The origin must match the browser's address bar exactly.
 config :everyday_citizen, :webauthn,

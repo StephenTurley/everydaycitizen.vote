@@ -10,10 +10,15 @@ defmodule EverydayCitizenWeb.SearchLive do
   never searched, echoed or put in a link, and the URL is replaced by a bare
   `/search`. Results show only AI summaries that
   are already cached; searching never starts one. The page is `noindex`.
+
+  A search runs once the page is connected, never on the first (static)
+  render, and each visitor may run a limited number a minute
+  (`config :everyday_citizen, :search, per_minute:`): past it, the page asks
+  them to wait and runs no query.
   """
   use EverydayCitizenWeb, :live_view
 
-  alias EverydayCitizen.{Reps, Search}
+  alias EverydayCitizen.{RateLimit, Reps, Search}
   alias EverydayCitizen.Search.Query
   alias EverydayCitizenWeb.SearchController
 
@@ -22,6 +27,7 @@ defmodule EverydayCitizenWeb.SearchLive do
   @page_size 10
   # the text search counts at most 1,000 matches: 100 pages
   @max_page 100
+  @minute :timer.minutes(1)
 
   @stages %{
     law: "Became law",
@@ -33,14 +39,19 @@ defmodule EverydayCitizenWeb.SearchLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, noindex: true, page_title: "Search")}
+    {:ok,
+     assign(socket,
+       noindex: true,
+       page_title: "Search",
+       remote_ip: EverydayCitizenWeb.RemoteIp.from_socket(socket)
+     )}
   end
 
   @impl true
   def handle_params(params, _uri, socket) do
     case classify(params["q"]) do
       {:search, query} ->
-        {:noreply, socket |> assign(kind: :search, query: query) |> search(page(params["page"]))}
+        {:noreply, socket |> assign(query: query) |> search(page(params["page"]))}
 
       # a hand-typed address leaves the address bar: the page moves to a bare
       # /search and remembers (in a flash no toast shows) to say why
@@ -60,7 +71,24 @@ defmodule EverydayCitizenWeb.SearchLive do
   defp classify(q) when is_binary(q), do: Query.classify(q)
   defp classify(_q), do: :empty
 
+  # The static render runs no query: it would be a search no per-visitor limit
+  # can count (its visitor's address is unknown until connected).
   defp search(socket, page) do
+    cond do
+      not connected?(socket) ->
+        assign(socket, kind: :searching)
+
+      RateLimit.hit({:search, socket.assigns.remote_ip}, per_minute(), @minute) == :limited ->
+        assign(socket, kind: :limited)
+
+      true ->
+        socket |> assign(kind: :search) |> run_search(page)
+    end
+  end
+
+  defp per_minute, do: Application.get_env(:everyday_citizen, :search, [])[:per_minute] || 60
+
+  defp run_search(socket, page) do
     query = socket.assigns.query
 
     numbered = numbered(Search.bill_by_number(query))
@@ -126,7 +154,7 @@ defmodule EverydayCitizenWeb.SearchLive do
     <Layouts.app
       flash={@flash}
       current_scope={@current_scope}
-      query={if @kind == :search, do: @query.text, else: ""}
+      query={if @kind in [:search, :searching, :limited], do: @query.text, else: ""}
     >
       <div class="pt-5 flex flex-col gap-6">
         <%= case @kind do %>
@@ -140,6 +168,10 @@ defmodule EverydayCitizenWeb.SearchLive do
             <p class="m-0 text-[15px] text-floor-muted">
               Search for a bill by its number or name, a phrase in its text, or a person by name or place.
             </p>
+          <% :searching -> %>
+            <p class="m-0 text-[15px] text-floor-muted">Searching…</p>
+          <% :limited -> %>
+            <p class="m-0 text-[15px]">Too many searches. Wait a minute and try again.</p>
           <% :search -> %>
             <p :if={@nothing?} class="m-0 text-[15px]">
               Nothing matched “{@query.text}”.
