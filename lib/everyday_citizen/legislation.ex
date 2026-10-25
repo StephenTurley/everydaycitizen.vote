@@ -253,12 +253,17 @@ defmodule EverydayCitizen.Legislation do
     |> Repo.all()
   end
 
-  @doc "External ids of all the jurisdiction's bills."
-  @spec bill_external_ids(String.t()) :: [String.t()]
-  def bill_external_ids(jurisdiction_key) do
+  @doc "External ids of the jurisdiction's bills that have no stored titles yet."
+  @spec bill_external_ids_without_titles(String.t()) :: [String.t()]
+  def bill_external_ids_without_titles(jurisdiction_key) do
     from(b in Bill,
+      as: :bill,
       join: j in assoc(b, :jurisdiction),
       where: j.key == ^jurisdiction_key,
+      where:
+        not exists(
+          from t in EverydayCitizen.Legislation.BillTitle, where: t.bill_id == parent_as(:bill).id
+        ),
       select: b.external_id
     )
     |> Repo.all()

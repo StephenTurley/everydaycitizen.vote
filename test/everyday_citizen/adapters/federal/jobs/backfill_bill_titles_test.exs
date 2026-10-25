@@ -64,6 +64,25 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.BackfillBillTitlesTest do
     )
   end
 
+  test "a bill with stored titles is not enqueued, one without is" do
+    src = Records.SourceRef.new("https://x.test/t", "t")
+
+    {:ok, _} =
+      Ingest.write(
+        %Records.BillTitles{
+          jurisdiction: "federal",
+          bill_external_id: "119-hr-22",
+          titles: [%{title: "SAVE Act", kind: "short"}],
+          source: src
+        },
+        nil
+      )
+
+    assert :ok = perform_job(BackfillBillTitles, %{})
+
+    assert [%{args: %{"type" => "s", "number" => "5"}}] = all_enqueued(worker: SyncBillTitles)
+  end
+
   test "a titles job writes the titles" do
     stub_titles(
       200,
