@@ -100,6 +100,33 @@ defmodule EverydayCitizenWeb.HomeLiveTest do
 
   defp days_from_now(n), do: DateTime.add(DateTime.utc_now(), n * 86_400, :second)
 
+  defp cache!(i, text) do
+    {subject, input} = Inputs.bill(bill(i))
+    {:ok, _} = Summaries.put_ai(:bill, subject, input, %{summary: text, model: "m"})
+    subject
+  end
+
+  # Reports each query that reads a version's text, made by this test process
+  # or a process it started (a LiveView under test lists it in $callers).
+  defp watch_text_queries do
+    test = self()
+    id = "text-queries-#{inspect(test)}"
+
+    :telemetry.attach(
+      id,
+      [:everyday_citizen, :repo, :query],
+      fn _event, _measures, %{query: sql}, _config ->
+        callers = [self() | Process.get(:"$callers", [])]
+
+        if test in callers and sql =~ "plain_text\"" and sql =~ ~r/SELECT[^F]*plain_text/,
+          do: send(test, {:text_query, sql})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(id) end)
+  end
+
   describe "new laws" do
     setup do
       laws!(7)
@@ -143,7 +170,13 @@ defmodule EverydayCitizenWeb.HomeLiveTest do
       assert length(all_enqueued(worker: EverydayCitizen.Jobs.SummarizeSubject)) == 5
 
       {subject, _} = Inputs.bill(bill(6))
-      send(view.pid, {:ai_summary, "bill", subject, {:ok, "Six is summarized."}})
+
+      Phoenix.PubSub.broadcast(
+        EverydayCitizen.PubSub,
+        Summaries.ai_topic(:bill, subject),
+        {:ai_summary, "bill", subject, {:ok, "Six is summarized."}}
+      )
+
       assert has_element?(view, "#law-119-hr-6", "Six is summarized.")
       refute has_element?(view, "#law-119-hr-7", "Six is summarized.")
       assert has_element?(view, "#law-119-hr-7", "Writing a plain-English summary")
@@ -151,6 +184,55 @@ defmodule EverydayCitizenWeb.HomeLiveTest do
       {subject, _} = Inputs.bill(bill(5))
       send(view.pid, {:ai_summary, "bill", subject, {:error, :paused}})
       refute has_element?(view, "#law-119-hr-5", "Writing a plain-English summary")
+    end
+
+    test "the first page load, before the live connection, does no summary work", %{conn: conn} do
+      cache!(7, "Cached seven.")
+      watch_text_queries()
+
+      html = conn |> get(~p"/") |> html_response(200)
+      assert html =~ "Law number 7"
+      refute html =~ "Cached seven."
+      refute html =~ "Writing a plain-English summary"
+      refute_received {:text_query, _}
+      assert [] = all_enqueued(worker: EverydayCitizen.Jobs.SummarizeSubject)
+    end
+
+    test "cached summaries show without the bills' text being read", %{conn: conn} do
+      for i <- 3..7, do: cache!(i, "Cached #{i}.")
+      watch_text_queries()
+
+      {:ok, view, _html} = live(conn, ~p"/")
+      assert has_element?(view, "#law-119-hr-3", "Cached 3.")
+      assert has_element?(view, "#law-119-hr-7", "Cached 7.")
+      refute_received {:text_query, _}
+      assert [] = all_enqueued(worker: EverydayCitizen.Jobs.SummarizeSubject)
+    end
+
+    test "Show 5 more never repeats a law signed since the page opened", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      {:ok, _} =
+        Ingest.write(
+          %Records.BillActions{
+            jurisdiction: "federal",
+            bill_external_id: "119-s-5",
+            actions: [
+              %Records.BillAction{
+                position: 9,
+                date: ~D[2026-10-24],
+                description: "Became Public Law",
+                classification: "became_law"
+              }
+            ],
+            source: @src
+          },
+          nil
+        )
+
+      html = view |> element("button", "Show 5 more") |> render_click()
+      assert length(Regex.scan(~r/id="law-119-hr-3"/, html)) == 1
+      assert has_element?(view, "#law-119-hr-1")
     end
 
     test "a crawler never starts a summary, but sees one already written", %{conn: conn} do

@@ -13,7 +13,7 @@ defmodule EverydayCitizenWeb.HomeLive do
   use EverydayCitizenWeb, :live_view
 
   alias EverydayCitizen.{Legislation, Reps, Summaries}
-  alias EverydayCitizen.Summaries.Claude
+  alias EverydayCitizen.Summaries.{Claude, Inputs}
   alias EverydayCitizenWeb.AiBillSummary
 
   @repo_url "https://github.com/StephenTurley/everydaycitizen.vote/blob/main/"
@@ -43,23 +43,43 @@ defmodule EverydayCitizenWeb.HomeLive do
   end
 
   # The next page of laws, each with its summary; one more is read to know
-  # whether there are more.
+  # whether there are more, and laws already shown (one signed since the page
+  # opened shifts the rest down) are not added twice.
   defp load_laws(socket) do
+    shown = MapSet.new(socket.assigns.laws, & &1.bill.id)
     page = Legislation.recent_laws(@page + 1, length(socket.assigns.laws))
-    laws = Enum.take(page, @page)
-
-    summaries =
-      for %{bill: bill} <- laws,
-          summary = AiBillSummary.load(socket, bill),
-          into: socket.assigns.summaries,
-          do: {bill.id, summary}
+    laws = page |> Enum.take(@page) |> Enum.reject(&MapSet.member?(shown, &1.bill.id))
 
     assign(socket,
       laws: socket.assigns.laws ++ laws,
       more_laws: length(page) > @page,
-      summaries: summaries
+      summaries: Map.merge(socket.assigns.summaries, summaries(socket, Enum.map(laws, & &1.bill)))
     )
   end
+
+  # None on the first page load. Once live: cached ones found by subject and
+  # prompt version in one query, without reading the bills' text (a subject
+  # names a version, whose text does not change); for the rest, the bill
+  # page's path, which reads the text, applies the limits and asks for one
+  # (never for crawlers).
+  defp summaries(socket, bills) do
+    if connected?(socket) and Claude.enabled?() do
+      subjects = Inputs.bill_subjects(Enum.map(bills, & &1.id))
+      cached = Summaries.cached_ai(:bill, Map.values(subjects))
+
+      for bill <- bills,
+          subject = subjects[bill.id],
+          summary = summary(socket, bill, subject, cached[subject]),
+          into: %{},
+          do: {bill.id, summary}
+    else
+      %{}
+    end
+  end
+
+  defp summary(_socket, _bill, subject, %{summary: text}), do: {subject, {:ok, text}}
+  defp summary(%{assigns: %{crawler: true}}, _bill, _subject, nil), do: nil
+  defp summary(socket, bill, _subject, nil), do: AiBillSummary.load(socket, bill)
 
   @impl true
   def handle_info({:ai_summary, "bill", subject, result}, socket) do
