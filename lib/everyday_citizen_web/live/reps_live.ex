@@ -13,7 +13,6 @@ defmodule EverydayCitizenWeb.RepsLive do
   alias EverydayCitizen.Summaries.{Claude, Inputs}
 
   @repo_url "https://github.com/StephenTurley/everydaycitizen.vote/blob/main/"
-  @visitor_limit 30
   @hour :timer.hours(1)
   @zone "America/New_York"
 
@@ -129,7 +128,11 @@ defmodule EverydayCitizenWeb.RepsLive do
         Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, topic)
 
         state =
-          if RateLimit.hit({:summaries, socket.assigns.remote_ip}, @visitor_limit, @hour) ==
+          if RateLimit.hit(
+               {:summaries, socket.assigns.remote_ip},
+               Summaries.visitor_limit(),
+               @hour
+             ) ==
                :limited,
              do: :limited,
              else: requested(Summaries.request_ai(:rep_week, subject, input))

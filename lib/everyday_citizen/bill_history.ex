@@ -270,12 +270,32 @@ defmodule EverydayCitizen.BillHistory do
     end
   end
 
-  defp normalized(paragraphs), do: Enum.map(paragraphs, &squash/1)
-  defp squash(text), do: String.replace(text, ~r/\s+/u, "")
+  defp normalized(paragraphs), do: paragraphs |> clauses() |> Enum.map(&squash/1)
 
-  # Paragraphs aligned by content; a run of removed paragraphs against a run of
-  # added ones is compared word by word as one passage.
+  # whitespace, and punctuation where a clause ends ("—" before a list, ":"), don't count
+  defp squash(text),
+    do: text |> String.replace(~r/[\s—–:;,]+$/u, "") |> String.replace(~r/\s+/u, "")
+
+  # The text split into clauses at its own numbering — "(a)", "(1)", "(A)",
+  # "(ii)" starting a clause — whatever its paragraphs, since versions of the
+  # same text are not always split the same way.
+  # after a space or punctuation; or run straight onto a word ("investments(a)Conduct")
+  # when a capitalized word follows, which a citation ("13104(f)(8)") never has
+  @clause_start ~r/(?:(?:^|(?<=[\s—–:;.]))(?=\((?:\d{1,3}|[a-z]{1,4}|[A-Z]{1,4})\)\s?[A-Z(])|(?<=[a-z])(?=\((?:\d{1,3}|[a-z]{1,4}|[A-Z]{1,4})\)[A-Z][a-z]))/u
+
+  defp clauses(paragraphs) do
+    paragraphs
+    |> Enum.join(" ")
+    |> String.split(@clause_start)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  # Clauses aligned by content; a run of removed clauses against a run of added
+  # ones is compared word by word as one passage.
   defp diff(before, after_) do
+    {before, after_} = {clauses(before), clauses(after_)}
+
     before
     |> Enum.map(&squash/1)
     |> List.myers_difference(Enum.map(after_, &squash/1))

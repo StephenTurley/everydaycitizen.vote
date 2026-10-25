@@ -60,6 +60,8 @@ config :everyday_citizen, :summaries,
   prompt_versions: %{section: "v2", bill: "v3", bill_chunk: "v2", rep_week: "v1", change: "v1"},
   # new summaries pause once today's Claude spend reaches this (dollars)
   daily_budget_usd: 2.0,
+  # summaries one visitor may ask for in an hour
+  visitor_limit: 30,
   # dollars per million tokens; the long-prompt rates apply to a whole request
   # whose input exceeds long_prompt_tokens
   rates: %{
