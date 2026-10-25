@@ -25,6 +25,11 @@ defmodule EverydayCitizenWeb.Layouts do
   attr :width, :atom, values: [:narrow, :full], default: :narrow
   attr :current_scope, :map, default: nil, doc: "the signed-in scope, if any"
   attr :query, :string, default: "", doc: "the search box's text (never an address)"
+
+  attr :search, :boolean,
+    default: true,
+    doc: "false leaves out the search box (pages served without CSRF protection)"
+
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -40,7 +45,7 @@ defmodule EverydayCitizenWeb.Layouts do
         >
           Everyday Citizen
         </a>
-        <.search_box query={@query} />
+        <.search_box :if={@search} query={@query} />
         <div class="flex items-center gap-3 sm:gap-5 text-[13px] sm:text-sm font-medium whitespace-nowrap">
           <a href={~p"/this-week"} class="py-3 text-floor-accent hover:text-floor-accent-dark">
             This week

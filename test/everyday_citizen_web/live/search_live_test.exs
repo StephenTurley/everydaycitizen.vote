@@ -139,12 +139,33 @@ defmodule EverydayCitizenWeb.SearchLiveTest do
            )
   end
 
-  test "a hand-typed address in the URL is not searched", %{conn: conn} do
-    {:ok, _view, html} = live(conn, ~p"/search?q=123 Main St")
+  test "a hand-typed address in the URL is not searched and leaves the address bar", %{
+    conn: conn
+  } do
+    assert {:error, {_kind, %{to: "/search"}}} = result = live(conn, ~p"/search?q=123 Main St")
+    {:ok, view, html} = follow_redirect(result, conn)
     assert html =~ "looks like an address"
-    refute html =~ "Main St\""
+    assert has_element?(view, ~s(a[href="/"]), "looks like an address")
     refute html =~ "Main St"
     refute html =~ "Bills with this name"
+    refute html =~ "Search for a bill"
+  end
+
+  test "an address patched in on a live page also leaves the address bar", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/search?q=laken riley")
+    render_patch(view, ~p"/search?q=123 Main St")
+    assert_patched(view, "/search")
+    html = render(view)
+    assert html =~ "looks like an address"
+    refute html =~ "Main St"
+  end
+
+  test "a place named in the query comes before the bill groups", %{conn: conn} do
+    bill!("119-s-90", "S. 90", "Unrelated title", "Grants for Iowa farms.")
+    {:ok, _view, html} = live(conn, ~p"/search?q=iowa")
+    {place, _} = :binary.match(html, ~s(aria-label="Iowa"))
+    {text, _} = :binary.match(html, ~s(aria-label="Bills whose text mentions it"))
+    assert place < text
   end
 
   test "a state search lists its members with links to their pages", %{

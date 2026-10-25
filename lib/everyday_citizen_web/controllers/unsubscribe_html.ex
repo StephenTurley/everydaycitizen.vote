@@ -4,7 +4,7 @@ defmodule EverydayCitizenWeb.UnsubscribeHTML do
 
   def confirm(assigns) do
     ~H"""
-    <Layouts.app flash={@flash}>
+    <Layouts.app flash={@flash} search={false}>
       <section class="pt-10 flex flex-col gap-3">
         <h1 class="m-0 text-[28px] leading-tight font-bold tracking-tight">Stop the daily email?</h1>
         <p class="m-0 text-[15px] leading-relaxed text-floor-ink-2">
@@ -26,7 +26,7 @@ defmodule EverydayCitizenWeb.UnsubscribeHTML do
 
   def done(assigns) do
     ~H"""
-    <Layouts.app flash={@flash}>
+    <Layouts.app flash={@flash} search={false}>
       <section class="pt-10 flex flex-col gap-3">
         <h1 class="m-0 text-[28px] leading-tight font-bold tracking-tight">Done</h1>
         <p class="m-0 text-[15px] leading-relaxed text-floor-ink-2">
@@ -42,7 +42,7 @@ defmodule EverydayCitizenWeb.UnsubscribeHTML do
 
   def invalid(assigns) do
     ~H"""
-    <Layouts.app flash={@flash}>
+    <Layouts.app flash={@flash} search={false}>
       <section class="pt-10 flex flex-col gap-3">
         <h1 class="m-0 text-[28px] leading-tight font-bold tracking-tight">
           This link doesn't work

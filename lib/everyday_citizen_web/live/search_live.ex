@@ -1,12 +1,14 @@
 defmodule EverydayCitizenWeb.SearchLive do
   @moduledoc """
   The search results page (mockup screens 1 and 2), reached from the header's
-  search box. Its groups come in a fixed order: bills with the number typed,
-  bills with this name, bills whose text mentions it (ten to a page), then the
-  place named and the people whose names match. An empty group is left out.
+  search box. Its groups come in a fixed order: the place named, if any, then
+  bills with the number typed, bills with this name, bills whose text mentions
+  it (ten to a page), then the people whose names match. An empty group is
+  left out.
 
   The query is classified again here, so a hand-typed address in the URL is
-  never searched, echoed or put in a link. Results show only AI summaries that
+  never searched, echoed or put in a link, and the URL is replaced by a bare
+  `/search`. Results show only AI summaries that
   are already cached; searching never starts one. The page is `noindex`.
   """
   use EverydayCitizenWeb, :live_view
@@ -40,7 +42,16 @@ defmodule EverydayCitizenWeb.SearchLive do
       {:search, query} ->
         {:noreply, socket |> assign(kind: :search, query: query) |> search(page(params["page"]))}
 
-      kind ->
+      # a hand-typed address leaves the address bar: the page moves to a bare
+      # /search and remembers (in a flash no toast shows) to say why
+      :address ->
+        {:noreply,
+         socket
+         |> put_flash(:address, "1")
+         |> push_patch(to: ~p"/search", replace: true)}
+
+      :empty ->
+        kind = if Phoenix.Flash.get(socket.assigns.flash, :address), do: :address, else: :empty
         {:noreply, assign(socket, kind: kind, query: nil)}
     end
   end
@@ -139,6 +150,11 @@ defmodule EverydayCitizenWeb.SearchLive do
               <% end %>
             </p>
 
+            <%!-- a place named outright is what was meant: its members come first --%>
+            <.group :if={@place} label={@place.name}>
+              <.person_item :for={rep <- @place.reps} rep={rep} />
+            </.group>
+
             <.group :if={@numbered != []} label={"Bills numbered #{@query.number || @query.text}"}>
               <.bill_item :for={bill <- @numbered} bill={bill} title={bill.title} />
             </.group>
@@ -177,10 +193,6 @@ defmodule EverydayCitizenWeb.SearchLive do
                   {@text.total - @page * page_size()} more bills mention it
                 </.link>
               </div>
-            </.group>
-
-            <.group :if={@place} label={@place.name}>
-              <.person_item :for={rep <- @place.reps} rep={rep} />
             </.group>
 
             <.group :if={@people != []} label="People">

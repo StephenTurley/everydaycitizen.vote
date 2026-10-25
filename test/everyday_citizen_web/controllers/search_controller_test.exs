@@ -50,6 +50,25 @@ defmodule EverydayCitizenWeb.SearchControllerTest do
     assert redirected_to(conn) == "/"
   end
 
+  test "the header form's own CSRF token is accepted, with ConnTest's bypass off", %{conn: conn} do
+    conn = get(conn, ~p"/this-week")
+
+    [_, token] =
+      Regex.run(
+        ~r/<form[^>]*id="site-search".*?name="_csrf_token"[^>]*value="([^"]+)"/s,
+        html_response(conn, 200)
+      )
+
+    fresh = fn -> conn |> recycle() |> put_private(:plug_skip_csrf_protection, false) end
+
+    posted = post(fresh.(), ~p"/search", %{"_csrf_token" => token, "q" => "laken riley"})
+    assert redirected_to(posted) == "/search?q=laken+riley"
+
+    assert_raise Plug.CSRFProtection.InvalidCSRFTokenError, fn ->
+      post(fresh.(), ~p"/search", %{"q" => "laken riley"})
+    end
+  end
+
   test "q is filtered from logs" do
     # Phoenix compiles the list at boot, so check what the logger makes of it
     assert Phoenix.Logger.filter_values(%{"q" => "123 Main St"}) == %{"q" => "[FILTERED]"}
