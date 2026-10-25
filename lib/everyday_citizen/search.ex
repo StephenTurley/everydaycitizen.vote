@@ -167,7 +167,8 @@ defmodule EverydayCitizen.Search do
             CASE WHEN ec_name_key(p.name) = $1 THEN 1
                  WHEN ec_name_key(p.name) LIKE $2 THEN 2
                  ELSE 3 END AS tier,
-            EXISTS (SELECT 1 FROM memberships m WHERE m.person_id = p.id
+            EXISTS (SELECT 1 FROM memberships m JOIN bodies cb ON cb.id = m.body_id
+                    WHERE m.person_id = p.id AND cb.classification = 'chamber'
                     AND (m.start_date IS NULL OR m.start_date <= $3)
                     AND (m.end_date IS NULL OR m.end_date >= $3)) AS current
           FROM people p
