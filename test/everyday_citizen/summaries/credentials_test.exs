@@ -63,6 +63,22 @@ defmodule EverydayCitizen.Summaries.CredentialsTest do
     allow_cache()
   end
 
+  # Fly labels the raw JWT application/json; it must be taken as text, not decoded
+  test "the identity token is read as text whatever its content type" do
+    federate()
+
+    Req.Test.stub(EverydayCitizen.FlyOidc, fn conn ->
+      conn
+      |> Plug.Conn.put_resp_content_type("application/json")
+      |> Plug.Conn.send_resp(200, "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ4In0.c2ln")
+    end)
+
+    assert {:ok, {"authorization", "Bearer sk-ant-oat01-0"}} = Credentials.auth_header()
+
+    assert_received {:exchange, _path,
+                     %{"assertion" => "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ4In0.c2ln"}}
+  end
+
   test "with federation, the machine's identity token is exchanged for a bearer token" do
     federate()
 

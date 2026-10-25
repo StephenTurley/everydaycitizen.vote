@@ -96,8 +96,15 @@ defmodule EverydayCitizen.Summaries.Credentials do
   end
 
   # A signed identity token for this machine from Fly (single-use: one per exchange).
+  # Fly sends the raw JWT labelled application/json, so the body is not decoded.
   defp identity_token(audience) do
-    [url: @oidc_url, json: %{aud: audience}, unix_socket: "/.fly/api", receive_timeout: 10_000]
+    [
+      url: @oidc_url,
+      json: %{aud: audience},
+      unix_socket: "/.fly/api",
+      receive_timeout: 10_000,
+      decode_body: false
+    ]
     |> Keyword.merge(Application.get_env(:everyday_citizen, :fly_oidc_req_options, []))
     |> Req.post()
     |> case do
