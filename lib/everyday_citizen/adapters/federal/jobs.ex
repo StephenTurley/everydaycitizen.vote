@@ -11,6 +11,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs do
     BackfillBillHistory,
     BackfillBillSections,
     BackfillBillSummaries,
+    BackfillBillTitles,
     BackfillBillWebUrls,
     Coverage,
     LinkVoteSubjects,
@@ -41,7 +42,8 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs do
       {"bill_sections", BackfillBillSections, %{}},
       {"zip_districts", SyncZipDistricts, %{}},
       {"bill_web_urls", BackfillBillWebUrls, %{}},
-      {"bill_history", BackfillBillHistory, %{}}
+      {"bill_history", BackfillBillHistory, %{}},
+      {"bill_titles", BackfillBillTitles, %{}}
     ]
   end
 

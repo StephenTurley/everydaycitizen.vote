@@ -44,6 +44,20 @@ defmodule EverydayCitizen.Adapters.Federal.CongressGov do
     |> Stream.flat_map(& &1)
   end
 
+  @doc """
+  Every item of a list endpoint with the first page's source (`nil` when there
+  are no items). A failed request is returned as `{:error, message}`.
+  """
+  @spec fetch_all(String.t(), String.t()) ::
+          {:ok, {[map()], SourceRef.t() | nil}} | {:error, String.t()}
+  def fetch_all(path, key) do
+    items = path |> paginate(key) |> Enum.to_list()
+    source = items |> List.first() |> then(&(&1 && elem(&1, 1)))
+    {:ok, {Enum.map(items, &elem(&1, 0)), source}}
+  rescue
+    e in RuntimeError -> {:error, Exception.message(e)}
+  end
+
   @spec count(String.t(), keyword()) :: {:ok, non_neg_integer()} | {:error, term()}
   def count(path, params \\ []) do
     with {:ok, body, _source} <- get(path, Keyword.put(params, :limit, 1)) do

@@ -83,8 +83,9 @@ config :everyday_citizen, Oban,
   # a deploy stops the old machine: running jobs get 25 s to finish
   shutdown_grace_period: :timer.seconds(25),
   repo: EverydayCitizen.Repo,
+  # backfill: one-off per-bill re-syncs, one at a time so they never starve ingest
   # bulk: the first-run bulk load's chunk jobs (Federal.BulkBatch)
-  queues: [ingest: 4, text: 2, bulk: 4, mail: 2, summaries: 2],
+  queues: [ingest: 4, text: 2, bulk: 4, mail: 2, summaries: 2, backfill: 1],
   plugins: [
     # Rescue jobs left executing by a crashed node; prune finished jobs after a week.
     # rescue_after must exceed every worker's timeout (the bulk bill and text

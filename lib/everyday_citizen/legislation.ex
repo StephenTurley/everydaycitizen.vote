@@ -253,6 +253,17 @@ defmodule EverydayCitizen.Legislation do
     |> Repo.all()
   end
 
+  @doc "External ids of all the jurisdiction's bills."
+  @spec bill_external_ids(String.t()) :: [String.t()]
+  def bill_external_ids(jurisdiction_key) do
+    from(b in Bill,
+      join: j in assoc(b, :jurisdiction),
+      where: j.key == ^jurisdiction_key,
+      select: b.external_id
+    )
+    |> Repo.all()
+  end
+
   @doc "External ids of stored amendments that already have a description."
   @spec described_amendment_ids() :: MapSet.t(String.t())
   def described_amendment_ids do

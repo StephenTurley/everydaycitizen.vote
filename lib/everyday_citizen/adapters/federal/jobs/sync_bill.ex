@@ -30,14 +30,14 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBill do
 
     with {:ok, detail, detail_src} <- CongressGov.get(base),
          {:ok, subjects, _src} <- CongressGov.get(base <> "/subjects", limit: 250),
-         {:ok, actions} <- fetch_all(base <> "/actions", "actions"),
-         {:ok, cosponsors} <- fetch_all(base <> "/cosponsors", "cosponsors"),
+         {:ok, actions} <- CongressGov.fetch_all(base <> "/actions", "actions"),
+         {:ok, cosponsors} <- CongressGov.fetch_all(base <> "/cosponsors", "cosponsors"),
          {:ok, text, text_src} <- CongressGov.get(base <> "/text", limit: 250),
-         {:ok, summaries} <- fetch_all(base <> "/summaries", "summaries"),
-         {:ok, committees} <- fetch_all(base <> "/committees", "committees"),
-         {:ok, relations} <- fetch_all(base <> "/relatedbills", "relatedBills"),
-         {:ok, titles} <- fetch_all(base <> "/titles", "titles"),
-         {:ok, amendments} <- fetch_all(base <> "/amendments", "amendments"),
+         {:ok, summaries} <- CongressGov.fetch_all(base <> "/summaries", "summaries"),
+         {:ok, committees} <- CongressGov.fetch_all(base <> "/committees", "committees"),
+         {:ok, relations} <- CongressGov.fetch_all(base <> "/relatedbills", "relatedBills"),
+         {:ok, titles} <- CongressGov.fetch_all(base <> "/titles", "titles"),
+         {:ok, amendments} <- CongressGov.fetch_all(base <> "/amendments", "amendments"),
          details = amendment_details(elem(amendments, 0), "#{c}"),
          {:ok, id} <-
            BillWriter.write(
@@ -57,15 +57,6 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBill do
            ) do
       enqueue_text(id, text, text_src)
     end
-  end
-
-  # Items from every page plus the first page's source; `nil` source means no items.
-  defp fetch_all(path, key) do
-    items = path |> CongressGov.paginate(key) |> Enum.to_list()
-    source = items |> List.first() |> then(&(&1 && elem(&1, 1)))
-    {:ok, {Enum.map(items, &elem(&1, 0)), source}}
-  rescue
-    e in RuntimeError -> {:error, Exception.message(e)}
   end
 
   # type+number => detail, for agreed amendments the list gives no description
