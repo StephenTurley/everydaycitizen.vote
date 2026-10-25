@@ -688,15 +688,26 @@ defmodule EverydayCitizenWeb.BillLive do
           </section>
 
           <section aria-label="Official summary" class="order-4 lg:order-3 pb-5 flex flex-col gap-2.5">
-            <h2 class="m-0 text-[18px] lg:text-[22px] font-bold">Official summary</h2>
-            <p :if={!@page.summary} class="m-0 text-[15px] text-floor-muted">
-              No official summary yet.
-            </p>
             <%= if @page.summary do %>
-              <p class="m-0 text-[13px] text-floor-muted">Written by the {@page.summary.author}.</p>
-              <.card class="text-[15px] leading-relaxed text-floor-ink-2 [&_p]:m-0 [&_p+p]:mt-2 [&_ul]:list-disc [&_ul]:pl-5">
-                {Phoenix.HTML.raw(@page.summary.html)}
-              </.card>
+              <%!-- folded by default: the plain-English summary above comes first --%>
+              <details class="group flex flex-col gap-2.5">
+                <summary class="list-none cursor-pointer flex items-center justify-between gap-3 py-1">
+                  <span class="flex flex-col gap-0.5">
+                    <h2 class="m-0 text-[18px] lg:text-[22px] font-bold">Official summary</h2>
+                    <span class="text-[13px] text-floor-muted">
+                      Written by the {@page.summary.author}.
+                    </span>
+                  </span>
+                  <span aria-hidden="true" class="text-floor-muted group-open:hidden">+</span>
+                  <span aria-hidden="true" class="text-floor-muted hidden group-open:inline">−</span>
+                </summary>
+                <.card class="mt-2.5 text-[15px] leading-relaxed text-floor-ink-2 [&_p]:m-0 [&_p+p]:mt-2 [&_ul]:list-disc [&_ul]:pl-5">
+                  {Phoenix.HTML.raw(@page.summary.html)}
+                </.card>
+              </details>
+            <% else %>
+              <h2 class="m-0 text-[18px] lg:text-[22px] font-bold">Official summary</h2>
+              <p class="m-0 text-[15px] text-floor-muted">No official summary yet.</p>
             <% end %>
           </section>
 

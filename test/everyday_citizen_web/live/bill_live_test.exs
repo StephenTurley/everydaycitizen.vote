@@ -606,6 +606,48 @@ defmodule EverydayCitizenWeb.BillLiveTest do
            )
   end
 
+  test "the official summary is folded away until opened, its author still shown", %{conn: conn} do
+    {:ok, _} =
+      Ingest.write(
+        %Records.BillSummaries{
+          jurisdiction: "federal",
+          bill_external_id: "119-s-5",
+          author: "Congressional Research Service",
+          summaries: [
+            %{
+              version_code: "is",
+              action_date: ~D[2026-01-06],
+              action_description: "Introduced",
+              html: "<p>This bill requires detention.</p>",
+              updated_at_source: ~U[2026-01-07 00:00:00Z]
+            }
+          ],
+          source: @src
+        },
+        nil
+      )
+
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+
+    assert has_element?(
+             view,
+             "section[aria-label='Official summary'] details:not([open]) summary",
+             "Official summary"
+           )
+
+    assert has_element?(
+             view,
+             "section[aria-label='Official summary'] summary",
+             "Written by the Congressional Research Service"
+           )
+
+    assert has_element?(
+             view,
+             "section[aria-label='Official summary'] details",
+             "This bill requires detention."
+           )
+  end
+
   test "a bill with no text shows no executive summary", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
     refute has_element?(view, "#bill-summary")
