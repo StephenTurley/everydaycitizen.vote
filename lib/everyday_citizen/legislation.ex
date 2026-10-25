@@ -2,7 +2,7 @@ defmodule EverydayCitizen.Legislation do
   @moduledoc "Queries over bills, actions, sponsorships and text versions."
   import Ecto.Query
 
-  alias EverydayCitizen.Legislation.{Bill, BillAction, BillSummary, BillVersion}
+  alias EverydayCitizen.Legislation.{Bill, BillAction, BillSummary, BillVersion, Sponsorship}
   alias EverydayCitizen.Legislature.Jurisdiction
   alias EverydayCitizen.Repo
 
@@ -179,6 +179,42 @@ defmodule EverydayCitizen.Legislation do
     |> Repo.update_all(set: [sections: sections, sections_version: format])
 
     :ok
+  end
+
+  @doc """
+  Bills a person sponsors (`"primary"`) or cosponsors (`"cosponsor"`), not
+  withdrawn, newest introduced first, each with its latest action; `total`
+  counts them all. Options: `:limit` (10) and `:offset` (0).
+  """
+  @spec sponsored_bills(integer(), String.t(), keyword()) :: %{
+          bills: [%{bill: Bill.t(), latest: BillAction.t() | nil}],
+          total: non_neg_integer()
+        }
+  def sponsored_bills(person_id, classification, opts)
+      when classification in ["primary", "cosponsor"] do
+    query =
+      from(s in Sponsorship,
+        join: b in Bill,
+        on: b.id == s.bill_id,
+        where:
+          s.person_id == ^person_id and s.classification == ^classification and
+            is_nil(s.withdrawn_on)
+      )
+
+    bills =
+      query
+      |> order_by([_s, b], desc_nulls_last: b.introduced_on, desc: b.id)
+      |> limit(^Keyword.get(opts, :limit, 10))
+      |> offset(^Keyword.get(opts, :offset, 0))
+      |> select([_s, b], b)
+      |> Repo.all()
+
+    latest = latest_actions(Enum.map(bills, & &1.id))
+
+    %{
+      bills: Enum.map(bills, &%{bill: &1, latest: latest[&1.id]}),
+      total: Repo.aggregate(query, :count)
+    }
   end
 
   @doc "Each bill's latest action (highest position), keyed by bill id."

@@ -69,6 +69,71 @@ defmodule EverydayCitizen.Legislature do
     |> Map.new()
   end
 
+  @doc "A person by id, given as an integer or its decimal string; nil for anything else."
+  @spec get_person(String.t() | integer()) :: Person.t() | nil
+  def get_person(id) when is_integer(id), do: Repo.get(Person, id)
+
+  def get_person(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int, ""} -> get_person(int)
+      _ -> nil
+    end
+  end
+
+  def get_person(_id), do: nil
+
+  @doc """
+  A person's most recent chamber membership, ended or not, with its body; nil
+  when they have none.
+  """
+  @spec latest_chamber_membership(integer()) ::
+          %{membership: Membership.t(), body: Body.t()} | nil
+  def latest_chamber_membership(person_id) do
+    from(m in Membership,
+      join: b in Body,
+      on: b.id == m.body_id,
+      where: m.person_id == ^person_id and b.classification == "chamber",
+      order_by: [desc_nulls_last: m.start_date, desc: m.id],
+      limit: 1,
+      select: %{membership: m, body: b}
+    )
+    |> Repo.one()
+  end
+
+  @doc "The earliest start date of a person's memberships in a body; nil when none is known."
+  @spec serving_since(integer(), integer()) :: Date.t() | nil
+  def serving_since(person_id, body_id) do
+    Membership
+    |> where([m], m.person_id == ^person_id and m.body_id == ^body_id)
+    |> select([m], min(m.start_date))
+    |> Repo.one()
+  end
+
+  @doc """
+  A person's committee and subcommittee seats current on `on`, as `%{body,
+  role}`: each committee by name, followed by its subcommittees by name.
+  """
+  @spec committee_roles(integer(), Date.t()) :: [%{body: Body.t(), role: String.t()}]
+  def committee_roles(person_id, %Date{} = on) do
+    from(m in Membership,
+      join: b in Body,
+      on: b.id == m.body_id,
+      left_join: parent in Body,
+      on: parent.id == b.parent_id,
+      where: m.person_id == ^person_id and b.classification in ["committee", "subcommittee"],
+      where: is_nil(m.start_date) or m.start_date <= ^on,
+      where: is_nil(m.end_date) or m.end_date >= ^on,
+      select: {%{body: b, role: m.role}, parent.name}
+    )
+    |> Repo.all()
+    |> Enum.uniq_by(fn {%{body: b}, _} -> b.id end)
+    |> Enum.sort_by(fn
+      {%{body: %{classification: "committee", name: name}}, _} -> {name, 0, ""}
+      {%{body: %{name: name}}, parent} -> {parent || name, 1, name}
+    end)
+    |> Enum.map(&elem(&1, 0))
+  end
+
   @spec any_person?() :: boolean()
   def any_person?, do: Repo.exists?(Person)
 

@@ -86,6 +86,7 @@ defmodule EverydayCitizenWeb.Router do
       live "/", HomeLive
       live "/reps/:district", RepsLive
       live "/bills/:id", BillLive
+      live "/people/:id", PersonLive
       live "/this-week", ThisWeekLive
       live "/feedback", FeedbackLive
 

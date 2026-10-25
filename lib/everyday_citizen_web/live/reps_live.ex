@@ -1,11 +1,8 @@
 defmodule EverydayCitizenWeb.RepsLive do
   @moduledoc """
-  A district's reps, one at a time (mockup board A): the row of reps, the
-  selected rep's header and counts, a week switcher, filters, and that week's
-  activity grouped by day, each item linking to its bill page. Above the week's
-  items, a plain-English summary of the rep's week, written by AI the first time
-  anyone views that week and cached (rewritten when the week gains activity).
-  With no week chosen, the page opens on the rep's most recent active week.
+  A district's reps, one at a time (mockup board A): the row of reps, then the
+  selected rep's header and counts (their name links to their own page) above
+  their week, the panel in `EverydayCitizenWeb.RepPanel`.
   """
   use EverydayCitizenWeb, :live_view
 
@@ -103,7 +100,9 @@ defmodule EverydayCitizenWeb.RepsLive do
               <div class="flex flex-col gap-1">
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <h1 class="m-0 text-[24px] lg:text-[32px] leading-tight font-bold tracking-tight">
-                    {@rep.person.name}
+                    <.link navigate={~p"/people/#{@rep.person.id}"} class="text-floor-ink">
+                      {@rep.person.name}
+                    </.link>
                   </h1>
                   <.follow_button
                     id="follow-rep"
@@ -113,7 +112,9 @@ defmodule EverydayCitizenWeb.RepsLive do
                   />
                 </div>
                 <p class="m-0 text-[14px] lg:text-[15px] text-floor-muted">
-                  {@rep.body.name}{if @rep.membership.party, do: " · #{@rep.membership.party}"} · {@rep.membership.district}
+                  {@rep.body.name}{if @rep.membership.party, do: " · #{@rep.membership.party}"} · {Reps.district_label(
+                    @rep.membership.district
+                  )}
                 </p>
               </div>
               <div class="grid grid-cols-2 lg:flex gap-2">
