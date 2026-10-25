@@ -7,6 +7,9 @@ defmodule EverydayCitizen.Search do
   title, then every word somewhere in a title. Within a tier, and for text
   matches, the bill that got further comes first (law, passed a chamber, had a
   roll-call vote, reported, introduced), then the newest.
+
+  Text search treats a phrase as all of its words (a deliberate loosening:
+  checking word order would rebuild multi-MB texts' tsvectors per query).
   """
   import Ecto.Query
 
@@ -19,6 +22,7 @@ defmodule EverydayCitizen.Search do
 
   @page_size 10
   @max_text_matches 1000
+  @text_timeout_ms 3000
 
   @stages %{4 => :law, 3 => :passed, 2 => :voted, 1 => :reported, 0 => :introduced}
 
@@ -133,74 +137,96 @@ defmodule EverydayCitizen.Search do
   @doc """
   Bills whose latest text matches the query's words, leaving out
   `exclude_bill_ids` (those already found by name), ten to a page with an
-  excerpt each. `total` counts at most 1,000 matches.
+  excerpt each. `total` counts at most 1,000 matches (`opts[:cap]`), and
+  those kept are the furthest along. A quoted or hyphenated phrase matches
+  bills containing all its words, in any order; the excerpt marks the exact
+  phrase where it occurs. A search running past 3 seconds (`opts[:timeout_ms]`)
+  finds nothing.
   """
-  @spec bills_by_text(Query.t(), [integer()], pos_integer()) :: %{
+  @spec bills_by_text(Query.t(), [integer()], pos_integer(), keyword()) :: %{
           results: [%{bill: Bill.t(), excerpt: Excerpt.t() | nil, stage: stage()}],
           total: non_neg_integer(),
           more?: boolean()
         }
-  def bills_by_text(%Query{text: text}, exclude_bill_ids, page) do
-    if empty_tsquery?(text),
-      do: %{results: [], total: 0, more?: false},
-      else: text_matches(text, exclude_bill_ids, page)
+  def bills_by_text(%Query{text: text}, exclude_bill_ids, page, opts \\ []) do
+    cap = Keyword.get(opts, :cap, @max_text_matches)
+    timeout_ms = Keyword.get(opts, :timeout_ms, @text_timeout_ms)
+
+    with false <- empty_tsquery?(text),
+         {:ok, rows, total} <- text_hits(text, exclude_bill_ids, page, cap, timeout_ms) do
+      bills = bills_by_id(Enum.map(rows, &hd/1))
+
+      results =
+        for [bill_id, version_id, stage] <- rows do
+          %{
+            bill: Map.fetch!(bills, bill_id),
+            excerpt: Excerpt.build(version_id, text),
+            stage: Map.fetch!(@stages, stage)
+          }
+        end
+
+      %{results: results, total: total, more?: page * @page_size < total}
+    else
+      _ -> %{results: [], total: 0, more?: false}
+    end
   end
 
-  # the latest version of each matching bill, at most 1,000 of them
+  # The latest version of each matching bill, furthest along first, capped.
+  # Phrase operators become AND: a phrase check would rebuild the tsvector of
+  # every candidate's full text, which takes seconds on multi-MB bills.
   @text_hits """
-  SELECT hit.bill_id, hit.id FROM bill_versions hit
+  SELECT hit.bill_id, hit.id, #{@stage_rank} AS stage, b.introduced_on
+  FROM bill_versions hit JOIN bills b ON b.id = hit.bill_id
   WHERE hit.plain_text IS NOT NULL
-    AND to_tsvector('english', hit.plain_text) @@ websearch_to_tsquery('english', $1)
+    AND to_tsvector('english', hit.plain_text) @@
+        regexp_replace(websearch_to_tsquery('english', $1)::text, '<[0-9]+>|<->', '&', 'g')::tsquery
     AND NOT (hit.bill_id = ANY ($2))
     AND hit.id = (
       SELECT l.id FROM bill_versions l
       WHERE l.bill_id = hit.bill_id AND l.plain_text IS NOT NULL AND l.plain_text <> ''
       ORDER BY l.date DESC NULLS LAST, l.id DESC
       LIMIT 1)
+  ORDER BY stage DESC, b.introduced_on DESC NULLS LAST, b.id DESC
   LIMIT $3
   """
 
-  defp text_matches(text, exclude_bill_ids, page) do
-    %{rows: rows} =
-      Repo.query!(
-        """
-        SELECT h.bill_id, h.id, #{@stage_rank} AS stage, count(*) OVER () AS total
-        FROM (#{@text_hits}) h JOIN bills b ON b.id = h.bill_id
-        ORDER BY stage DESC, b.introduced_on DESC NULLS LAST, b.id DESC
-        LIMIT $4 OFFSET $5
-        """,
-        [text, exclude_bill_ids, @max_text_matches, @page_size, (page - 1) * @page_size]
-      )
+  # runs under a statement timeout; a search that takes too long finds nothing
+  defp text_hits(text, exclude_bill_ids, page, cap, timeout_ms) do
+    {:ok, {rows, total}} =
+      Repo.transaction(fn ->
+        Repo.query!("SET LOCAL statement_timeout = #{Integer.to_string(timeout_ms)}")
 
-    total =
-      case rows do
-        [[_, _, _, total] | _] -> total
-        [] when page == 1 -> 0
-        # a page past the end has no rows to carry the count
-        [] -> count_text_matches(text, exclude_bill_ids)
-      end
+        %{rows: rows} =
+          Repo.query!(
+            """
+            SELECT h.bill_id, h.id, h.stage, count(*) OVER () AS total
+            FROM (#{@text_hits}) h
+            ORDER BY h.stage DESC, h.introduced_on DESC NULLS LAST, h.bill_id DESC
+            LIMIT $4 OFFSET $5
+            """,
+            [text, exclude_bill_ids, cap, @page_size, (page - 1) * @page_size]
+          )
 
-    bills = bills_by_id(Enum.map(rows, &hd/1))
+        total =
+          case rows do
+            [[_, _, _, total] | _] -> total
+            [] when page == 1 -> 0
+            # a page past the end has no rows to carry the count
+            [] -> count_text_hits(text, exclude_bill_ids, cap)
+          end
 
-    results =
-      for [bill_id, version_id, stage, _] <- rows do
-        %{
-          bill: Map.fetch!(bills, bill_id),
-          excerpt: Excerpt.build(version_id, text),
-          stage: Map.fetch!(@stages, stage)
-        }
-      end
+        {Enum.map(rows, &Enum.take(&1, 3)), total}
+      end)
 
-    %{results: results, total: total, more?: page * @page_size < total}
+    {:ok, rows, total}
+  rescue
+    e in Postgrex.Error ->
+      if e.postgres[:code] == :query_canceled, do: :timeout, else: reraise(e, __STACKTRACE__)
   end
 
-  defp count_text_matches(text, exclude_bill_ids) do
+  defp count_text_hits(text, exclude_bill_ids, cap) do
     %{rows: [[total]]} =
-      Repo.query!("SELECT count(*) FROM (#{@text_hits}) h", [
-        text,
-        exclude_bill_ids,
-        @max_text_matches
-      ])
+      Repo.query!("SELECT count(*) FROM (#{@text_hits}) h", [text, exclude_bill_ids, cap])
 
     total
   end

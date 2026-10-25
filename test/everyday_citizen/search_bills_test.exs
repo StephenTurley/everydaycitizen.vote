@@ -317,6 +317,42 @@ defmodule EverydayCitizen.SearchBillsTest do
           do: assert(%{results: _} = Search.bills_by_text(search(q), [], 1))
     end
 
+    test "a quoted phrase finds a bill containing all its words" do
+      bill = bill!("119-hr-300", "H.R. 300", "Families Act")
+      version!(bill, "ih", ~D[2026-01-03], "Tax rules change. A refundable credit for families.")
+
+      assert %{results: [%{bill: %{external_id: "119-hr-300"}}]} =
+               Search.bills_by_text(search(~s("tax credit")), [], 1)
+    end
+
+    test "a hyphenated query works" do
+      bill = bill!("119-hr-301", "H.R. 301", "Coverage Act")
+      version!(bill, "ih", ~D[2026-01-03], "Pre-existing conditions are covered.")
+
+      assert %{results: [%{bill: %{external_id: "119-hr-301"}, excerpt: %{parts: parts}}]} =
+               Search.bills_by_text(search("pre-existing conditions"), [], 1)
+
+      assert Enum.any?(parts, &match?({:mark, _}, &1))
+    end
+
+    test "the match cap keeps the bills that got furthest" do
+      for n <- 1..4 do
+        bill = bill!("119-hr-#{400 + n}", "H.R. #{400 + n}", "Bill #{n}")
+        version!(bill, "ih", ~D[2026-01-03], "Lighthouse funding.")
+      end
+
+      law =
+        bill!("119-hr-499", "H.R. 499", "Law",
+          actions: ["became_law"],
+          introduced_on: ~D[2020-01-01]
+        )
+
+      version!(law, "ih", ~D[2026-01-03], "Lighthouse funding.")
+
+      assert %{results: [%{stage: :law, bill: %{external_id: "119-hr-499"}}, _], total: 2} =
+               Search.bills_by_text(search("lighthouse"), [], 1, cap: 2)
+    end
+
     test "a query of only stopwords finds nothing" do
       assert %{results: [], total: 0, more?: false} =
                Search.bills_by_text(search("the of"), [], 1)

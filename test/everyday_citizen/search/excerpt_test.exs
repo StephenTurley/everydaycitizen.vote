@@ -88,6 +88,41 @@ defmodule EverydayCitizen.Search.ExcerptTest do
     assert Enum.map_join(parts, &elem(&1, 1)) =~ "shall be permanent"
   end
 
+  test "a quoted phrase is marked where it occurs", %{bill: bill} do
+    version =
+      version!(bill, "ih", "whole text", [
+        section("1.", "Rules", [block("Tax rules and a credit for families.")]),
+        section("2.", "Credit", [block("The tax credit is refundable.")])
+      ])
+
+    assert %{section: "Sec. 2 Credit", parts: parts} = Excerpt.build(version.id, ~s("tax credit"))
+    assert {:mark, "tax"} in parts and {:mark, "credit"} in parts
+  end
+
+  test "without the exact phrase, the first block with all its words is used", %{bill: bill} do
+    version =
+      version!(bill, "ih", "whole text", [
+        section("1.", "Other", [block("Nothing here.")]),
+        section("2.", "Rules", [block("Tax rules and a credit for families.")])
+      ])
+
+    assert %{section: "Sec. 2 Rules", parts: parts} = Excerpt.build(version.id, ~s("tax credit"))
+    assert {:mark, "Tax"} in parts
+  end
+
+  test "text inside a quoted block is searched", %{bill: bill} do
+    version =
+      version!(bill, "ih", "whole text", [
+        section("3.", "Amendment", [
+          block("Section 5 is amended to read:"),
+          %{"level" => 1, "quote" => [block("Daylight saving time is permanent.")]}
+        ])
+      ])
+
+    assert %{section: "Sec. 3 Amendment", parts: parts} = Excerpt.build(version.id, "daylight")
+    assert {:mark, "Daylight"} in parts
+  end
+
   test "a section without a heading is labeled by its number alone", %{bill: bill} do
     version = version!(bill, "ih", "whole text", [section("7", nil, [block("Daylight rules.")])])
     assert %{section: "Sec. 7"} = Excerpt.build(version.id, "daylight")
