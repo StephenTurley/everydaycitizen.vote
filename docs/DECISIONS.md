@@ -255,3 +255,6 @@ The home page shows a law's cached plain-English summary by kind, subject (which
 
 ## 2026-10-25 — The container starts as root only to open Fly's Machine API socket
 Federated sign-in to Claude failed with EACCES: the app runs as `nobody`, and Fly makes `/.fly/api` (the only way a machine gets its OIDC token without a stored secret) root-only. Fly's docs say nothing on non-root access; a community thread suggests giving the app's group write access. The image's entrypoint (`rel/overlays/bin/as_app`) does that and then runs the command as `nobody` via `setpriv`, so the app itself never runs as root. Chosen by the owner over storing a Fly API token or keeping the 30-day Anthropic key.
+
+## 2026-10-25 — Fly's OIDC tokens name the organization, not its `personal` alias
+Correction to the federation entry above: Fly issues tokens with issuer `https://oidc.fly.io/stephen-980` and subject `stephen-980:thefloor-vote:<machine>`, using the organization's name, even though the app's org slug is `personal` and `oidc.fly.io/personal` serves its own discovery document. The Claude Console issuer and rule now use `stephen-980`; with `personal` the exchange returned 401.
