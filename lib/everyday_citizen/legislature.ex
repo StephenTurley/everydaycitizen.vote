@@ -127,6 +127,72 @@ defmodule EverydayCitizen.Legislature do
     end)
   end
 
+  @doc """
+  Members current on `on` of each `{body_external_id, {:exact | :prefix, text}}`
+  seat, as `%{person, membership, body}`: in seat order, then by district number
+  ("2" before "10"), then by name.
+  """
+  @spec current_members_matching(
+          String.t(),
+          [{String.t(), {:exact | :prefix, String.t()}}],
+          Date.t()
+        ) ::
+          [map()]
+  def current_members_matching(_jurisdiction_key, [], _on), do: []
+
+  def current_members_matching(jurisdiction_key, seats, %Date{} = on) do
+    rows =
+      Membership
+      |> join(:inner, [m], b in Body, on: b.id == m.body_id)
+      |> join(:inner, [_m, b], j in Jurisdiction, on: j.id == b.jurisdiction_id)
+      |> join(:inner, [m], p in Person, on: p.id == m.person_id)
+      |> where([_m, _b, j], j.key == ^jurisdiction_key)
+      |> where(^matcher_condition(seats))
+      |> where([m], is_nil(m.start_date) or m.start_date <= ^on)
+      |> where([m], is_nil(m.end_date) or m.end_date >= ^on)
+      |> select([m, b, _j, p], %{person: p, membership: m, body: b})
+      |> Repo.all()
+
+    rows
+    |> Enum.uniq_by(& &1.person.id)
+    |> Enum.sort_by(
+      &{seat_rank(seats, &1), district_number(&1.membership.district), &1.person.name}
+    )
+  end
+
+  defp matcher_condition(seats) do
+    Enum.reduce(seats, dynamic(false), fn
+      {body, {:exact, district}}, acc ->
+        dynamic([m, b], ^acc or (b.external_id == ^body and m.district == ^district))
+
+      {body, {:prefix, prefix}}, acc ->
+        like = escape_like(prefix) <> "%"
+        dynamic([m, b], ^acc or (b.external_id == ^body and like(m.district, ^like)))
+    end)
+  end
+
+  defp escape_like(text), do: String.replace(text, ["\\", "%", "_"], &"\\#{&1}")
+
+  defp seat_rank(seats, %{body: body, membership: membership}) do
+    Enum.find_index(seats, fn
+      {id, {:exact, district}} ->
+        id == body.external_id and membership.district == district
+
+      {id, {:prefix, prefix}} ->
+        id == body.external_id and String.starts_with?(membership.district || "", prefix)
+    end)
+  end
+
+  # the trailing integer of a district key; seats without one come first
+  defp district_number(nil), do: 0
+
+  defp district_number(district) do
+    case Regex.run(~r/(\d+)$/, district) do
+      [_, n] -> String.to_integer(n)
+      nil -> 0
+    end
+  end
+
   @doc "District keys overlapping a postal code, largest share of its land first."
   @spec postal_districts(String.t(), String.t()) :: [String.t()]
   def postal_districts(jurisdiction_key, postal_code) do

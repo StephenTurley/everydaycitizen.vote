@@ -29,6 +29,27 @@ defmodule EverydayCitizen.Reps do
   @spec known_district?(String.t()) :: boolean()
   def known_district?(key), do: locator().districts_for(key) != []
 
+  @doc """
+  The place a typed query names (a state, say) and its current members in the
+  order the locator lists its seats; nil when the query names no place.
+  """
+  @spec place(String.t()) :: nil | %{name: String.t(), reps: [rep()]}
+  def place(query) do
+    case locator().place(query) do
+      {:ok, %{name: name, seats: seats}} ->
+        reps = Legislature.current_members_matching(jurisdiction(), seats, Date.utc_today())
+        %{name: name, reps: reps}
+
+      :error ->
+        nil
+    end
+  end
+
+  @doc "A district key in words, for display; nil for nil."
+  @spec district_label(String.t() | nil) :: String.t() | nil
+  def district_label(nil), do: nil
+  def district_label(district), do: locator().district_label(district)
+
   @doc "The default jurisdiction's key, for pages that show one jurisdiction."
   @spec jurisdiction() :: String.t()
   def jurisdiction, do: Application.fetch_env!(:everyday_citizen, :default_jurisdiction)

@@ -14,7 +14,9 @@ defmodule EverydayCitizen.Search do
   import Ecto.Query
 
   alias EverydayCitizen.Legislation.Bill
+  alias EverydayCitizen.Legislature.{Body, Membership, Person}
   alias EverydayCitizen.Repo
+  alias EverydayCitizen.Reps
   alias EverydayCitizen.Search.Excerpt
   alias EverydayCitizen.Search.Query
   alias EverydayCitizen.Summaries
@@ -132,6 +134,74 @@ defmodule EverydayCitizen.Search do
         summary: cached_summary(bill)
       }
     end
+  end
+
+  @doc """
+  The place the query names, if any, with its current members; and the people
+  whose names match, current members first within each tier of match (the whole
+  name, the name inside a longer one, then a small typo), then by name. Each
+  person carries their latest chamber membership. People listed under the place
+  are left out of `people`.
+  """
+  @spec people(Query.t(), pos_integer()) :: %{
+          place: nil | %{name: String.t(), reps: [Reps.rep()]},
+          people: [%{person: Person.t(), membership: Membership.t() | nil, body: Body.t() | nil}]
+        }
+  def people(%Query{text: text, key: key}, limit) do
+    place = Reps.place(text)
+    skip = if place, do: Enum.map(place.reps, & &1.person.id), else: []
+    %{place: place, people: people_by_name(key, skip, limit)}
+  end
+
+  defp people_by_name(key, _skip, _limit) when key in [nil, ""], do: []
+
+  defp people_by_name(key, skip, limit) do
+    today = Date.utc_today()
+    like = "%#{escape_like(key)}%"
+
+    %{rows: rows} =
+      Repo.query!(
+        """
+        SELECT id FROM (
+          SELECT p.id, p.name,
+            CASE WHEN ec_name_key(p.name) = $1 THEN 1
+                 WHEN ec_name_key(p.name) LIKE $2 THEN 2
+                 ELSE 3 END AS tier,
+            EXISTS (SELECT 1 FROM memberships m WHERE m.person_id = p.id
+                    AND (m.start_date IS NULL OR m.start_date <= $3)
+                    AND (m.end_date IS NULL OR m.end_date >= $3)) AS current
+          FROM people p
+          WHERE NOT (p.id = ANY ($4))
+            AND (ec_name_key(p.name) LIKE $2
+                 OR word_similarity($1, ec_name_key(p.name)) >= 0.5)
+        ) found
+        ORDER BY tier, NOT current, name, id
+        LIMIT $5
+        """,
+        [key, like, today, skip, limit]
+      )
+
+    ids = Enum.map(rows, &hd/1)
+    people = Repo.all(from p in Person, where: p.id in ^ids) |> Map.new(&{&1.id, &1})
+    chambers = latest_chamber_memberships(ids)
+
+    for id <- ids do
+      {membership, body} = Map.get(chambers, id, {nil, nil})
+      %{person: Map.fetch!(people, id), membership: membership, body: body}
+    end
+  end
+
+  defp latest_chamber_memberships(ids) do
+    from(m in Membership,
+      join: b in Body,
+      on: b.id == m.body_id,
+      where: m.person_id in ^ids and b.classification == "chamber",
+      order_by: [desc_nulls_last: m.start_date, desc: m.id],
+      select: {m.person_id, m, b}
+    )
+    |> Repo.all()
+    |> Enum.uniq_by(&elem(&1, 0))
+    |> Map.new(fn {id, m, b} -> {id, {m, b}} end)
   end
 
   @doc """

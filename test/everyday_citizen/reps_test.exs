@@ -102,4 +102,21 @@ defmodule EverydayCitizen.RepsTest do
     stub("no_match.json")
     assert {:error, :not_found} = Reps.find("nowhere")
   end
+
+  test "place lists a state's senators then House members; nil for no place" do
+    assert %{name: "Iowa", reps: reps} = Reps.place("Iowa")
+
+    assert Enum.map(reps, & &1.person.name) == [
+             "Chuck Grassley",
+             "Joni Ernst",
+             "Mariannette Miller-Meeks"
+           ]
+
+    assert Reps.place("nowhere") == nil
+  end
+
+  test "district_label" do
+    assert Reps.district_label("IA-1") == "Iowa's 1st district"
+    assert Reps.district_label(nil) == nil
+  end
 end

@@ -75,4 +75,30 @@ defmodule EverydayCitizen.Adapters.Federal.GeocoderTest do
     assert_received :asked
     refute_received :asked
   end
+
+  test "place matches full state names in any case and postal codes only in capitals" do
+    assert {:ok,
+            %{name: "Ohio", seats: [{"senate", {:exact, "OH"}}, {"house", {:prefix, "OH-"}}]}} =
+             Geocoder.place("ohio")
+
+    assert {:ok, %{name: "Ohio"}} = Geocoder.place("OH")
+    for q <- ["in", "or", "me", "ok", "hi", "oh"], do: assert(Geocoder.place(q) == :error, q)
+    assert {:ok, %{name: "Indiana"}} = Geocoder.place("IN")
+
+    assert {:ok, %{name: "District of Columbia", seats: [{"house", {:prefix, "DC-"}}]}} =
+             Geocoder.place("district of columbia")
+  end
+
+  test "district labels" do
+    assert Geocoder.district_label("OH-4") == "Ohio's 4th district"
+    assert Geocoder.district_label("NY-12") == "New York's 12th district"
+    assert Geocoder.district_label("TX-22") == "Texas's 22nd district"
+    assert Geocoder.district_label("CA-21") == "California's 21st district"
+    assert Geocoder.district_label("CA-13") == "California's 13th district"
+    assert Geocoder.district_label("CA-3") == "California's 3rd district"
+    assert Geocoder.district_label("AK-AL") == "Alaska at large"
+    assert Geocoder.district_label("IA") == "Iowa"
+    assert Geocoder.district_label("ZZ-9") == "ZZ-9"
+    assert Geocoder.district_label("nonsense") == "nonsense"
+  end
 end
