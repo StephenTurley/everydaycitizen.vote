@@ -54,7 +54,7 @@ and of a rep's week (on the reps page), written by Claude the first time someone
 views them and cached, labeled as AI-written beside their source, inside a
 $2-a-day budget, with the prompts published in `priv/prompts/`. Bill text
 history (`docs/superpowers/plans/2026-10-25-bill-text-history.md`): each section
-shows where it came from, the steps and reps' part, and an AI change explanation. M1 (schema +
+shows where it came from, the steps and reps' part, and an AI change explanation. Search and person pages (`docs/superpowers/plans/2026-10-25-search-and-person-pages.md`): a search box on every page for bills by name, number or text and for people and places, and a page for every person. M1 (schema +
 federal adapter) and M2 (your reps, bill pages, accounts with email link and
 passkeys, following, daily email) are done and in production.
 
