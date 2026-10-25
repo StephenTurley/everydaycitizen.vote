@@ -135,6 +135,31 @@ defmodule EverydayCitizenWeb.BillLiveTest do
     assert html =~ ~s(href="https://www.congress.gov/x")
   end
 
+  test "the sponsor and cosponsors link to their pages", %{
+    conn: conn,
+    ernst: ernst,
+    grassley: grassley
+  } do
+    {:ok, view, _} = live(conn, ~p"/bills/119-s-5")
+    assert has_element?(view, ~s(a[href="/people/#{ernst.id}"]), "Joni Ernst")
+    assert has_element?(view, ~s(details a[href="/people/#{grassley.id}"]), "Chuck Grassley")
+  end
+
+  test "who voted how loads on opening and links every name", %{
+    conn: conn,
+    ernst: ernst,
+    grassley: grassley
+  } do
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+    refute has_element?(view, ~s([id^=vote-positions-list] a[href="/people/#{grassley.id}"]))
+
+    html = view |> element("summary[phx-click=positions]") |> render_click()
+    assert html =~ ~s(href="/people/#{ernst.id}")
+    assert has_element?(view, ~s(a[href="/people/#{grassley.id}"]), "Chuck Grassley")
+    assert html =~ "Yea"
+    assert html =~ "Nay"
+  end
+
   test "the bill links its official page, else its source record", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
     assert has_element?(view, ~s(a[href="https://www.congress.gov/x"]), "Official page")

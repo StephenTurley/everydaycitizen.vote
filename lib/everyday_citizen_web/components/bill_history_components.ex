@@ -8,6 +8,10 @@ defmodule EverydayCitizenWeb.BillHistoryComponents do
   """
   use Phoenix.Component
 
+  use Phoenix.VerifiedRoutes,
+    endpoint: EverydayCitizenWeb.Endpoint,
+    router: EverydayCitizenWeb.Router
+
   @committee_labels %{
     "referred" => "Referred to",
     "markup" => "Marked up by",
@@ -150,7 +154,11 @@ defmodule EverydayCitizenWeb.BillHistoryComponents do
           data-rep
           class="flex flex-col gap-1 text-[14px] text-floor-ink-2"
         >
-          <span class="font-semibold text-floor-ink">{rep.person.name}</span>
+          <span class="font-semibold text-floor-ink">
+            <.link navigate={~p"/people/#{rep.person.id}"} class="hover:underline">
+              {rep.person.name}
+            </.link>
+          </span>
           <span :for={{vote, option} <- rep.votes}>
             <strong class="font-semibold">{String.capitalize(option)}</strong>
             on {vote_label(vote)} · {vote.identifier}
