@@ -55,8 +55,25 @@ defmodule EverydayCitizen.Digest do
        versions(bills, window) ++
        Enum.reject(bill_votes(bills, window), &MapSet.member?(voted, elem(&1.key, 1))))
     |> Enum.uniq_by(& &1.key)
+    |> Enum.uniq_by(&same_step/1)
     |> Enum.sort_by(&(&1.date || ~D[0001-01-01]), {:desc, Date})
   end
+
+  # The official record often lists a step twice, once for each system that
+  # recorded it: an action on the same bill, day and wording is one item.
+  defp same_step(%{kind: kind, url: url, date: date, detail: detail})
+       when kind in [:action, :rep_bill_moved] do
+    wording =
+      detail
+      |> String.downcase()
+      |> String.replace(~r/\s+/, " ")
+      |> String.trim()
+      |> String.trim_trailing(".")
+
+    {:action, url, date, wording}
+  end
+
+  defp same_step(item), do: item.key
 
   @doc "A token for the email's unsubscribe link: never expires, only turns email off."
   @spec unsubscribe_token(User.t()) :: String.t()

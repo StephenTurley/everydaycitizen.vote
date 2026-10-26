@@ -23,12 +23,17 @@ defmodule EverydayCitizen.DigestTest do
     Map.merge(people, %{user: user, scope: Scope.for_user(user), bill: bill})
   end
 
-  defp new_action!(bill, classification \\ "reported") do
+  defp new_action!(
+         bill,
+         classification \\ "reported",
+         position \\ 99,
+         text \\ "Reported by the committee."
+       ) do
     Repo.insert!(%BillAction{
       bill_id: bill.id,
-      position: 99,
+      position: position,
       date: ~D[2026-10-20],
-      description: "Reported by the committee.",
+      description: text,
       classification: classification,
       source_id: bill.source_id
     })
@@ -67,6 +72,21 @@ defmodule EverydayCitizen.DigestTest do
              items(user)
 
     assert detail =~ "Reported by the committee."
+  end
+
+  # the official record often lists a step twice, once per system that recorded it
+  test "the same step recorded twice on a followed bill is one item", %{
+    scope: scope,
+    bill: bill,
+    user: user
+  } do
+    {:ok, _} = Follows.follow(scope, {:bill, bill.id})
+    new_action!(bill, "signed", 98, "Signed by President.")
+    new_action!(bill, "signed", 99, "Signed  by President")
+    new_action!(bill, "enrolled", 100, "Presented to President.")
+
+    assert ["Presented to President.", "Signed by President."] =
+             user |> items() |> Enum.map(& &1.detail) |> Enum.sort()
   end
 
   test "a followed rep's vote shows how they voted", %{scope: scope, grassley: g, user: user} do
