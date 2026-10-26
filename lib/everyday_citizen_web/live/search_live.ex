@@ -288,12 +288,13 @@ defmodule EverydayCitizenWeb.SearchLive do
         <% end %>…”
       </p>
       <.story_line
-        :if={(groups = story_groups(@summary)) != []}
+        :if={story = story_of(@summary)}
         class="mt-1 pl-2 border-l-[3px] border-floor-line"
-        group={hd(groups)}
+        group={hd(story.groups)}
+        tags={story.tags}
       />
       <div
-        :if={story_groups(@summary) == [] && @summary && opening(@summary) != ""}
+        :if={!story_of(@summary) && @summary && opening(@summary) != ""}
         class="mt-1 pl-2 border-l-[3px] border-floor-line text-[14px] text-floor-ink-2"
       >
         <span class="block text-[12px] text-floor-muted">

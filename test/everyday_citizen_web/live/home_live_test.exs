@@ -177,6 +177,13 @@ defmodule EverydayCitizenWeb.HomeLiveTest do
       refute html =~ "It warns members."
     end
 
+    test "a law's card shows its tags", %{conn: conn} do
+      cache!(7, @story <> "\n\n## Tags\nSets rules · Changes taxes · States a view")
+      {:ok, view, _html} = live(conn, ~p"/")
+      assert has_element?(view, "#law-summary-119-hr-7", "Sets rules · Changes taxes")
+      refute has_element?(view, "#law-summary-119-hr-7", "States a view")
+    end
+
     test "a law with one group has no more link", %{conn: conn} do
       cache!(7, "S.\n\n## If this becomes law\n- Post offices: one gets a new name.")
       {:ok, view, _html} = live(conn, ~p"/")

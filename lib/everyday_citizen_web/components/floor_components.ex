@@ -259,6 +259,7 @@ defmodule EverydayCitizenWeb.FloorComponents do
     ~H"""
     <%= if @story do %>
       <div id={@id} class={["px-4 py-3 rounded-xl flex flex-col gap-3", @class]}>
+        <.story_tags tags={@story.tags} subjects={length(@story.subjects)} />
         <h2 class="m-0 text-[18px] font-bold">If this becomes law</h2>
         <div class="flex flex-col gap-2.5">
           <div
@@ -276,6 +277,19 @@ defmodule EverydayCitizenWeb.FloorComponents do
           Written by AI from {@source}; it can be wrong.
           <a href={@prompt_url} class="underline">How it's written</a>
         </p>
+        <details
+          :if={length(@story.subjects) > 1}
+          id={@id <> "-subjects"}
+          class="group bg-floor-card border border-floor-line-soft rounded-xl px-4"
+          phx-mounted={JS.ignore_attributes(["open"])}
+        >
+          <summary class="list-none cursor-pointer min-h-11 flex items-center font-bold [&::-webkit-details-marker]:hidden">
+            <.disclosure_mark />All {length(@story.subjects)} subjects
+          </summary>
+          <ul class="m-0 pb-3 pl-5 list-disc flex flex-col gap-1 text-[15px]">
+            <li :for={subject <- @story.subjects}>{subject.name}</li>
+          </ul>
+        </details>
         <details
           :if={@story.example}
           id={@id <> "-example"}
@@ -323,8 +337,23 @@ defmodule EverydayCitizenWeb.FloorComponents do
     """
   end
 
+  attr :tags, :list, default: []
+  attr :subjects, :integer, default: 0
+
+  # A story's tags, one style for all, and how many unrelated things it does
+  defp story_tags(assigns) do
+    ~H"""
+    <p :if={@tags != [] or @subjects > 1} class="m-0 text-[12px] font-semibold text-floor-muted">
+      {Enum.join(@tags, " · ")}<span :if={@tags != [] and @subjects > 1}> · </span><span :if={
+        @subjects > 1
+      }>Does {@subjects} unrelated things</span>
+    </p>
+    """
+  end
+
   attr :id, :string, default: nil
   attr :class, :any, default: nil
+  attr :tags, :list, default: []
   attr :group, :map, required: true, doc: "%{label, sentence}, the first of a bill's story"
   attr :more, :integer, default: 0, doc: "how many more groups the bill page shows"
   attr :href, :string, default: nil
@@ -336,6 +365,7 @@ defmodule EverydayCitizenWeb.FloorComponents do
   def story_line(assigns) do
     ~H"""
     <div id={@id} class={["flex flex-col gap-1", @class]}>
+      <.story_tags tags={@tags} />
       <p class="m-0 text-[15px] leading-relaxed text-floor-ink">
         <span class="font-bold">{@group.label}:</span> {@group.sentence}
       </p>
@@ -351,17 +381,18 @@ defmodule EverydayCitizenWeb.FloorComponents do
     """
   end
 
-  @doc "A summary's story groups (empty for a summary without one)."
-  @spec story_groups(String.t() | nil) :: [Story.group()]
-  def story_groups(nil), do: []
-  def story_groups(text), do: Story.split(text).groups
+  @doc "A summary's story, or nil for a summary without one."
+  @spec story_of(String.t() | nil) :: Story.t() | nil
+  def story_of(nil), do: nil
 
-  defp story({:ok, text}) do
+  def story_of(text) do
     case Story.split(text) do
       %{groups: []} -> nil
       story -> story
     end
   end
+
+  defp story({:ok, text}), do: story_of(text)
 
   defp story(_state), do: nil
 

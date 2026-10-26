@@ -100,7 +100,7 @@ defmodule EverydayCitizenWeb.SearchLiveTest do
     {subject, input} = Inputs.bill(bill)
 
     story =
-      "Keeps lamps lit.\n\n## If this becomes law\n- If you own a lamp: it would stay lit.\n- Lamp makers: they would label lamps."
+      "Keeps lamps lit.\n\n## If this becomes law\n- If you own a lamp: it would stay lit.\n- Lamp makers: they would label lamps.\n\n## Tags\nSets rules"
 
     {:ok, _} = Summaries.put_ai(:bill, subject, input, %{summary: story, model: "m"})
 
@@ -108,6 +108,7 @@ defmodule EverydayCitizenWeb.SearchLiveTest do
     section = "section[aria-label='Bills with this name']"
     assert has_element?(view, section, "If you own a lamp")
     assert has_element?(view, section, "it would stay lit.")
+    assert has_element?(view, section, "Sets rules")
     refute has_element?(view, section, "Keeps lamps lit.")
     refute has_element?(view, section, "Lamp makers")
   end

@@ -173,13 +173,8 @@ defmodule EverydayCitizenWeb.HomeLive do
   end
 
   # What a "Report a problem" form under a law's summary sends with the report.
-  # a written summary's first story group and how many more, if it has a story
-  defp law_story({_subject, {:ok, text}}) do
-    case story_groups(text) do
-      [first | more] -> {first, length(more)}
-      [] -> nil
-    end
-  end
+  # a written summary's story, if it has one
+  defp law_story({_subject, {:ok, text}}), do: story_of(text)
 
   defp law_story(_summary), do: nil
 
@@ -304,8 +299,9 @@ defmodule EverydayCitizenWeb.HomeLive do
               :if={story = law_story(@summaries[bill.id])}
               id={"law-summary-#{bill.external_id}"}
               class="mt-1"
-              group={elem(story, 0)}
-              more={elem(story, 1)}
+              group={hd(story.groups)}
+              more={length(story.groups) - 1}
+              tags={story.tags}
               href={~p"/bills/#{bill.external_id}"}
             />
             <.ai_box

@@ -556,6 +556,33 @@ defmodule EverydayCitizenWeb.BillLiveTest do
       assert html =~ ~r/If this becomes law.*Text of the bill/s
     end
 
+    test "tags and unrelated subjects show with the story", %{conn: conn, bill: bill} do
+      cache_summary!(
+        bill,
+        @story <>
+          "\n## Tags\nSets rules · Spends or authorizes money\n\n## Subjects\n- Trading rules for officials: SEC. 2\n- Photo ID to vote: SEC. 3\n"
+      )
+
+      {:ok, view, html} = live(conn, ~p"/bills/119-s-5")
+      assert has_element?(view, "#bill-summary", "Sets rules · Spends or authorizes money")
+      assert has_element?(view, "#bill-summary", "Does 2 unrelated things")
+      assert has_element?(view, "#bill-summary-subjects:not([open])", "All 2 subjects")
+      assert has_element?(view, "#bill-summary-subjects li", "Photo ID to vote")
+      assert html =~ ~r/Spends or authorizes money.*If this becomes law/s
+    end
+
+    test "one subject: no unrelated things", %{conn: conn, bill: bill} do
+      cache_summary!(
+        bill,
+        @story <> "\n## Tags\nSets rules\n\n## Subjects\n- Dating apps: SEC. 2\n"
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+      assert has_element?(view, "#bill-summary", "Sets rules")
+      refute has_element?(view, "#bill-summary", "unrelated")
+      refute has_element?(view, "#bill-summary-subjects")
+    end
+
     test "a summary without a story part shows as before, open", %{conn: conn, bill: bill} do
       cache_summary!(bill, "It does one thing.")
       {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
