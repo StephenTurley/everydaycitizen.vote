@@ -144,3 +144,83 @@ group's line instead. Search still never starts a summary.
   until it is rewritten (my call; search never writes).
 - Markup and exact spacing, following the mockup and the site's components
   (`ai_box`, `floor-card`, `floor-accent`).
+
+---
+
+## Revision, 2026-10-26: kinds of bill, unrelated parts, and where parts came from
+
+Found on the sample review: telling every bill "people first" distorts bills
+whose main effect is not on people. The GOLDEN DOME Act's story led with
+lawsuits and procurement rules and left out its $23 billion authorization for
+a defense program. And H.R. 7008 was only stock-trading rules as introduced,
+but its passed version also requires photo ID to vote; a story that leads with
+stock trading hides the second part.
+
+### The rule above every other (owner, 2026-10-26)
+
+**Simple lines lead, details follow.** Whatever the kind, the reader first sees
+a few short, plain lines (at most 4, at most 20 words each); everything else
+stays folded below, as in the first design.
+
+### Kinds of bill (owner approved, 2026-10-26)
+
+Built from a blind sample of 150 bills of the current session (stratified by
+type, plus laws and bills that passed a chamber), then checked on 48 and 50
+fresh bills. Claude picks one kind per **version** of a bill, from what that
+version's text does, never from guesses about anyone's aim. The kind's label
+shows beside the bill's title wherever its story shows (bill page, home cards,
+search results).
+
+| # | Label | Covers | The story leads with |
+|---|---|---|---|
+| 1 | Sets rules | requires, bans or allows something for people, businesses or officials; crimes, disclosure, conduct rules, conditions on federal money | who must, may or can't do what; then penalties, enforcement, start |
+| 2 | Changes benefits | who qualifies for or gets a benefit, coverage, loan, payment, federal pay or immigration status | who gains or loses, what changes, from when |
+| 3 | Changes taxes | taxes, credits, deductions, exclusions, tariffs | who pays more or less, on what, how much, from when |
+| 4 | Funds the government | spending bills, stopgaps, shutdown pay | the total, the largest amounts and agencies, the period, limits on use |
+| 5 | Starts or funds a program | creates, funds, renews or expands a program, grant, pilot, research effort or system | the program and its money (amounts, years), who runs it, who can apply or benefit |
+| 6 | Orders a study or action | tells an agency to study, report, plan, review, train or write rules | which agency must do what, by when, delivered to whom |
+| 7 | Changes how government works | offices, powers, structure, courts and judgeships, hiring, charters, budget process | what changes, for which office or body, what it may now do or no longer do |
+| 8 | Overturns a rule | cancels a regulation or executive action; disapproval resolutions; blocked sales | the rule or action cancelled, what it required, that it would no longer have force |
+| 9 | Transfers land | conveys land or property, or changes its status or use | what land, from whom to whom, on what conditions |
+| 10 | Names something | buildings, places, offices, national symbols | one line: what is named what |
+| 11 | States a view | honors, designates a day, congratulates, condemns or urges, with no legal effect | one line saying it changes no law, then what it says |
+| 12 | Chamber business | how a chamber will debate a bill, its own rules, schedule or committee seats | what the chamber would do, for which bill |
+| 13 | Broad package | several large parts of different kinds | its 3 to 4 biggest parts, each told as its own kind is told |
+
+The "If this becomes law" part keeps its shape (`- label: sentence`), so the
+parser and the three surfaces stay as built; what changes is what its lines
+lead with, by kind. Groups of people (with "you") remain the way to tell kinds
+1 to 3, and any line about people.
+
+### Unrelated parts
+
+Claude lists the version's separate subjects: parts that deal with unrelated
+matters (H.R. 7008's passed version: trading rules for officials, and photo ID
+for voters). Parts that serve one subject count as one. Each subject gets at
+least one story line, and when there is more than one, "Does N unrelated
+things" shows beside the kind's label. Different kinds across the subjects make
+the bill a Broad package.
+
+### Where a part came from (no AI)
+
+For each subject, Claude names the bill's sections it comes from. When those
+sections were not in the bill's first version, the site says so under the
+story, from `BillHistory.origins/3`: "The photo ID part was added in the
+version of Jul 22, 2026", linking to that version. Only the fact and its date,
+never a reason.
+
+### What a reply holds (prompt v4, not yet shipped, revised in place)
+
+Two new parts, parsed like the others: `## Kind` (one line, a label from the
+table, exactly) and `## Subjects` (one line per subject: `- subject: SEC. 2,
+SEC. 3`). A reply whose kind is not in the table, or that has no subjects part,
+shows no label and no "added" line; the story still shows.
+
+### Calls made on this revision (mine)
+
+- The kinds are prompt text, versioned with it; the code knows only the 13
+  labels (for the label's styling and to reject a kind not in the table).
+- One label style for all kinds (no colors per kind), so no kind looks better
+  or worse than another.
+- The second fresh sample read only each bill's opening (3,000 characters), so
+  it checks the kinds, not the subject-splitting; H.R. 7008 was read whole.
