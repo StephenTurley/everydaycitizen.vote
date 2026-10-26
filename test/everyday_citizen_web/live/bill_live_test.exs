@@ -122,6 +122,24 @@ defmodule EverydayCitizenWeb.BillLiveTest do
     refute has_element?(view, "figure", "amended by adding")
   end
 
+  test "a rep whose chamber passed the bill without a roll call is told so", %{conn: conn} do
+    bill = EverydayCitizen.Legislation.get_bill("federal", "119-s-5")
+
+    EverydayCitizen.Repo.insert!(%EverydayCitizen.Legislation.BillAction{
+      bill_id: bill.id,
+      source_id: bill.source_id,
+      position: 99,
+      date: ~D[2026-06-23],
+      description: "Passed by voice vote.",
+      classification: "passed_chamber"
+    })
+
+    {:ok, _view, html} = live(conn, ~p"/bills/119-s-5")
+    assert html =~ "No recorded vote"
+    assert html =~ "The House of Representatives passed it without a recorded vote, Jun 23"
+    refute html =~ "The House of Representatives hasn&#39;t voted"
+  end
+
   test "the bill, where it stands, and how your reps were involved", %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/bills/119-s-5")
 

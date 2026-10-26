@@ -12,7 +12,7 @@ defmodule EverydayCitizen.BillPageTest do
     Map.put(people, :reps, Reps.for_district("IA-1"))
   end
 
-  defp bill!(id, classification, actions) do
+  defp bill!(id, classification, actions, reps \\ []) do
     {:ok, _} =
       Ingest.write(
         %Records.Bill{
@@ -49,7 +49,7 @@ defmodule EverydayCitizen.BillPageTest do
         nil
       )
 
-    {:ok, page} = BillPage.load("federal", id, [])
+    {:ok, page} = BillPage.load("federal", id, reps)
     page
   end
 
@@ -127,6 +127,25 @@ defmodule EverydayCitizen.BillPageTest do
     assert by_name["Chuck Grassley"] == "yea"
     assert by_name["Joni Ernst"] == :sponsor
     assert by_name["Mariannette Miller-Meeks"] == :no_vote
+  end
+
+  test "your reps: a chamber that passed the bill without a roll call", %{reps: reps} do
+    page =
+      bill!(
+        "119-hr-11",
+        "bill",
+        [
+          {~D[2026-02-01], "introduced", "house"},
+          {~D[2026-02-10], "passed_chamber", nil},
+          {~D[2026-03-01], "passed_chamber", nil},
+          {~D[2026-03-09], "became_law", nil}
+        ],
+        reps
+      )
+
+    by_name = Map.new(page.reps, &{&1.person.name, {&1.state, &1.passed_on}})
+    assert by_name["Mariannette Miller-Meeks"] == {:unrecorded, ~D[2026-02-10]}
+    assert by_name["Joni Ernst"] == {:unrecorded, ~D[2026-03-01]}
   end
 
   test "versions, summary and votes", %{reps: reps} do

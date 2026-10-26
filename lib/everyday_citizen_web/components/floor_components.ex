@@ -24,7 +24,7 @@ defmodule EverydayCitizenWeb.FloorComponents do
 
   @doc """
   A vote position chip. `option` is `yea`, `nay`, `present` or `absent`, or one of
-  the bill-page states (`no_vote`, `not_in_office`, `sponsor`, `cosponsor`);
+  the bill-page states (`no_vote`, `unrecorded`, `not_in_office`, `sponsor`, `cosponsor`);
   `prefix` adds "Voted".
   """
   attr :option, :any, required: true
@@ -49,6 +49,7 @@ defmodule EverydayCitizenWeb.FloorComponents do
     "present" => "Present",
     "absent" => "Not voting",
     "no_vote" => "No vote yet",
+    "unrecorded" => "No recorded vote",
     "not_in_office" => "Not in office",
     "sponsor" => "Sponsor",
     "cosponsor" => "Cosponsor"
