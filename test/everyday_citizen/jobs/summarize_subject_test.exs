@@ -110,7 +110,7 @@ defmodule EverydayCitizen.Jobs.SummarizeSubjectTest do
   test "over budget, the job calls nothing and the page hears it is paused", %{bill: bill} do
     {subject, _} = Inputs.bill(bill)
 
-    for _ <- 1..200,
+    for _ <- 1..400,
         do: :ok = Summaries.record_usage(:section, %{input_tokens: 100_000, output_tokens: 0})
 
     Req.Test.stub(EverydayCitizen.Claude, fn _ -> flunk("no call over budget") end)

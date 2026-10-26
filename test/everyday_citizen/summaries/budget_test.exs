@@ -9,17 +9,27 @@ defmodule EverydayCitizen.Summaries.BudgetTest do
     :ok = Summaries.record_usage(:section, %{input_tokens: 100_000, output_tokens: 1_000_000})
     assert_in_delta Summaries.spent_today_usd(), 0.51, 0.0001
 
-    :ok = Summaries.record_usage(:bill, %{input_tokens: 200_000, output_tokens: 1_000})
+    :ok = Summaries.record_usage(:section, %{input_tokens: 200_000, output_tokens: 1_000})
     # 200,000 × $0.50/M + 1,000 × $2.50/M = $0.1025
     assert_in_delta Summaries.spent_today_usd(), 0.6125, 0.0001
   end
 
+  test "a bill summary is written by its own model and costs that model's rates" do
+    assert Summaries.model(:bill) == "claude-sonnet-5-5"
+    assert Summaries.model(:section) == "claude-haiku-5-5"
+    # 100,000 × $2/M + 10,000 × $10/M = $0.30
+    :ok = Summaries.record_usage(:bill, %{input_tokens: 100_000, output_tokens: 10_000})
+    assert_in_delta Summaries.spent_today_usd(), 0.30, 0.0001
+  end
+
   test "new summaries pause once today's spend reaches the daily budget" do
     refute Summaries.over_budget?()
-    # $2.00 at $0.10/M input = 20M input tokens, spread under the long-prompt tier
-    for _ <- 1..200,
+    # $4.00 at $0.10/M input = 40M input tokens, spread under the long-prompt tier
+    for _ <- 1..399,
         do: :ok = Summaries.record_usage(:section, %{input_tokens: 100_000, output_tokens: 0})
 
+    refute Summaries.over_budget?()
+    :ok = Summaries.record_usage(:section, %{input_tokens: 100_000, output_tokens: 0})
     assert Summaries.over_budget?()
   end
 

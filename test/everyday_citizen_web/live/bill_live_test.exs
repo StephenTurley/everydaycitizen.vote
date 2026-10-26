@@ -517,6 +517,90 @@ defmodule EverydayCitizenWeb.BillLiveTest do
       assert has_element?(view, "#bill-summary", "Cached.")
     end
 
+    @story """
+    It warns members.
+
+    ## Who this affects
+    - Apps: send warnings.
+
+    ## Words to know
+    - Fraud ban: an ended account.
+
+    ## For example
+    Made-up situation: an app bans an account.
+
+    ## If this becomes law
+    - If you use a dating app: you'd be warned within a day.
+    - If you run a dating app: you'd send the warnings.
+    """
+
+    defp cache_summary!(bill, text) do
+      {subject, input} = EverydayCitizen.Summaries.Inputs.bill(bill)
+
+      {:ok, _} =
+        EverydayCitizen.Summaries.put_ai(:bill, subject, input, %{summary: text, model: "m"})
+
+      subject
+    end
+
+    test "the summary leads with each group's story and folds the rest", %{conn: conn, bill: bill} do
+      cache_summary!(bill, @story)
+      {:ok, view, html} = live(conn, ~p"/bills/119-s-5")
+
+      assert has_element?(view, "#bill-summary h2", "If this becomes law")
+      assert has_element?(view, "#bill-summary", "If you use a dating app")
+      assert has_element?(view, "#bill-summary", "you'd send the warnings.")
+      assert has_element?(view, "#bill-summary-example:not([open])", "Made-up situation")
+      assert has_element?(view, "#bill-summary-full:not([open])", "Who this affects")
+      assert has_element?(view, "#bill-summary", "Written by AI from the bill")
+      assert html =~ ~r/If this becomes law.*Text of the bill/s
+    end
+
+    test "tags and unrelated subjects show with the story", %{conn: conn, bill: bill} do
+      cache_summary!(
+        bill,
+        @story <>
+          "\n## Tags\nSets rules · Spends or authorizes money\n\n## Subjects\n- Trading rules for officials: SEC. 2\n- Photo ID to vote: SEC. 3\n"
+      )
+
+      {:ok, view, html} = live(conn, ~p"/bills/119-s-5")
+      assert has_element?(view, "#bill-summary", "Sets rules · Spends or authorizes money")
+      assert has_element?(view, "#bill-summary", "Does 2 unrelated things")
+      assert has_element?(view, "#bill-summary-subjects:not([open])", "All 2 subjects")
+      assert has_element?(view, "#bill-summary-subjects li", "Photo ID to vote")
+      assert html =~ ~r/Spends or authorizes money.*If this becomes law/s
+    end
+
+    test "one subject: no unrelated things", %{conn: conn, bill: bill} do
+      cache_summary!(
+        bill,
+        @story <> "\n## Tags\nSets rules\n\n## Subjects\n- Dating apps: SEC. 2\n"
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+      assert has_element?(view, "#bill-summary", "Sets rules")
+      refute has_element?(view, "#bill-summary", "unrelated")
+      refute has_element?(view, "#bill-summary-subjects")
+    end
+
+    test "a summary without a story part shows as before, open", %{conn: conn, bill: bill} do
+      cache_summary!(bill, "It does one thing.")
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+      assert has_element?(view, "#bill-summary", "It does one thing.")
+      refute has_element?(view, "#bill-summary-full")
+    end
+
+    test "a problem report carries the whole summary, story included", %{conn: conn, bill: bill} do
+      cache_summary!(bill, @story)
+      {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+      view |> element("#bill-summary button", "Report a problem") |> render_click()
+      view |> form("#bill-summary form", report: %{reason: "other"}) |> render_submit()
+
+      assert [report] = EverydayCitizen.Repo.all(EverydayCitizen.Feedback.Report)
+      assert report.summary =~ "## If this becomes law"
+      assert report.summary =~ "## Who this affects"
+    end
+
     test "a reader can report a problem with the summary, which stores what they saw", %{
       conn: conn,
       bill: bill

@@ -140,19 +140,24 @@ defmodule EverydayCitizen.Summaries do
     :queued
   end
 
+  @doc "The model that writes a kind of summary."
+  @spec model(atom()) :: String.t()
+  def model(kind), do: Map.get(config(:models) || %{}, kind, config(:model))
+
   @doc "Whether today's spending (America/New_York day) has reached `daily_budget_usd`."
   @spec over_budget?() :: boolean()
   def over_budget?, do: spent_today_usd() >= config(:daily_budget_usd)
 
   @doc """
   Records one Claude call's cost: input and output tokens at the configured
-  rates, the long-prompt rates when the input exceeds the tier (100K tokens).
+  rates of the kind's model, the long-prompt rates when the input exceeds the
+  tier (100K tokens).
   """
   @spec record_usage(atom(), map()) :: :ok
   def record_usage(kind, result) do
     input = result[:input_tokens] || 0
     output = result[:output_tokens] || 0
-    rates = config(:rates)
+    rates = Map.fetch!(config(:rates), model(kind))
 
     {in_rate, out_rate} =
       if input > rates.long_prompt_tokens,

@@ -76,7 +76,7 @@ defmodule EverydayCitizen.Summaries.ClaudeTest do
 
     for {kind, file, tag, cap} <- [
           {:section, "section_summary.v2.md", "section", 300},
-          {:bill, "bill_summary.v3.md", "bill", 800},
+          {:bill, "bill_summary.v4.md", "bill", 800},
           {:bill_chunk, "bill_chunk.v2.md", "part", 600},
           {:rep_week, "rep_week.v1.md", "activity", 300},
           {:change, "change_summary.v1.md", "change", 400}
@@ -91,6 +91,7 @@ defmodule EverydayCitizen.Summaries.ClaudeTest do
 
     {:ok, _} = Claude.summarize("input", :bill, max_tokens: 900, note: "Length: long")
     assert_received {:body, body}
+    assert body["model"] == "claude-sonnet-5-5"
     assert body["max_tokens"] == 900
     assert [%{"content" => "Length: long\n\n<bill>\ninput\n</bill>"}] = body["messages"]
   end

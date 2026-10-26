@@ -32,6 +32,35 @@ defmodule EverydayCitizen.BillHistoryTest do
     assert map_size(BillHistory.origins(bill, "rh")) == 2
   end
 
+  test "a subject whose sections were all added later is listed with the version that added it",
+       %{bill: bill} do
+    sections = EverydayCitizen.BillPage.sections(bill, "eh")
+
+    subjects = [
+      %{name: "Trading rules", sections: ["2"]},
+      %{name: "Photo ID to vote", sections: ["3"]},
+      %{name: "Both", sections: ["2", "3"]},
+      %{name: "Unknown", sections: ["9"]},
+      %{name: "None named", sections: []}
+    ]
+
+    assert BillHistory.added_subjects(subjects, sections, BillHistory.origins(bill, "eh")) == [
+             %{name: "Photo ID to vote", added_in: "eh"}
+           ]
+  end
+
+  test "a section number used twice in a version names no subject's origin" do
+    sections = [%{"enum" => "101."}, %{"enum" => "101."}]
+
+    origins = %{
+      0 => %{status: :original, added_in: "ih", changed_in: []},
+      1 => %{status: :added, added_in: "eh", changed_in: []}
+    }
+
+    assert BillHistory.added_subjects([%{name: "Twice", sections: ["101"]}], sections, origins) ==
+             []
+  end
+
   test "a changed section compares against the wording before its last change", %{bill: bill} do
     %{from: "ih", to: "rh", paragraphs: paragraphs} = BillHistory.comparison(bill, "eh", 1)
     ops = List.flatten(paragraphs)

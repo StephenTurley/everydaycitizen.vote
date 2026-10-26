@@ -43,9 +43,9 @@ defmodule EverydayCitizen.Jobs.SummarizeSectionTest do
     %{version: version, text: Summaries.section_text(Enum.at(@sections, 1))}
   end
 
-  # today's spend reaches the $2.00 budget (20M input tokens at $0.10/M)
+  # today's spend reaches the $4.00 budget (40M input tokens at $0.10/M)
   defp spend_budget! do
-    for _ <- 1..200,
+    for _ <- 1..400,
         do: :ok = Summaries.record_usage(:section, %{input_tokens: 100_000, output_tokens: 0})
   end
 

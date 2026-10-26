@@ -11,7 +11,7 @@ defmodule EverydayCitizenWeb.BillLive do
   use EverydayCitizenWeb, :live_view
 
   alias EverydayCitizen.{BillHistory, BillPage, Follows, RateLimit, Reps, Summaries}
-  alias EverydayCitizen.Summaries.{Claude, Inputs}
+  alias EverydayCitizen.Summaries.{Claude, Inputs, Story}
   alias EverydayCitizenWeb.AiBillSummary
 
   import EverydayCitizenWeb.BillHistoryComponents
@@ -392,16 +392,6 @@ defmodule EverydayCitizenWeb.BillLive do
     """
   end
 
-  # ▸ when a <details> is closed, ▾ when open; its <details> carries `group`.
-  defp disclosure_mark(assigns) do
-    ~H"""
-    <span aria-hidden="true" class="inline-block w-4 group-open:hidden">▸</span><span
-      aria-hidden="true"
-      class="hidden w-4 group-open:inline-block"
-    >▾</span>
-    """
-  end
-
   defp cosponsors(1), do: "1 cosponsor"
   defp cosponsors(n), do: "#{n} cosponsors"
 
@@ -417,6 +407,31 @@ defmodule EverydayCitizenWeb.BillLive do
       true -> "another version of this bill"
     end
   end
+
+  # The summary's subjects that later versions added, from the text's history
+  # (only beside the version the summary was written from)
+  defp added_parts(%{bill_summary: {subject, {:ok, text}}, version: %{code: code}} = assigns) do
+    if String.ends_with?(subject, ":" <> code) do
+      text
+      |> Story.split()
+      |> Map.fetch!(:subjects)
+      |> BillHistory.added_subjects(Enum.map(assigns.sections, &elem(&1, 0)), assigns.origins)
+      |> Enum.map(fn %{name: name, added_in: added_in} ->
+        %{
+          name: name,
+          href: ~p"/bills/#{assigns.page.bill.external_id}?version=#{added_in}",
+          date: full_date(assigns.version_dates[added_in])
+        }
+      end)
+    else
+      []
+    end
+  end
+
+  defp added_parts(_assigns), do: []
+
+  defp full_date(nil), do: "a later date"
+  defp full_date(d), do: Calendar.strftime(d, "%b %-d, %Y")
 
   defp version_label(v), do: "#{v.classification || v.code}#{if v.date, do: " · #{date(v.date)}"}"
 
@@ -726,10 +741,10 @@ defmodule EverydayCitizenWeb.BillLive do
         <div class="contents lg:flex lg:flex-col lg:gap-6 lg:col-start-1 xl:col-start-2 lg:row-start-1 lg:min-w-0">
           <section
             :if={match?({_, _}, @bill_summary)}
-            aria-label="In plain English"
+            aria-label="If this becomes law"
             class="order-3 lg:order-1 pb-5 lg:pb-0"
           >
-            <.ai_box
+            <.bill_story
               id="bill-summary"
               class="bg-floor-card border border-floor-line"
               title="In plain English: what this bill does"
@@ -737,6 +752,7 @@ defmodule EverydayCitizenWeb.BillLive do
               state={elem(@bill_summary, 1)}
               prompt_url={@repo_url <> Claude.prompt_path(:bill)}
               report={report(assigns, :bill, elem(@bill_summary, 0))}
+              added={added_parts(assigns)}
             />
           </section>
 

@@ -6,6 +6,7 @@ defmodule EverydayCitizenWeb.FloorComponents do
   """
   use Phoenix.Component
 
+  alias EverydayCitizen.Summaries.Story
   alias Phoenix.LiveView.JS
 
   @doc "A white card with the hairline border."
@@ -170,36 +171,7 @@ defmodule EverydayCitizenWeb.FloorComponents do
       </p>
       <%= case @state do %>
         <% {:ok, text} -> %>
-          <%!-- clamped, the parts' boxes give way on phones so the two-line
-               clamp counts their lines --%>
-          <div class={[
-            "text-[15px] leading-relaxed text-floor-ink",
-            if(@clamp,
-              do: "max-lg:line-clamp-2 lg:flex lg:flex-col lg:gap-2",
-              else: "flex flex-col gap-2"
-            )
-          ]}>
-            <div
-              :for={{heading, parts} <- summary_sections(text)}
-              data-part={heading == "For example" && "example"}
-              class={[
-                "flex flex-col gap-1.5",
-                @clamp && "max-lg:contents",
-                heading == "For example" &&
-                  "mt-1 px-3 py-2.5 rounded-lg border border-dashed border-floor-line bg-floor-card"
-              ]}
-            >
-              <h3 :if={heading} class="m-0 mt-1 text-[13px] font-semibold text-floor-muted">
-                {heading}
-              </h3>
-              <%= for part <- parts do %>
-                <ul :if={match?({:list, _}, part)} class="m-0 pl-5 list-disc flex flex-col gap-1">
-                  <li :for={item <- elem(part, 1)}>{item}</li>
-                </ul>
-                <p :if={match?({:para, _}, part)} class="m-0">{elem(part, 1)}</p>
-              <% end %>
-            </div>
-          </div>
+          <.summary_body text={Story.without_meta(text)} clamp={@clamp} />
           <p class="m-0 text-[12px] text-floor-muted">
             Written by AI from {@source}; it can be wrong.
             <a href={@prompt_url} class="underline">How it's written</a>
@@ -226,6 +198,236 @@ defmodule EverydayCitizenWeb.FloorComponents do
           <p class="m-0 text-[14px] text-floor-muted">A summary isn't available right now.</p>
       <% end %>
     </div>
+    """
+  end
+
+  attr :text, :string, required: true
+  attr :clamp, :boolean, default: false
+
+  # A summary's parts: paragraphs, lists, "## " headings, the example set apart.
+  defp summary_body(assigns) do
+    ~H"""
+    <%!-- clamped, the parts' boxes give way on phones so the two-line
+               clamp counts their lines --%>
+    <div class={[
+      "text-[15px] leading-relaxed text-floor-ink",
+      if(@clamp,
+        do: "max-lg:line-clamp-2 lg:flex lg:flex-col lg:gap-2",
+        else: "flex flex-col gap-2"
+      )
+    ]}>
+      <div
+        :for={{heading, parts} <- summary_sections(@text)}
+        data-part={heading == "For example" && "example"}
+        class={[
+          "flex flex-col gap-1.5",
+          @clamp && "max-lg:contents",
+          heading == "For example" &&
+            "mt-1 px-3 py-2.5 rounded-lg border border-dashed border-floor-line bg-floor-card"
+        ]}
+      >
+        <h3 :if={heading} class="m-0 mt-1 text-[13px] font-semibold text-floor-muted">
+          {heading}
+        </h3>
+        <%= for part <- parts do %>
+          <ul :if={match?({:list, _}, part)} class="m-0 pl-5 list-disc flex flex-col gap-1">
+            <li :for={item <- elem(part, 1)}>{item}</li>
+          </ul>
+          <p :if={match?({:para, _}, part)} class="m-0">{elem(part, 1)}</p>
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :class, :string, default: nil
+  attr :title, :string, required: true
+  attr :source, :string, required: true
+  attr :state, :any, required: true
+  attr :prompt_url, :string, required: true
+  attr :report, :map, default: nil
+
+  attr :added, :list,
+    default: [],
+    doc: "subjects added after the first version: %{name, date, href} (not AI-written)"
+
+  @doc """
+  A bill's AI summary led by its story: "If this becomes law", one card per
+  group the bill affects, then the made-up example and the full summary folded
+  away. A summary without a story part, or any other state, is an `ai_box`.
+  """
+  def bill_story(assigns) do
+    assigns = assign(assigns, :story, story(assigns.state))
+
+    ~H"""
+    <%= if @story do %>
+      <div id={@id} class={["px-4 py-3 rounded-xl flex flex-col gap-3", @class]}>
+        <.story_tags tags={@story.tags} subjects={length(@story.subjects)} />
+        <h2 class="m-0 text-[18px] font-bold">If this becomes law</h2>
+        <div class="flex flex-col gap-2.5">
+          <div
+            :for={{group, i} <- Enum.with_index(@story.groups)}
+            class={[
+              "bg-floor-card rounded-xl px-4 py-3.5 flex flex-col gap-1",
+              if(i == 0, do: "border-2 border-floor-accent", else: "border border-floor-line")
+            ]}
+          >
+            <p class="m-0 font-bold">{group.label}</p>
+            <p class="m-0 text-[15px] leading-relaxed">{group.sentence}</p>
+          </div>
+        </div>
+        <p class="m-0 text-[12px] text-floor-muted">
+          Written by AI from {@source}; it can be wrong.
+          <a href={@prompt_url} class="underline">How it's written</a>
+        </p>
+        <p :for={part <- @added} class="m-0 text-[14px] text-floor-ink-2">
+          The {part.name} part was added in the <.link
+            navigate={part.href}
+            class="text-floor-accent underline"
+          >version of {part.date}</.link>.
+        </p>
+        <details
+          :if={length(@story.subjects) > 1}
+          id={@id <> "-subjects"}
+          class="group bg-floor-card border border-floor-line-soft rounded-xl px-4"
+          phx-mounted={JS.ignore_attributes(["open"])}
+        >
+          <summary class="list-none cursor-pointer min-h-11 flex items-center font-bold [&::-webkit-details-marker]:hidden">
+            <.disclosure_mark />All {length(@story.subjects)} subjects
+          </summary>
+          <ul class="m-0 pb-3 pl-5 list-disc flex flex-col gap-1 text-[15px]">
+            <li :for={subject <- @story.subjects}>{subject.name}</li>
+          </ul>
+        </details>
+        <details
+          :if={@story.example}
+          id={@id <> "-example"}
+          class="group bg-floor-card border border-floor-line-soft rounded-xl px-4"
+          phx-mounted={JS.ignore_attributes(["open"])}
+        >
+          <summary class="list-none cursor-pointer min-h-11 flex items-center font-bold [&::-webkit-details-marker]:hidden">
+            <.disclosure_mark />A made-up example
+          </summary>
+          <div class="pb-3 text-[15px] leading-relaxed">
+            <.summary_body text={@story.example} />
+          </div>
+        </details>
+        <details
+          :if={@story.rest != ""}
+          id={@id <> "-full"}
+          class="group bg-floor-card border border-floor-line-soft rounded-xl px-4"
+          phx-mounted={JS.ignore_attributes(["open"])}
+        >
+          <summary class="list-none cursor-pointer min-h-11 flex items-center font-bold [&::-webkit-details-marker]:hidden">
+            <.disclosure_mark />The full summary
+          </summary>
+          <div class="pb-3">
+            <.summary_body text={@story.rest} />
+          </div>
+        </details>
+        <.live_component
+          :if={@report}
+          module={EverydayCitizenWeb.FeedbackForm}
+          id={"#{@id}-report"}
+          report={Map.put(@report, :summary, elem(@state, 1))}
+        />
+      </div>
+    <% else %>
+      <.ai_box
+        id={@id}
+        class={@class}
+        title={@title}
+        source={@source}
+        state={@state}
+        prompt_url={@prompt_url}
+        report={@report}
+      />
+    <% end %>
+    """
+  end
+
+  attr :tags, :list, default: []
+  attr :subjects, :integer, default: 0
+
+  # A story's tags, one style for all, and how many unrelated things it does
+  defp story_tags(assigns) do
+    ~H"""
+    <p :if={@tags != [] or @subjects > 1} class="m-0 text-[12px] font-semibold text-floor-muted">
+      {Enum.join(@tags, " · ")}<span :if={@tags != [] and @subjects > 1}> · </span><span :if={
+        @subjects > 1
+      }>Does {@subjects} unrelated things</span>
+    </p>
+    """
+  end
+
+  attr :id, :string, default: nil
+  attr :class, :any, default: nil
+  attr :tags, :list, default: []
+  attr :group, :map, required: true, doc: "%{label, sentence}, the first of a bill's story"
+  attr :more, :integer, default: 0, doc: "how many more groups the bill page shows"
+  attr :href, :string, default: nil
+  attr :prompt_url, :string, default: nil
+  attr :report, :map, default: nil, doc: "as `ai_box`'s; the form sends `text`, the whole reply"
+  attr :text, :string, default: nil
+
+  @doc """
+  A bill's story in one line, for a list: its first group's label and sentence,
+  "+N more groups" linking to the bill page, and the AI label.
+  """
+  def story_line(assigns) do
+    ~H"""
+    <div id={@id} class={["flex flex-col gap-1", @class]}>
+      <.story_tags tags={@tags} />
+      <p class="m-0 text-[15px] leading-relaxed text-floor-ink">
+        <span class="font-bold">{@group.label}:</span> {@group.sentence}
+      </p>
+      <.link
+        :if={@more > 0 && @href}
+        navigate={@href}
+        class="self-start text-[13px] font-semibold text-floor-accent hover:underline"
+      >
+        +{@more} more {if @more == 1, do: "group", else: "groups"}
+      </.link>
+      <p class="m-0 text-[12px] text-floor-muted">
+        Written by AI from the bill; it can be wrong<a
+          :if={@prompt_url}
+          href={@prompt_url}
+          class="ml-1 underline"
+        >How it's written</a>
+      </p>
+      <.live_component
+        :if={@report && @text}
+        module={EverydayCitizenWeb.FeedbackForm}
+        id={"#{@id}-report"}
+        report={Map.put(@report, :summary, @text)}
+      />
+    </div>
+    """
+  end
+
+  @doc "A summary's story, or nil for a summary without one."
+  @spec story_of(String.t() | nil) :: Story.t() | nil
+  def story_of(nil), do: nil
+
+  def story_of(text) do
+    case Story.split(text) do
+      %{groups: []} -> nil
+      story -> story
+    end
+  end
+
+  defp story({:ok, text}), do: story_of(text)
+
+  defp story(_state), do: nil
+
+  @doc "▸ when a <details> is closed, ▾ when open; its <details> carries `group`."
+  def disclosure_mark(assigns) do
+    ~H"""
+    <span aria-hidden="true" class="inline-block w-4 group-open:hidden">▸</span><span
+      aria-hidden="true"
+      class="hidden w-4 group-open:inline-block"
+    >▾</span>
     """
   end
 

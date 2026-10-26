@@ -47,6 +47,13 @@ defmodule EverydayCitizenWeb.AiBoxTest do
     assert LazyHTML.text(example) =~ "2.5 × $100,000 = $250,000"
   end
 
+  test "a reply's tags and subjects are not shown as summary text" do
+    html = box("It does a thing.\n\n## Tags\nSets rules\n\n## Subjects\n- Photo ID: SEC. 3")
+    assert html =~ "It does a thing."
+    refute html =~ "Tags"
+    refute html =~ "SEC. 3"
+  end
+
   test "a summary without headings renders as before" do
     html = box("One sentence.\n- A point.")
     assert html =~ "<p class=\"m-0\">One sentence.</p>"
@@ -56,10 +63,19 @@ defmodule EverydayCitizenWeb.AiBoxTest do
 
   test "the published bill prompt asks for the headings the page shows" do
     prompt =
-      File.read!(Application.app_dir(:everyday_citizen, "priv/prompts/bill_summary.v3.md"))
+      File.read!(Application.app_dir(:everyday_citizen, "priv/prompts/bill_summary.v4.md"))
 
-    for heading <- ["## Who this affects", "## Words to know", "## For example"],
+    for heading <- [
+          "## Who this affects",
+          "## Words to know",
+          "## For example",
+          "## " <> EverydayCitizen.Summaries.Story.heading(),
+          "## Tags",
+          "## Subjects"
+        ],
         do: assert(prompt =~ heading)
+
+    for tag <- EverydayCitizen.Summaries.Story.tags(), do: assert(prompt =~ tag)
   end
 
   test "clamped, the summary is cut to two lines on phones only" do
