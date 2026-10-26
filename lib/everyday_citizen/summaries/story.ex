@@ -103,6 +103,23 @@ defmodule EverydayCitizen.Summaries.Story do
     |> String.trim()
   end
 
+  @doc """
+  The reply with its subjects' section numbers replaced by "sections not known":
+  for a reply written from summaries of a bill's parts, which carry none, so any
+  it gives are guesses.
+  """
+  @spec forget_sections(String.t()) :: String.t()
+  def forget_sections(text) do
+    Regex.replace(
+      ~r/(^##[ \t]+#{@subjects_heading}[ \t]*\n)(.*?)(?=^##[ \t]|\z)/ms,
+      text,
+      fn _, heading, body ->
+        heading <>
+          Regex.replace(~r/^(\s*-\s*[^:\n]+):.*$/m, body, "\\1: sections not known")
+      end
+    )
+  end
+
   @doc "The reply without its Tags and Subjects parts, which are not summary text."
   @spec without_meta(String.t()) :: String.t()
   def without_meta(text) do

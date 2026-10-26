@@ -38,6 +38,15 @@ defmodule EverydayCitizen.Summaries.BudgetTest do
     assert Summaries.spent_today_usd() == 0.0
   end
 
+  test "a stored bill summary names both prompts that wrote it; its draft follows the bill's" do
+    assert Summaries.cache_version(:bill) == "v4+check.v1"
+    assert Summaries.cache_version(:bill_draft) == "v4"
+    assert Summaries.cache_version(:rep_week) == "v1"
+
+    {:ok, row} = Summaries.put_ai(:bill, "bill:1:is", "input", %{summary: "S", model: "m"})
+    assert row.prompt_version == "v4+check.v1"
+  end
+
   test "a bill or week summary is stored once per subject and prompt version, found while its input matches" do
     {:ok, _} = Summaries.put_ai(:bill, "bill:1:is", "input one", %{summary: "S1", model: "m"})
     {:ok, _} = Summaries.put_ai(:bill, "bill:1:is", "input one", %{summary: "S2", model: "m"})

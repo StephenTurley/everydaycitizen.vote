@@ -502,7 +502,7 @@ defmodule EverydayCitizenWeb.BillLive do
     %{
       kind: to_string(kind),
       subject: subject,
-      prompt_version: Summaries.prompt_version(kind),
+      prompt_version: Summaries.cache_version(kind),
       page: assigns.path,
       user: assigns.current_scope && assigns.current_scope.user,
       remote_ip: assigns.remote_ip

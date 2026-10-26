@@ -219,6 +219,36 @@ defmodule EverydayCitizen.Summaries.WriterTest do
     assert combined =~ "<part>\n- part summary\n</part>"
   end
 
+  # the parts' summaries carry no section numbers, so any in the reply are guesses
+  test "a very long bill's subjects keep no section numbers" do
+    Req.Test.stub(EverydayCitizen.Claude, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      [%{"content" => content}] = Jason.decode!(body)["messages"]
+
+      text =
+        cond do
+          String.starts_with?(content, "<part>") ->
+            "- part summary"
+
+          String.starts_with?(content, "<check>") ->
+            "- Savers: they would be signed up."
+
+          true ->
+            "S.\n\n## If this becomes law\n- Savers: they would be signed up.\n\n## Subjects\n- Retirement: SEC. 401\n- Ports: SEC. 1301"
+        end
+
+      reply(conn, text)
+    end)
+
+    section = "SEC. 1. " <> String.duplicate("word ", 20_000) <> "\n"
+    assert {:ok, %{summary: summary}} = Writer.write(:bill, String.duplicate(section, 3))
+
+    assert EverydayCitizen.Summaries.Story.split(summary).subjects == [
+             %{name: "Retirement", sections: []},
+             %{name: "Ports", sections: []}
+           ]
+  end
+
   test "a long bill's finished parts are kept, so a retry pays only for what is left" do
     test = self()
     {:ok, final_fails} = Agent.start_link(fn -> true end)

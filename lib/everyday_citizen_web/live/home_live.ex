@@ -182,7 +182,7 @@ defmodule EverydayCitizenWeb.HomeLive do
     %{
       kind: "bill",
       subject: subject,
-      prompt_version: Summaries.prompt_version(:bill),
+      prompt_version: Summaries.cache_version(:bill),
       page: "/",
       user: assigns.current_scope && assigns.current_scope.user,
       remote_ip: assigns.remote_ip
