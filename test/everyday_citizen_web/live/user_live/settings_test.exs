@@ -2,6 +2,7 @@ defmodule EverydayCitizenWeb.UserLive.SettingsTest do
   use EverydayCitizenWeb.ConnCase, async: true
 
   alias EverydayCitizen.Accounts
+  import Ecto.Query
   import Phoenix.LiveViewTest
   import EverydayCitizen.AccountsFixtures
   import EverydayCitizen.WebAuthnFixtures
@@ -218,6 +219,82 @@ defmodule EverydayCitizenWeb.UserLive.SettingsTest do
 
       view |> element("#digest-toggle") |> render_click()
       assert EverydayCitizen.Repo.reload!(user).digest_enabled
+    end
+  end
+
+  describe "delete account" do
+    setup %{conn: conn} do
+      user = user_fixture()
+      EverydayCitizen.FloorFixtures.iowa!()
+      bill = EverydayCitizen.Legislation.get_bill("federal", "119-s-5")
+
+      {:ok, _} =
+        EverydayCitizen.Follows.follow(
+          EverydayCitizen.Accounts.Scope.for_user(user),
+          {:bill, bill.id}
+        )
+
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "deletes the account with what it follows and its sign-ins, and signs out", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/users/settings")
+      assert has_element?(view, "#delete-account", "Delete your account")
+
+      result = view |> element("#delete-account-button") |> render_click()
+      assert {:error, {:redirect, %{to: "/"}}} = result
+      {:ok, conn} = follow_redirect(result, conn)
+      assert html_response(conn, 200) =~ "Your account is deleted."
+
+      assert EverydayCitizen.Repo.get(EverydayCitizen.Accounts.User, user.id) == nil
+      assert EverydayCitizen.Repo.aggregate(EverydayCitizen.Follows.Follow, :count) == 0
+
+      assert EverydayCitizen.Repo.aggregate(
+               from(t in EverydayCitizen.Accounts.UserToken, where: t.user_id == ^user.id),
+               :count
+             ) == 0
+
+      assert {:error, {:redirect, %{to: "/users/log-in"}}} = live(conn, ~p"/users/settings")
+    end
+
+    test "a report the person sent stays, without their account", %{conn: conn, user: user} do
+      {:ok, report} =
+        EverydayCitizen.Feedback.submit(%{"kind" => "bill", "reason" => "inaccurate"}, user)
+
+      {:ok, view, _html} = live(conn, ~p"/users/settings")
+      view |> element("#delete-account-button") |> render_click()
+
+      assert %{user_id: nil} = EverydayCitizen.Repo.reload!(report)
+    end
+
+    test "without a recent sign-in it asks to confirm it's you first", %{conn: conn} do
+      conn =
+        log_in_user(conn, user_fixture(),
+          token_authenticated_at: DateTime.add(DateTime.utc_now(:second), -11, :minute)
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/users/settings")
+      refute has_element?(view, "#delete-account-button")
+      assert has_element?(view, "#delete-account a[href='/users/log-in']", "confirm it")
+    end
+
+    test "the delete event alone, without a recent sign-in, deletes nothing", %{conn: conn} do
+      user = user_fixture()
+
+      conn =
+        log_in_user(conn, user,
+          token_authenticated_at: DateTime.add(DateTime.utc_now(:second), -11, :minute)
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/users/settings")
+
+      assert {:error, {:live_redirect, %{to: "/users/log-in"}}} =
+               render_click(view, "delete_account", %{})
+
+      assert EverydayCitizen.Repo.get(EverydayCitizen.Accounts.User, user.id)
     end
   end
 end

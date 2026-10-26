@@ -274,3 +274,6 @@ Shipped in two deploys under the migration rule: the first adds and fills the co
 
 ## 2026-10-26 — CI fails on dependencies with security advisories
 Hex printed advisories during `mix deps.get` without failing, so eleven Bandit advisories went unnoticed until read in a log. CI now runs `mix hex.audit` after fetching deps; it fails on any advisory (any severity) or retired package. A new advisory therefore blocks deploys until the dependency is upgraded or the advisory is acknowledged in `mix.exs` (`hex: [ignore_advisories: [...]]`) with a reason in this log.
+
+## 2026-10-26 — Privacy fixes before a privacy policy
+So the policy can describe what is true: fonts are served from this site (Google Fonts saw every visitor's IP); Sentry error reports carry no visitor IP (not read into REMOTE_ADDR, proxy IP headers dropped, removed again in before_send); expired sign-in tokens (which keep the email they were sent to) and accounts never confirmed after 30 days are deleted nightly (`PruneAccounts`, 04:30); and an account can be deleted from settings after a recent sign-in, taking its follows, passkeys and sessions with it. Reports it sent stay, without the account (the existing nilify on `feedback_reports.user_id`).
