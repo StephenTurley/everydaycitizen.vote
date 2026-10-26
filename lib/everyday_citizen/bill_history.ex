@@ -142,6 +142,45 @@ defmodule EverydayCitizen.BillHistory do
   end
 
   @doc """
+  Each rep's part in the steps that changed a section (`origin`, from
+  `origins/3`): their votes and committees across those steps, and whether
+  their chamber voted in them at all. Reps are `%{person, body}`.
+  """
+  @spec rep_involvement(map(), [map()], [map()]) :: [map()]
+  def rep_involvement(origin, steps, reps), do: rep_parts(change_steps(origin, steps), reps)
+
+  # the steps that changed a section (not the version it started in, unless added there)
+  defp change_steps(%{status: status, added_in: added_in, changed_in: changed}, steps) do
+    codes = if(status == :added, do: [added_in], else: []) ++ changed
+    Enum.filter(steps, &(&1.code in codes))
+  end
+
+  defp rep_parts(_steps, []), do: []
+
+  defp rep_parts(steps, reps) do
+    people = Enum.map(reps, & &1.person)
+    per_step = Enum.map(steps, &involvement(&1, people))
+
+    chambers =
+      for step <- steps,
+          vote <- step.votes ++ Enum.map(step.related_votes, & &1.vote),
+          into: MapSet.new(),
+          do: vote.body_id
+
+    for {rep, i} <- Enum.with_index(reps) do
+      parts = Enum.map(per_step, &Enum.at(&1, i))
+
+      %{
+        person: rep.person,
+        body: rep.body,
+        chamber_voted: MapSet.member?(chambers, rep.body.id),
+        votes: parts |> Enum.flat_map(& &1.votes) |> Enum.uniq_by(fn {v, _} -> v.id end),
+        committees: parts |> Enum.flat_map(& &1.committees) |> Enum.uniq_by(& &1.id)
+      }
+    end
+  end
+
+  @doc """
   Each person's part in a step: their positions on its roll calls (procedural
   ones first, by date) as `{vote, option}`, and the step's committees they are
   members of. People in the order given; nothing found gives empty lists.
