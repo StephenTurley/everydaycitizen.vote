@@ -235,9 +235,11 @@ defmodule EverydayCitizen.Search do
   def bills_by_text(%Query{text: text}, exclude_bill_ids, page, opts \\ []) do
     cap = Keyword.get(opts, :cap, @max_text_matches)
     timeout_ms = Keyword.get(opts, :timeout_ms, @text_timeout_ms)
+    # tests only: a statement that outlasts the timeout, to reach that path reliably
+    sleep_ms = Keyword.get(opts, :sleep_ms)
 
     with false <- empty_tsquery?(text),
-         {:ok, rows, total} <- text_hits(text, exclude_bill_ids, page, cap, timeout_ms) do
+         {:ok, rows, total} <- text_hits(text, exclude_bill_ids, page, cap, timeout_ms, sleep_ms) do
       bills = bills_by_id(Enum.map(rows, &hd/1))
 
       results =
@@ -277,10 +279,11 @@ defmodule EverydayCitizen.Search do
   """
 
   # runs under a statement timeout; a search that takes too long finds nothing
-  defp text_hits(text, exclude_bill_ids, page, cap, timeout_ms) do
+  defp text_hits(text, exclude_bill_ids, page, cap, timeout_ms, sleep_ms) do
     {:ok, {rows, total}} =
       Repo.transaction(fn ->
         Repo.query!("SET LOCAL statement_timeout = #{Integer.to_string(timeout_ms)}")
+        if sleep_ms, do: Repo.query!("SELECT pg_sleep($1)", [sleep_ms / 1000])
 
         %{rows: rows} =
           Repo.query!(
