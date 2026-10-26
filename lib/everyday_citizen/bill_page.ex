@@ -54,15 +54,22 @@ defmodule EverydayCitizen.BillPage do
           preload: :body
       )
 
+    passes = passes(bill, actions)
+
+    passed_by =
+      for {%Body{id: id}, %Date{} = date} <- [passes.first, passes.second],
+          into: %{},
+          do: {id, date}
+
     %{
       bill: bill,
       sponsor:
         sponsorships |> Enum.find(&(&1.classification == "primary")) |> then(&(&1 && &1.person)),
       cosponsor_count: Enum.count(sponsorships, &(&1.classification == "cosponsor")),
       cosponsors: cosponsors(sponsorships),
-      steps: steps(bill, actions),
+      steps: steps(bill, actions, passes),
       latest_action: List.last(actions),
-      reps: Enum.map(reps, &rep_state(&1, sponsorships, votes)),
+      reps: Enum.map(reps, &rep_state(&1, sponsorships, votes, passed_by)),
       summary: Legislation.latest_summary(bill),
       # metadata only: the XML, text and sections of every version would be
       # many MB on large bills; `sections/2` loads one version's
@@ -113,18 +120,23 @@ defmodule EverydayCitizen.BillPage do
     ) || []
   end
 
-  defp steps(bill, actions) do
+  # Each chamber and the day it passed the bill (nil if it hasn't): the first is
+  # the chamber it came from, the second the other one.
+  defp passes(bill, actions) do
     first = bill.from_body
     second = first && other_chamber(first)
-    dates = fn classes -> for a <- actions, a.classification in classes, a.date, do: a.date end
-
-    introduced = bill.introduced_on || List.first(dates.(["introduced"]))
+    dates = for a <- actions, a.classification in @after_second, a.date, do: a.date
     passed = actions |> Enum.filter(&(&1.classification == "passed_chamber"))
 
     first_pass =
       passed |> Enum.map(& &1.date) |> Enum.reject(&is_nil/1) |> Enum.min(Date, fn -> nil end)
 
-    second_pass = second_pass(passed, second, dates.(@after_second))
+    %{first: {first, first_pass}, second: {second, second_pass(passed, second, dates)}}
+  end
+
+  defp steps(bill, actions, %{first: {first, first_pass}, second: {second, second_pass}}) do
+    dates = fn classes -> for a <- actions, a.classification in classes, a.date, do: a.date end
+    introduced = bill.introduced_on || List.first(dates.(["introduced"]))
     committee = first_date(dates.(~w(reported markup)))
     law = first_date(dates.(["became_law"]))
 
@@ -214,8 +226,9 @@ defmodule EverydayCitizen.BillPage do
   defp first_date([]), do: nil
   defp first_date(dates), do: Enum.min(dates, Date)
 
-  # Sponsor, then their vote in their own chamber's main roll call, then cosponsor.
-  defp rep_state(rep, sponsorships, votes) do
+  # Sponsor, then their vote in their own chamber's main roll call, then cosponsor;
+  # a chamber that passed the bill with no roll call recorded no one's vote.
+  defp rep_state(rep, sponsorships, votes, passed_by) do
     mine = Enum.find(sponsorships, &(&1.person_id == rep.person.id))
 
     state =
@@ -224,10 +237,17 @@ defmodule EverydayCitizen.BillPage do
         option = vote_option(rep, votes) -> option
         mine -> :cosponsor
         main_vote(votes, rep.body.id) -> :not_in_office
+        passed_by[rep.body.id] -> :unrecorded
         true -> :no_vote
       end
 
-    %{person: rep.person, body: rep.body, state: state, vote: main_vote(votes, rep.body.id)}
+    %{
+      person: rep.person,
+      body: rep.body,
+      state: state,
+      vote: main_vote(votes, rep.body.id),
+      passed_on: passed_by[rep.body.id]
+    }
   end
 
   defp vote_option(rep, votes) do

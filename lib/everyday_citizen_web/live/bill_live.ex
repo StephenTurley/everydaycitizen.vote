@@ -438,6 +438,10 @@ defmodule EverydayCitizenWeb.BillLive do
   defp rep_note(%{state: :sponsor}), do: "Sponsor of this bill"
   defp rep_note(%{state: :cosponsor}), do: "Cosponsor of this bill"
   defp rep_note(%{state: :no_vote, body: body}), do: "The #{body.name} hasn't voted"
+
+  defp rep_note(%{state: :unrecorded, body: body, passed_on: date}),
+    do: "The #{body.name} passed it without a recorded vote, #{date(date)}"
+
   defp rep_note(%{vote: vote}) when not is_nil(vote), do: "#{vote.question}, #{vote_date(vote)}"
   defp rep_note(_), do: nil
 
