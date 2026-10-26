@@ -392,16 +392,6 @@ defmodule EverydayCitizenWeb.BillLive do
     """
   end
 
-  # ▸ when a <details> is closed, ▾ when open; its <details> carries `group`.
-  defp disclosure_mark(assigns) do
-    ~H"""
-    <span aria-hidden="true" class="inline-block w-4 group-open:hidden">▸</span><span
-      aria-hidden="true"
-      class="hidden w-4 group-open:inline-block"
-    >▾</span>
-    """
-  end
-
   defp cosponsors(1), do: "1 cosponsor"
   defp cosponsors(n), do: "#{n} cosponsors"
 
@@ -726,10 +716,10 @@ defmodule EverydayCitizenWeb.BillLive do
         <div class="contents lg:flex lg:flex-col lg:gap-6 lg:col-start-1 xl:col-start-2 lg:row-start-1 lg:min-w-0">
           <section
             :if={match?({_, _}, @bill_summary)}
-            aria-label="In plain English"
+            aria-label="If this becomes law"
             class="order-3 lg:order-1 pb-5 lg:pb-0"
           >
-            <.ai_box
+            <.bill_story
               id="bill-summary"
               class="bg-floor-card border border-floor-line"
               title="In plain English: what this bill does"
