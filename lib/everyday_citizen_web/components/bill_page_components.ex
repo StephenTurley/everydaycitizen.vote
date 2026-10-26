@@ -2,7 +2,8 @@ defmodule EverydayCitizenWeb.BillPageComponents do
   @moduledoc """
   The parts of the bill page around its text: the header with the sponsor and
   the follow button, where the bill stands, the visitor's reps' part in it,
-  its roll calls, and the official summary labeled with its author.
+  its roll calls, the AI-written story of the bill (with the parts later
+  versions added), and the official summary labeled with its author.
   """
   use EverydayCitizenWeb, :html
 

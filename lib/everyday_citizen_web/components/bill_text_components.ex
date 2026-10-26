@@ -19,7 +19,6 @@ defmodule EverydayCitizenWeb.BillTextComponents do
   def bill_contents(assigns) do
     ~H"""
     <nav
-      :if={@sections != []}
       aria-label="Sections"
       class="hidden xl:flex xl:col-start-1 xl:row-start-1 flex-col gap-0.5 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto"
     >
@@ -185,8 +184,8 @@ defmodule EverydayCitizenWeb.BillTextComponents do
     """
   end
 
-  @doc "The bill page's path for a version and an open section (or \"all\")."
-  def section_path(bill, version, enum) do
+  # the bill page's path for a version and an open section (or "all")
+  defp section_path(bill, version, enum) do
     ~p"/bills/#{bill.external_id}?#{Enum.reject([version: version && version.code, section: enum], &is_nil(elem(&1, 1)))}"
   end
 
