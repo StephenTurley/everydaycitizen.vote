@@ -24,26 +24,6 @@ defmodule EverydayCitizen.Legislation do
     Bill |> where([b], b.session_id == ^session_id) |> Repo.aggregate(:count)
   end
 
-  @doc "Actions the adapter could not classify, oldest first, for review."
-  @spec list_unclassified_actions(pos_integer()) :: [BillAction.t()]
-  def list_unclassified_actions(limit) do
-    BillAction
-    |> where([a], a.unclassified)
-    |> order_by([a], asc: a.id)
-    |> limit(^limit)
-    |> Repo.all()
-  end
-
-  @doc "Versions whose text has not been fetched yet."
-  @spec versions_missing_text(pos_integer()) :: [BillVersion.t()]
-  def versions_missing_text(limit) do
-    BillVersion
-    |> where([v], is_nil(v.text_source_id))
-    |> order_by([v], asc: v.id)
-    |> limit(^limit)
-    |> Repo.all()
-  end
-
   @doc "`{bill_external_id, code}` of every version in the jurisdiction with no text stored."
   @spec version_keys_missing_text(String.t()) :: [{String.t(), String.t()}]
   def version_keys_missing_text(jurisdiction_key) do
@@ -119,19 +99,6 @@ defmodule EverydayCitizen.Legislation do
     |> order_by([s], desc_nulls_last: s.action_date, desc: s.id)
     |> limit(1)
     |> Repo.one()
-  end
-
-  @doc "Ids of the given bills that have no summary stored."
-  @spec bill_ids_without_summary([integer()]) :: MapSet.t(integer())
-  def bill_ids_without_summary(bill_ids) do
-    with_summary =
-      BillSummary
-      |> where([s], s.bill_id in ^bill_ids)
-      |> select([s], s.bill_id)
-      |> distinct(true)
-      |> Repo.all()
-
-    MapSet.difference(MapSet.new(bill_ids), MapSet.new(with_summary))
   end
 
   @doc "Up to `limit` of a jurisdiction's bills with no `web_url`, as `%{id, external_id, source_url}`."

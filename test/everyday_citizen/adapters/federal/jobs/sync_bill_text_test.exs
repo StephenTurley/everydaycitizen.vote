@@ -5,7 +5,6 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBillTextTest do
   alias EverydayCitizen.Adapters.Federal.Jobs.SyncBillText
   alias EverydayCitizen.Ingest
   alias EverydayCitizen.Ingest.Records
-  alias EverydayCitizen.Legislation
   alias EverydayCitizen.Legislation.BillVersion
   alias EverydayCitizen.Repo
 
@@ -80,7 +79,6 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBillTextTest do
     assert v.plain_text =~ "Short title\n"
     assert v.xml =~ "<legis-body"
     assert v.text_source_id
-    assert Legislation.versions_missing_text(10) == []
     assert [%{"kind" => "section", "enum" => "1.", "heading" => "Short title"} | _] = v.sections
     assert v.sections_version == EverydayCitizen.Adapters.Federal.BillSections.format()
   end
@@ -107,7 +105,6 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBillTextTest do
     stub(%{})
     assert :ok = perform_job(SyncBillText, @args)
     assert version().text_source_id == nil
-    assert [_] = Legislation.versions_missing_text(10)
   end
 
   @html "<!DOCTYPE html>\n<html lang=\"en\"><head><title>Error</title></head><body><p>Not found</p></body></html>"

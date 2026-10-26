@@ -13,9 +13,6 @@ defmodule EverydayCitizen.Legislature do
 
   alias EverydayCitizen.Repo
 
-  @spec get_jurisdiction!(String.t()) :: Jurisdiction.t()
-  def get_jurisdiction!(key), do: Repo.get_by!(Jurisdiction, key: key)
-
   @spec get_body(String.t(), String.t()) :: Body.t() | nil
   def get_body(jurisdiction_key, external_id) do
     Body

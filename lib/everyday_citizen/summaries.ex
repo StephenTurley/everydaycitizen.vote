@@ -309,11 +309,6 @@ defmodule EverydayCitizen.Summaries do
   @spec topic(integer(), non_neg_integer()) :: String.t()
   def topic(version_id, index), do: "section_summary:#{version_id}:#{index}"
 
-  @doc "How many section summaries were written today (America/New_York)."
-  @spec created_today() :: non_neg_integer()
-  def created_today,
-    do: Repo.aggregate(from(s in SectionSummary, where: s.inserted_at >= ^today_start()), :count)
-
   defp today_start,
     do: DateTime.now!(@zone) |> DateTime.to_date() |> DateTime.new!(~T[00:00:00], @zone)
 
