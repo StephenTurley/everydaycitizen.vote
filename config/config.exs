@@ -57,7 +57,7 @@ config :everyday_citizen, :mail_from, {"Everyday Citizen", "hello@everydaycitize
 # view and cached; the prompt is priv/prompts/section_summary.<prompt_version>.md.
 config :everyday_citizen, :summaries,
   model: "claude-haiku-5-5",
-  prompt_versions: %{section: "v2", bill: "v3", bill_chunk: "v2", rep_week: "v1", change: "v1"},
+  prompt_versions: %{section: "v2", bill: "v4", bill_chunk: "v2", rep_week: "v1", change: "v1"},
   # new summaries pause once today's Claude spend reaches this (dollars)
   daily_budget_usd: 2.0,
   # summaries one visitor may ask for in an hour

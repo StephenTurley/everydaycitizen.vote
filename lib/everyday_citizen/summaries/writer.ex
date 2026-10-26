@@ -14,8 +14,8 @@ defmodule EverydayCitizen.Summaries.Writer do
   alias EverydayCitizen.Summaries.Claude
 
   @max_part 250_000
-  # reply caps leave room for the who-it-affects, words and example parts
-  @bands [{10_000, "short", 900}, {60_000, "medium", 1200}, {250_000, "long", 1600}]
+  # reply caps leave room for the who-it-affects, words, example and story parts
+  @bands [{10_000, "short", 1100}, {60_000, "medium", 1400}, {250_000, "long", 1800}]
   # a line that starts a section or a larger part: where a long bill is split
   @break ~r/^\s*(SEC\.|Sec\.|SECTION|Section|TITLE|Title|DIVISION|Division|SUBTITLE|Subtitle)\b/
   # a first line restating the length note ("Length: medium (3 to 5 sentences…)")
@@ -33,7 +33,7 @@ defmodule EverydayCitizen.Summaries.Writer do
   def band(text) do
     size = String.length(text)
 
-    Enum.find_value(@bands, {"very long", 2000}, fn {max, name, cap} ->
+    Enum.find_value(@bands, {"very long", 2200}, fn {max, name, cap} ->
       if size <= max, do: {name, cap}
     end)
   end

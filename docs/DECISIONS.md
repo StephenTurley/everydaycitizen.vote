@@ -258,3 +258,6 @@ Federated sign-in to Claude failed with EACCES: the app runs as `nobody`, and Fl
 
 ## 2026-10-25 — Fly's OIDC tokens name the organization, not its `personal` alias
 Correction to the federation entry above: Fly issues tokens with issuer `https://oidc.fly.io/stephen-980` and subject `stephen-980:thefloor-vote:<machine>`, using the organization's name, even though the app's org slug is `personal` and `oidc.fly.io/personal` serves its own discovery document. The Claude Console issuer and rule now use `stephen-980`; with `personal` the exchange returned 401.
+
+## 2026-10-26 — Bill summaries lead with "If this becomes law"
+Owner's direction: most visitors give a bill a moment, so the first thing shown is what it would do to people, told from each affected group's side. Prompt v4 adds a part of 1 to 4 groups, each "- label: one sentence", written last in the reply (after the summary it distills, keeping the unheaded first part the length rule and echo check rely on) and shown first on the bill page, the home page's new laws and search results; the rest of the summary is folded below. Reply caps rise by 200 tokens per length band (1,100/1,400/1,800/2,200). Every cached bill summary is rewritten on its next view, inside the daily budget. The owner reviewed real v4 output on sample bills before it shipped.

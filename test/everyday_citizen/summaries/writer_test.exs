@@ -32,10 +32,10 @@ defmodule EverydayCitizen.Summaries.WriterTest do
   end
 
   test "the length band follows the bill's size" do
-    assert Writer.band(String.duplicate("a", 9_000)) == {"short", 900}
-    assert Writer.band(String.duplicate("a", 40_000)) == {"medium", 1200}
-    assert Writer.band(String.duplicate("a", 200_000)) == {"long", 1600}
-    assert Writer.band(String.duplicate("a", 300_000)) == {"very long", 2000}
+    assert Writer.band(String.duplicate("a", 9_000)) == {"short", 1100}
+    assert Writer.band(String.duplicate("a", 40_000)) == {"medium", 1400}
+    assert Writer.band(String.duplicate("a", 200_000)) == {"long", 1800}
+    assert Writer.band(String.duplicate("a", 300_000)) == {"very long", 2200}
   end
 
   test "a short bill is one request with its length band" do
@@ -45,7 +45,7 @@ defmodule EverydayCitizen.Summaries.WriterTest do
              Writer.write(:bill, "SEC. 1. Short text.")
 
     assert_received {:call, body}
-    assert body["max_tokens"] == 900
+    assert body["max_tokens"] == 1100
 
     assert [%{"content" => "Length: short\n\n<bill>\nSEC. 1. Short text.\n</bill>"}] =
              body["messages"]
@@ -114,7 +114,7 @@ defmodule EverydayCitizen.Summaries.WriterTest do
       assert String.starts_with?(part, "SEC. 1.")
     end
 
-    assert final["max_tokens"] == 2000
+    assert final["max_tokens"] == 2200
     assert [%{"content" => "Length: very long\n\n<bill>\n" <> combined}] = final["messages"]
     assert combined =~ "<part>\n- part summary\n</part>"
   end
@@ -184,8 +184,8 @@ defmodule EverydayCitizen.Summaries.WriterTest do
   test "a reply cut off at its cap is retried once with twice the room, and never kept cut off" do
     stub_stops(["max_tokens", "end_turn"])
     assert {:ok, %{summary: "Summary (end_turn)."}} = Writer.write(:bill, "SEC. 1. Short text.")
-    assert_received {:call, %{"max_tokens" => 900}}
-    assert_received {:call, %{"max_tokens" => 1800}}
+    assert_received {:call, %{"max_tokens" => 1100}}
+    assert_received {:call, %{"max_tokens" => 2200}}
     # both calls are paid for
     assert_in_delta Summaries.spent_today_usd(), 0.00025, 0.000001
 
