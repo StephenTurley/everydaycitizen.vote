@@ -15,7 +15,8 @@ defmodule EverydayCitizen.SentryJobsTest do
     for reason <- [
           %Req.TransportError{reason: :timeout},
           {:http_status, 503},
-          {:http_status, 429}
+          {:http_status, 429},
+          {:http_status, 529, "Overloaded"}
         ] do
       refute SentryJobs.report_error?(Worker, job(1, reason)), inspect(reason)
       assert SentryJobs.report_error?(Worker, job(3, reason)), inspect(reason)
@@ -25,6 +26,7 @@ defmodule EverydayCitizen.SentryJobsTest do
   test "any other failure is reported at once" do
     assert SentryJobs.report_error?(Worker, job(1, {:missing_prerequisite, :session}))
     assert SentryJobs.report_error?(Worker, job(1, {:http_status, 404}))
+    assert SentryJobs.report_error?(Worker, job(1, {:http_status, 400, "Use between_tools."}))
   end
 
   test "a raised exception is reported at once" do

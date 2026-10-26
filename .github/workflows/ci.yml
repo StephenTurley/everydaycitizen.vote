@@ -53,3 +53,9 @@ jobs:
       - run: flyctl deploy --remote-only --ha=false --image-label git-${{ github.sha }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      # one tiny call to each Claude model in use, with the settings summaries
+      # send: a setting a model refuses fails here, not silently in the jobs
+      - name: Check Claude answers
+        run: flyctl ssh console -a thefloor-vote -C "/app/bin/everyday_citizen rpc 'EverydayCitizen.Release.check_claude()'"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

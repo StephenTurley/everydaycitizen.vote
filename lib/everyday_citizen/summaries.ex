@@ -144,6 +144,10 @@ defmodule EverydayCitizen.Summaries do
   @spec model(atom()) :: String.t()
   def model(kind), do: Map.get(config(:models) || %{}, kind, config(:model))
 
+  @doc "Every model a kind of summary is written by, the default first."
+  @spec models() :: [String.t()]
+  def models, do: Enum.uniq([config(:model) | Map.values(config(:models) || %{})])
+
   @doc "Whether today's spending (America/New_York day) has reached `daily_budget_usd`."
   @spec over_budget?() :: boolean()
   def over_budget?, do: spent_today_usd() >= config(:daily_budget_usd)

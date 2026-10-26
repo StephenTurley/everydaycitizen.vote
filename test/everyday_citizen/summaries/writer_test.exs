@@ -106,7 +106,7 @@ defmodule EverydayCitizen.Summaries.WriterTest do
 
   test "a failed check keeps nothing but the draft, so a retry pays only for the check" do
     stub_check(500)
-    assert {:error, {:http_status, 500}} = Writer.write(:bill, "SEC. 1. Short text.")
+    assert {:error, {:http_status, 500, _}} = Writer.write(:bill, "SEC. 1. Short text.")
     assert_received {:call, :bill, _}
     assert_received {:call, :check, _}
 

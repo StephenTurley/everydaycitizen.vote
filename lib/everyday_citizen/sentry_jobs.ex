@@ -21,5 +21,6 @@ defmodule EverydayCitizen.SentryJobs do
   defp transient?(%Req.TransportError{}), do: true
   defp transient?(%Mint.TransportError{}), do: true
   defp transient?({:http_status, status}) when status == 429 or status >= 500, do: true
+  defp transient?({:http_status, status, _message}), do: transient?({:http_status, status})
   defp transient?(_reason), do: false
 end

@@ -53,8 +53,42 @@ defmodule EverydayCitizen.Summaries.ClaudeTest do
   test "an error status is returned, not raised" do
     for status <- [429, 500, 401] do
       Req.Test.stub(EverydayCitizen.Claude, &reply(&1, status, %{"type" => "error"}))
-      assert {:error, {:http_status, ^status}} = Claude.summarize("text")
+      assert {:error, {:http_status, ^status, nil}} = Claude.summarize("text")
     end
+  end
+
+  test "each model in use answers a tiny call made with the settings summaries send" do
+    test = self()
+
+    Req.Test.stub(EverydayCitizen.Claude, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      body = Jason.decode!(body)
+      send(test, {:check, body["model"], body["thinking"], body["max_tokens"]})
+      reply(conn, 200, %{"content" => [%{"type" => "text", "text" => "ok"}]})
+    end)
+
+    assert Claude.check() == :ok
+    assert_received {:check, "claude-haiku-5-5", %{"type" => "disabled"}, 5}
+    assert_received {:check, "claude-sonnet-5-5", %{"type" => "between_tools"}, 5}
+    refute_received {:check, _, _, _}
+
+    Req.Test.stub(
+      EverydayCitizen.Claude,
+      &reply(&1, 400, %{"type" => "error", "error" => %{"message" => "Use between_tools."}})
+    )
+
+    assert {:error, [{"claude-haiku-5-5", {:http_status, 400, "Use between_tools."}} | _]} =
+             Claude.check()
+  end
+
+  # the message says what was wrong (a 400 for a setting a model refuses went unseen for hours)
+  test "an error keeps the message Claude sent with it" do
+    Req.Test.stub(
+      EverydayCitizen.Claude,
+      &reply(&1, 400, %{"type" => "error", "error" => %{"message" => "Use between_tools."}})
+    )
+
+    assert {:error, {:http_status, 400, "Use between_tools."}} = Claude.summarize("text")
   end
 
   test "each kind uses its own published prompt, tag and reply cap; options can override" do
