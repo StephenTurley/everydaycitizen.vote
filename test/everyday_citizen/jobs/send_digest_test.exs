@@ -44,11 +44,11 @@ defmodule EverydayCitizen.Jobs.SendDigestTest do
     end
   end
 
-  defp new_action!(bill, inserted_at \\ DateTime.utc_now()) do
+  defp new_action!(bill, inserted_at \\ DateTime.utc_now(), date \\ ~D[2026-10-20]) do
     Repo.insert!(%BillAction{
       bill_id: bill.id,
       position: System.unique_integer([:positive]),
-      date: ~D[2026-10-20],
+      date: date,
       description: "Reported by the committee.",
       classification: "reported",
       source_id: bill.source_id,
@@ -155,8 +155,9 @@ defmodule EverydayCitizen.Jobs.SendDigestTest do
       )
     )
 
-    new_action!(bill, DateTime.add(DateTime.utc_now(), -2, :day))
-    new_action!(bill, DateTime.add(DateTime.utc_now(), -1, :hour))
+    # two steps on different days (one step recorded twice is one item)
+    new_action!(bill, DateTime.add(DateTime.utc_now(), -2, :day), ~D[2026-10-19])
+    new_action!(bill, DateTime.add(DateTime.utc_now(), -1, :hour), ~D[2026-10-20])
 
     :ok = run(user)
 
