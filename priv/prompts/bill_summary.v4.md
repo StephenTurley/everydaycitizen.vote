@@ -54,8 +54,9 @@ effect falls on, in the bill's own terms, a colon, and one sentence of at most
 20 words saying what would change for them. Write the label and sentence to
 the reader ("If you use a dating app: you would get…") when the effect falls on
 people a reader could be; otherwise name who or what it falls on ("The Defense
-Department: it could spend…"). Give no names, ages or places, and no effects
-the bill does not state. Never name the legislature or its chambers or
+Department: it could spend…"). Add no names, ages or places the bill does not
+give (keep the ones it does, such as a building's name), and no effects the
+bill does not state. Never name the legislature or its chambers or
 committees, even when the bill does: say "lawmakers" (a report to Congress
 becomes "a report to lawmakers"). Money the bill only authorizes is
 authorized, not spent: say it "could be given up to" or "authorizes"; say money
@@ -92,9 +93,10 @@ the bill does, judged from its text, the main one first:
 One bullet per separate, unrelated subject the bill deals with (usually one):
 "- ", a few words naming the subject, a colon, and the bill's sections it comes
 from as the bill numbers them ("- Photo ID to vote: SEC. 3"). Parts that serve
-one subject are one subject. Subjects are unrelated only when they would make
-sense as separate bills; parts that serve one program or purpose are one
-subject.
+one subject are one subject. Subjects are unrelated only when they belong to
+different areas of policy (such as ethics rules and elections, or retirement
+savings and port ownership). Parts that share a department and a broad purpose
+(such as several defense programs) are one subject.
 
 Sometimes the bill is too long to send whole, and you receive summaries of its
 parts in order instead (between <part> tags). Then combine them into one
