@@ -58,6 +58,7 @@ defmodule EverydayCitizen.Ingest.Writer.Votes do
                classification: r.classification || "other",
                result: r.result,
                passed: r.passed,
+               voted_on: r.voted_on,
                voted_at: r.voted_at,
                yea_count: r.counts.yea,
                nay_count: r.counts.nay,

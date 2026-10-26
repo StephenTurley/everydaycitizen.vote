@@ -12,14 +12,14 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.HouseFloorTest do
 
   test "one floor event per top-level floor item; sub-items are not events" do
     assert length(events()) == 6
-    assert Enum.all?(events(), &match?(%Event{classification: "floor", all_day: true}, &1))
+    assert Enum.all?(events(), &match?(%Event{classification: "floor", start_at: nil}, &1))
     assert Enum.all?(events(), &(&1.body_external_id == "house"))
     assert Enum.all?(events(), &(&1.status == "scheduled"))
     assert Enum.all?(events(), &(&1.jurisdiction == "federal"))
   end
 
-  test "start_at is the week date at midnight Eastern, in UTC" do
-    assert Enum.all?(events(), &(&1.start_at == ~U[2026-09-14 04:00:00Z]))
+  test "events are dated the week's Monday, with no clock time" do
+    assert Enum.all?(events(), &(&1.date == ~D[2026-09-14] and is_nil(&1.start_at)))
   end
 
   test "external ids are stable and unique" do

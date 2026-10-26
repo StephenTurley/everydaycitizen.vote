@@ -4,6 +4,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.Congress do
   legislature and chamber bodies, and the congress session with its
   per-session sub-sessions (`119-1`, `119-2`), in dependency order.
   """
+  alias EverydayCitizen.Adapters.Federal.VoteSupport
   alias EverydayCitizen.Ingest.Records.{Body, Jurisdiction, LegislativeSession, SourceRef}
 
   @jurisdiction "federal"
@@ -24,6 +25,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.Congress do
         key: @jurisdiction,
         name: "United States Congress",
         classification: "federal",
+        time_zone: VoteSupport.time_zone(),
         source: source
       },
       body("congress", "United States Congress", "legislature", nil, source),

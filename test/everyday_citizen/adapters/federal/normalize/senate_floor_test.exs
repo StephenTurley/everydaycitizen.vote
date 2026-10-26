@@ -16,7 +16,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.SenateFloorTest do
   test "the next meeting becomes a floor event at its time, titled with the day's program" do
     e = event(@busy, ~D[2026-09-22])
 
-    assert %Event{classification: "floor", body_external_id: "senate", all_day: false} = e
+    assert %Event{classification: "floor", body_external_id: "senate", date: ~D[2026-09-23]} = e
     assert e.external_id == "senate-floor-2026-09-23"
     assert e.raw_classification == "record-next-meeting"
     assert e.start_at == ~U[2026-09-23 14:00:00Z]
@@ -66,7 +66,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.SenateFloorTest do
     </pre>
     """
 
-    assert %Event{all_day: true, start_at: ~U[2027-01-04 05:00:00Z], title: "To be announced."} =
+    assert %Event{date: ~D[2027-01-04], start_at: nil, title: "To be announced."} =
              event(html, ~D[2026-12-30])
   end
 

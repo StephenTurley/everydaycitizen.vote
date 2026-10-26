@@ -16,11 +16,22 @@ defmodule EverydayCitizen.Adapters.Federal.VoteSupport do
     end
   end
 
+  @doc "The zone the legislature keeps its days and clock times in."
+  @spec time_zone() :: String.t()
+  def time_zone, do: "America/New_York"
+
+  @doc "The America/New_York date of a moment."
+  @spec eastern_date(DateTime.t() | nil) :: Date.t() | nil
+  def eastern_date(nil), do: nil
+
+  def eastern_date(%DateTime{} = at),
+    do: at |> DateTime.shift_zone!(time_zone()) |> DateTime.to_date()
+
   @doc "Converts a naive America/New_York wall-clock time to UTC."
   @spec eastern_to_utc(NaiveDateTime.t()) :: DateTime.t()
   def eastern_to_utc(%NaiveDateTime{} = naive) do
     local =
-      case DateTime.from_naive(naive, "America/New_York") do
+      case DateTime.from_naive(naive, time_zone()) do
         {:ok, dt} -> dt
         {:ambiguous, first, _second} -> first
         {:gap, _before, after_gap} -> after_gap

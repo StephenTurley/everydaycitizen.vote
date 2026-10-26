@@ -15,6 +15,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeetingsTest do
       key: "federal",
       name: "Federal",
       classification: "federal",
+      time_zone: "America/New_York",
       source: src()
     })
 
@@ -154,6 +155,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeetingsTest do
       jurisdiction: "federal",
       external_id: "meeting-#{id}",
       classification: "hearing",
+      date: DateTime.to_date(start_at),
       start_at: start_at,
       source:
         Records.SourceRef.new(

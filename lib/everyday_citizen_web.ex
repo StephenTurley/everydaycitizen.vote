@@ -52,6 +52,8 @@ defmodule EverydayCitizenWeb do
     quote do
       use Phoenix.LiveView
 
+      on_mount EverydayCitizenWeb.TimeZone
+
       unquote(html_helpers())
     end
   end

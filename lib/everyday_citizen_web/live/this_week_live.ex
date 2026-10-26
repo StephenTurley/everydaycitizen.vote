@@ -11,8 +11,6 @@ defmodule EverydayCitizenWeb.ThisWeekLive do
   alias EverydayCitizen.Follows
   alias EverydayCitizen.Reps
 
-  @zone "America/New_York"
-
   @impl true
   def mount(_params, session, socket) do
     {:ok, assign(socket, district: session["district"], page_title: "This week")}
@@ -22,7 +20,7 @@ defmodule EverydayCitizenWeb.ThisWeekLive do
   def handle_params(params, _uri, socket) do
     %{current_scope: scope, district: district} = socket.assigns
     signed_in = !!(scope && scope.user)
-    from = from_date(params["from"])
+    from = from_date(params["from"], socket.assigns.time_zone)
     show = show(params, signed_in, district)
 
     {:noreply,
@@ -34,10 +32,10 @@ defmodule EverydayCitizenWeb.ThisWeekLive do
      )}
   end
 
-  defp from_date(param) do
+  defp from_date(param, zone) do
     case Date.from_iso8601(param || "") do
       {:ok, date} -> date
-      _ -> DateTime.now!(@zone) |> DateTime.to_date()
+      _ -> EverydayCitizen.Clock.today(zone)
     end
   end
 
@@ -70,10 +68,10 @@ defmodule EverydayCitizenWeb.ThisWeekLive do
     ~p"/this-week?#{params}"
   end
 
-  defp time(%{all_day: true}), do: "All day"
+  defp time(%{start_at: nil}, _zone), do: "All day"
 
-  defp time(event),
-    do: event.start_at |> DateTime.shift_zone!(@zone) |> Calendar.strftime("%-I:%M %p")
+  defp time(event, zone),
+    do: event.start_at |> DateTime.shift_zone!(zone) |> Calendar.strftime("%-I:%M %p")
 
   # a definition, not a reason: what the term means
   defp pro_forma?(%{title: title}) when is_binary(title), do: title =~ ~r/pro forma/i
@@ -91,7 +89,7 @@ defmodule EverydayCitizenWeb.ThisWeekLive do
             This week
           </h1>
           <p class="m-0 text-[14px] lg:text-[15px] text-floor-muted">
-            {Calendar.strftime(@from, "%b %-d")} to {Calendar.strftime(Date.add(@from, 6), "%b %-d")}, Eastern time
+            {Calendar.strftime(@from, "%b %-d")} to {Calendar.strftime(Date.add(@from, 6), "%b %-d")}, times in {@zone_label}
           </p>
         </section>
 
@@ -161,10 +159,10 @@ defmodule EverydayCitizenWeb.ThisWeekLive do
               class="!p-3.5 lg:!px-[18px] lg:!py-4 flex flex-col gap-1.5 lg:grid lg:grid-cols-[88px_minmax(0,1fr)] lg:gap-x-4 lg:gap-y-1"
             >
               <span class="hidden lg:block lg:row-span-3 text-[14px] font-semibold text-floor-ink-2">
-                {time(event)}
+                {time(event, @time_zone)}
               </span>
               <span class="text-[13px] text-floor-muted lg:col-start-2">
-                <span class="lg:hidden">{time(event)}{if event.body, do: " · "}</span>{if event.body,
+                <span class="lg:hidden">{time(event, @time_zone)}{if event.body, do: " · "}</span>{if event.body,
                   do: event.body.name}
               </span>
               <p class="m-0 text-[16px] font-semibold leading-snug lg:col-start-2">{event.title}</p>

@@ -13,6 +13,16 @@ defmodule EverydayCitizen.Legislature do
 
   alias EverydayCitizen.Repo
 
+  @doc "The zone a jurisdiction's legislature keeps its days in (UTC if it is not stored)."
+  @spec time_zone(String.t()) :: String.t()
+  def time_zone(jurisdiction_key) do
+    Jurisdiction
+    |> where([j], j.key == ^jurisdiction_key)
+    |> select([j], j.time_zone)
+    |> Repo.one()
+    |> Kernel.||("Etc/UTC")
+  end
+
   @spec get_body(String.t(), String.t()) :: Body.t() | nil
   def get_body(jurisdiction_key, external_id) do
     Body

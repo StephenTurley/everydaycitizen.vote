@@ -16,7 +16,6 @@ defmodule EverydayCitizenWeb.HomeLive do
   alias EverydayCitizen.Summaries.{Claude, Inputs}
   alias EverydayCitizenWeb.AiSummary
 
-  @zone "America/New_York"
   @page 5
 
   @impl true
@@ -31,7 +30,11 @@ defmodule EverydayCitizenWeb.HomeLive do
        laws: [],
        more_laws: false,
        summaries: %{},
-       upcoming: EverydayCitizen.Calendar.upcoming_floor(@page),
+       upcoming:
+         EverydayCitizen.Calendar.upcoming_floor(
+           @page,
+           EverydayCitizen.Clock.today(socket.assigns.time_zone)
+         ),
        step: :zip,
        zip: nil,
        split: [],
@@ -160,15 +163,14 @@ defmodule EverydayCitizenWeb.HomeLive do
   defp split_text(zip, [a, b]), do: "ZIP code #{zip} is split between #{a} and #{b}."
   defp split_text(zip, many), do: "ZIP code #{zip} is split between #{Enum.join(many, ", ")}."
 
-  defp day(%DateTime{} = at), do: at |> DateTime.shift_zone!(@zone) |> Calendar.strftime("%b %-d")
+  defp day(%Date{} = date), do: Calendar.strftime(date, "%b %-d")
 
-  defp weekday(%DateTime{} = at),
-    do: at |> DateTime.shift_zone!(@zone) |> Calendar.strftime("%a, %b %-d")
+  defp weekday(%Date{} = date), do: Calendar.strftime(date, "%a, %b %-d")
 
   # the next floor event, unless it is already listed
   defp next_line(%{items: items, next: next}) do
     if next && next.id not in Enum.map(items, & &1.id),
-      do: "Next on the calendar: #{day(next.start_at)}, #{next.title}"
+      do: "Next on the calendar: #{day(next.date)}, #{next.title}"
   end
 
   # a written summary's story, if it has one
@@ -226,7 +228,7 @@ defmodule EverydayCitizenWeb.HomeLive do
               <li :for={event <- @upcoming.items}>
                 <.card class="!p-3.5 flex flex-col gap-1">
                   <p class="m-0 text-[13px] text-floor-muted">
-                    {weekday(event.start_at)}<span :if={event.body}> · {event.body.name}</span>
+                    {weekday(event.date)}<span :if={event.body}> · {event.body.name}</span>
                   </p>
                   <p :if={event.title} class="m-0 text-[15px] leading-snug">{event.title}</p>
                   <ul class="m-0 p-0 list-none flex flex-col gap-1">

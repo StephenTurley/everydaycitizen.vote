@@ -16,6 +16,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncHouseVoteTest do
       key: "federal",
       name: "Federal",
       classification: "federal",
+      time_zone: "America/New_York",
       source: src()
     })
 

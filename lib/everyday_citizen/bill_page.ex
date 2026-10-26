@@ -50,7 +50,7 @@ defmodule EverydayCitizen.BillPage do
       Repo.all(
         from v in Vote,
           where: v.bill_id == ^bill.id,
-          order_by: [desc: v.voted_at, desc: v.id],
+          order_by: [desc: v.voted_on, desc_nulls_last: v.voted_at, desc: v.id],
           preload: :body
       )
 

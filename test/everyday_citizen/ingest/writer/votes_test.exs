@@ -14,6 +14,7 @@ defmodule EverydayCitizen.Ingest.Writer.VotesTest do
       key: @jur,
       name: "Fed",
       classification: "federal",
+      time_zone: "America/New_York",
       source: source_ref()
     })
 
@@ -68,6 +69,7 @@ defmodule EverydayCitizen.Ingest.Writer.VotesTest do
         classification: "passage",
         result: "Passed",
         passed: true,
+        voted_on: ~D[2026-02-01],
         voted_at: ~U[2026-02-01 15:00:00Z],
         bill_external_id: "119-hr-1",
         counts: %{yea: 2, nay: 0, present: 0, absent: 0},

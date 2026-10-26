@@ -61,6 +61,7 @@ defmodule EverydayCitizen.FollowsTest do
             external_id: id,
             classification: "floor",
             title: id,
+            date: ~D[2026-10-26],
             start_at: ~U[2026-10-26 14:00:00Z],
             bill_external_ids: bills,
             source: src

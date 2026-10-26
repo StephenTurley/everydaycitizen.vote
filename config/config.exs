@@ -24,8 +24,11 @@ config :everyday_citizen,
   ecto_repos: [EverydayCitizen.Repo],
   generators: [timestamp_type: :utc_datetime]
 
-# Time zone database (Senate vote times are America/New_York)
+# Time zone database
 config :elixir, :time_zone_database, Tz.TimeZoneDatabase
+
+# The site's own day: the summary budget and the daily email (EverydayCitizen.Clock)
+config :everyday_citizen, :site_time_zone, "America/New_York"
 
 # Configure the endpoint
 config :everyday_citizen, EverydayCitizenWeb.Endpoint,
@@ -116,6 +119,7 @@ config :everyday_citizen, Oban,
     # backfills allow 90 minutes), or a still-running job would be started twice.
     {Oban.Plugins.Lifeline, rescue_after: :timer.hours(2)},
     {Oban.Plugins.Pruner, max_age: 7 * 24 * 60 * 60},
+    # the same zone as :site_time_zone below
     {Oban.Plugins.Cron,
      timezone: "America/New_York",
      crontab: [

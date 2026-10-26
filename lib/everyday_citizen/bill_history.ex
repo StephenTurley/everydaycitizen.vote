@@ -22,9 +22,6 @@ defmodule EverydayCitizen.BillHistory do
   alias EverydayCitizen.Summaries
   alias EverydayCitizen.Votes.{Vote, VotePosition}
 
-  # dates of record are kept in the legislature's local time
-  @zone "America/New_York"
-
   @type origin :: %{
           status: :original | :changed | :added,
           added_in: String.t(),
@@ -138,8 +135,8 @@ defmodule EverydayCitizen.BillHistory do
         actions: Enum.filter(actions, &inside.(&1.date)),
         committees: Enum.filter(committees, &inside.(&1.date)),
         amendments: Enum.filter(amendments, &(&1.agreed and inside.(&1.latest_action_date))),
-        votes: Enum.filter(votes, &inside.(local_date(&1.voted_at))),
-        related_votes: Enum.filter(related, &inside.(local_date(&1.vote.voted_at)))
+        votes: Enum.filter(votes, &inside.(&1.voted_on)),
+        related_votes: Enum.filter(related, &inside.(&1.vote.voted_on))
       })
     end)
   end
@@ -157,7 +154,7 @@ defmodule EverydayCitizen.BillHistory do
 
     votes =
       (Enum.map(step.related_votes, & &1.vote) ++ step.votes)
-      |> Enum.sort_by(& &1.voted_at, DateTime)
+      |> Enum.sort_by(&Vote.order_key/1)
 
     positions =
       from(p in VotePosition,
@@ -189,7 +186,11 @@ defmodule EverydayCitizen.BillHistory do
   end
 
   defp bill_votes(bill) do
-    from(v in Vote, where: v.bill_id == ^bill.id, order_by: [v.voted_at, v.id], preload: :body)
+    from(v in Vote,
+      where: v.bill_id == ^bill.id,
+      order_by: [asc: v.voted_on, asc_nulls_first: v.voted_at, asc: v.id],
+      preload: :body
+    )
     |> Repo.all()
   end
 
@@ -203,7 +204,7 @@ defmodule EverydayCitizen.BillHistory do
         from(v in Vote,
           left_join: b in assoc(v, :bill),
           where: b.external_id in ^refs or v.bill_ref in ^refs,
-          order_by: [v.voted_at, v.id],
+          order_by: [asc: v.voted_on, asc_nulls_first: v.voted_at, asc: v.id],
           preload: [:body, :bill]
         )
         |> Repo.all()
@@ -215,11 +216,6 @@ defmodule EverydayCitizen.BillHistory do
 
   defp in_window?(date, from, to),
     do: (is_nil(from) or Date.after?(date, from)) and (is_nil(to) or not Date.after?(date, to))
-
-  defp local_date(%NaiveDateTime{} = at),
-    do: at |> DateTime.from_naive!("Etc/UTC") |> DateTime.shift_zone!(@zone) |> DateTime.to_date()
-
-  defp local_date(%DateTime{} = at), do: at |> DateTime.shift_zone!(@zone) |> DateTime.to_date()
 
   @doc """
   The texts an explanation of section `index`'s change in version `code` is

@@ -13,6 +13,7 @@ defmodule EverydayCitizen.Ingest.Writer.LegislationTest do
       key: @jur,
       name: "Fed",
       classification: "federal",
+      time_zone: "America/New_York",
       source: source_ref()
     })
 

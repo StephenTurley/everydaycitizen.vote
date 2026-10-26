@@ -74,6 +74,7 @@ defmodule EverydayCitizenWeb.BillHistoryLiveTest do
       identifier: "Roll Call 60",
       question: "On Agreeing to the Resolution",
       result: "Passed",
+      voted_on: ~D[2026-07-21],
       voted_at: ~U[2026-07-21 17:00:00Z],
       bill_external_id: "119-sres-10",
       counts: %{yea: 51, nay: 49, present: 0, absent: 0},

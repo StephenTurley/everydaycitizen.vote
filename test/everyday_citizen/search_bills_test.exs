@@ -25,6 +25,7 @@ defmodule EverydayCitizen.SearchBillsTest do
       key: "fed",
       name: "Fed",
       classification: "federal",
+      time_zone: "America/New_York",
       source: source_ref()
     })
 
@@ -110,6 +111,7 @@ defmodule EverydayCitizen.SearchBillsTest do
         classification: "passage",
         result: "Failed",
         passed: false,
+        voted_on: ~D[2026-02-01],
         voted_at: ~U[2026-02-01 17:00:00Z],
         bill_external_id: external_id,
         counts: %{yea: 1, nay: 2, present: 0, absent: 0},

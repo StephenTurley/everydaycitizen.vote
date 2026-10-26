@@ -24,7 +24,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeeting do
     end
   end
 
-  defp write(%{start_at: nil}, id, _run_id) do
+  defp write(%{date: nil}, id, _run_id) do
     Logger.warning("Skipping committee meeting #{id}: missing or invalid date")
     :ok
   end

@@ -4,7 +4,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.CommitteeMeeting do
   `Records.Event`.
 
   `event/2` reads one meeting detail document. A missing or unparseable `date`
-  gives `start_at: nil`; the job skips such meetings.
+  gives `date: nil`; the job skips such meetings.
 
   Type mapping: `Hearing`, `Open Hearing` and `Closed Hearing` are hearings,
   `Markup` is a markup, everything else (`Meeting`, `Open Business Meeting`, ...)
@@ -16,7 +16,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.CommitteeMeeting do
   Only `relatedItems.bills` are linked; nominations and other item kinds are
   ignored. A bill whose type is not recognized is kept as a raw label.
   """
-  alias EverydayCitizen.Adapters.Federal.BillId
+  alias EverydayCitizen.Adapters.Federal.{BillId, VoteSupport}
   alias EverydayCitizen.Ingest.Records.{Event, SourceRef}
 
   @classifications %{
@@ -44,6 +44,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.CommitteeMeeting do
       raw_classification: type,
       status: status(meeting["meetingStatus"]),
       title: meeting["title"],
+      date: meeting["date"] |> parse_datetime() |> VoteSupport.eastern_date(),
       start_at: parse_datetime(meeting["date"]),
       location: location(meeting["location"]),
       bill_external_ids: linked,

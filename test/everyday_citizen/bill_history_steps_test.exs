@@ -94,6 +94,7 @@ defmodule EverydayCitizen.BillHistoryStepsTest do
       external_id: "senate-119-2-6",
       identifier: "Roll Call 6",
       question: "On the Resolution",
+      voted_on: ~D[2026-01-19],
       voted_at: ~U[2026-01-19 17:00:00Z],
       bill_external_id: "119-sres-10",
       positions: [

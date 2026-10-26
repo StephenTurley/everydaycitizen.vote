@@ -4,14 +4,14 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.HouseFloor do
   (`floorschedule/category/floor-items/floor-item`) into floor `Records.Event`s.
 
   One event per top-level floor item (sub-items are supporting documents such as
-  reports and prints, not floor business). Events are all-day on the week's Monday,
-  midnight America/New_York in UTC. `legis-num` supplies the bill link: a label
+  reports and prints, not floor business). Events are dated the week's Monday,
+  with no clock time. `legis-num` supplies the bill link: a label
   anywhere in it resolves (`"Senate amendments to H.R. 5334"` links H.R. 5334); a
   non-empty one that holds no bill label is kept as a raw label. An item with a
   `remove-date` is `status: "removed"`. Anything that is not a floor schedule
   parses to no events.
   """
-  alias EverydayCitizen.Adapters.Federal.{BillId, VoteSupport}
+  alias EverydayCitizen.Adapters.Federal.BillId
   alias EverydayCitizen.Ingest.Records.{Event, SourceRef}
 
   @spec events(String.t(), SourceRef.t(), integer() | nil) :: [Event.t()]
@@ -31,11 +31,10 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.HouseFloor do
     with week when is_binary(week) <- attrs["week-date"],
          {:ok, date} <- Date.from_iso8601(week) do
       congress = parse_int(attrs["congress-num"]) || default_congress
-      start_at = VoteSupport.eastern_to_utc(NaiveDateTime.new!(date, ~T[00:00:00]))
 
       kids
       |> items()
-      |> Enum.map(&event(&1, week, start_at, congress, source))
+      |> Enum.map(&event(&1, week, date, congress, source))
       |> unique_ids()
     else
       _ -> []
@@ -49,7 +48,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.HouseFloor do
         do: item
   end
 
-  defp event({"floor-item", attrs, kids}, week, start_at, congress, source) do
+  defp event({"floor-item", attrs, kids}, week, date, congress, source) do
     attrs = Map.new(attrs)
     label = kids |> child_text("legis-num") |> collapse()
     {linked, raw} = bills(label, congress)
@@ -62,8 +61,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.HouseFloor do
       raw_classification: "floor-item",
       status: status(attrs["remove-date"]),
       title: kids |> child_text("floor-text") |> collapse() |> blank_to_nil(),
-      start_at: start_at,
-      all_day: true,
+      date: date,
       bill_external_ids: linked,
       raw_bill_labels: raw,
       source: source

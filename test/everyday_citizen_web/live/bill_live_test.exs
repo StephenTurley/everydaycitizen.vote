@@ -712,6 +712,7 @@ defmodule EverydayCitizenWeb.BillLiveTest do
           classification: "amendment",
           result: "Amendment Rejected",
           passed: false,
+          voted_on: ~D[2026-01-19],
           voted_at: ~U[2026-01-19 17:00:00Z],
           bill_external_id: "119-s-5",
           description: "To limit price increases for tickets.",
@@ -733,6 +734,31 @@ defmodule EverydayCitizenWeb.BillLiveTest do
              view,
              ~s(section[aria-label='Votes on this bill'] a[href="https://example.test/amendment/1"])
            )
+  end
+
+  test "a vote with only a date shows that date to a reader far west of the legislature", %{
+    conn: conn
+  } do
+    {:ok, _} =
+      Ingest.write(
+        %Records.Vote{
+          jurisdiction: "federal",
+          body_external_id: "senate",
+          session_identifier: "119-2",
+          external_id: "senate-119-2-9",
+          identifier: "Roll Call 9",
+          question: "On the Motion",
+          voted_on: ~D[2026-01-23],
+          bill_external_id: "119-s-5",
+          source: @src
+        },
+        nil
+      )
+
+    conn = put_connect_params(conn, %{"time_zone" => "Pacific/Honolulu"})
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5")
+
+    assert has_element?(view, "section[aria-label='Votes on this bill']", "Roll Call 9 · Jan 23")
   end
 
   test "the official summary is folded away until opened, its author still shown", %{conn: conn} do

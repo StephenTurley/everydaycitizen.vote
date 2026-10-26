@@ -39,8 +39,8 @@ defmodule EverydayCitizen.Ingest.Writer.Calendar do
                  raw_classification: r.raw_classification,
                  status: r.status,
                  title: r.title,
+                 date: r.date,
                  start_at: r.start_at,
-                 all_day: r.all_day,
                  location: r.location,
                  unresolved_bill_labels: r.raw_bill_labels ++ missing,
                  source_id: source_id

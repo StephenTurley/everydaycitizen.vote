@@ -172,6 +172,7 @@ defmodule EverydayCitizen.BillPageTest do
             external_id: id,
             identifier: roll,
             question: "On the Amendment",
+            voted_on: ~D[2026-01-21],
             voted_at: ~U[2026-01-21 05:00:00Z],
             bill_external_id: "119-s-5",
             counts: %{yea: 1, nay: 0, present: 0, absent: 0},
