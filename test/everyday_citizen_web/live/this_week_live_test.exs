@@ -106,6 +106,24 @@ defmodule EverydayCitizenWeb.ThisWeekLiveTest do
       assert render(view) =~ "10:00 AM"
     end
 
+    test "a tz cookie the time-zone database doesn't know is not kept", %{conn: conn} do
+      conn =
+        conn |> put_req_cookie("tz", "Mars/Olympus_Mons") |> get(~p"/this-week?from=2026-10-26")
+
+      assert html_response(conn, 200) =~ "10:00 AM"
+      assert get_session(conn, "time_zone") == nil
+    end
+
+    test "the browser's zone wins over the one kept in the session", %{conn: conn} do
+      conn =
+        conn
+        |> init_test_session(%{"time_zone" => "America/Chicago"})
+        |> put_connect_params(%{"time_zone" => "America/Los_Angeles"})
+
+      {:ok, view, _html} = live(conn, ~p"/this-week?from=2026-10-26")
+      assert render(view) =~ "7:00 AM"
+    end
+
     test "the tz cookie gives the first render the reader's zone", %{conn: conn} do
       conn =
         conn |> put_req_cookie("tz", "America/Chicago") |> get(~p"/this-week?from=2026-10-26")

@@ -4,20 +4,22 @@ defmodule EverydayCitizen.Repo.Migrations.VotesAndEventsKeepDates do
   time (`voted_at`, `start_at`) only when its source gave one. Dates were
   stored as midnight in the legislature's zone; each jurisdiction now records
   that zone.
+
+  The add half of the change: it works with the code before it, which still
+  reads `voted_at`, `start_at` and `all_day` (docs/ops/deploys.md). A later
+  migration clears the date-only times, makes the dates required and drops
+  `all_day`.
   """
   use Ecto.Migration
 
   def up do
     alter table(:jurisdictions), do: add(:time_zone, :string)
-    flush()
-    # the only jurisdiction stored so far; its adapter writes the same value
-    execute "UPDATE jurisdictions SET time_zone = 'America/New_York' WHERE key = 'federal'"
-    execute "UPDATE jurisdictions SET time_zone = 'Etc/UTC' WHERE time_zone IS NULL"
-    execute "ALTER TABLE jurisdictions ALTER COLUMN time_zone SET NOT NULL"
-
     alter table(:votes), do: add(:voted_on, :date)
     alter table(:events), do: add(:date, :date)
     flush()
+
+    # the only jurisdiction stored so far; its adapter writes the same value
+    execute "UPDATE jurisdictions SET time_zone = 'America/New_York' WHERE key = 'federal'"
 
     execute """
     UPDATE votes v SET voted_on = ((v.voted_at AT TIME ZONE 'UTC') AT TIME ZONE j.time_zone)::date
@@ -25,32 +27,26 @@ defmodule EverydayCitizen.Repo.Migrations.VotesAndEventsKeepDates do
     WHERE s.id = v.session_id
     """
 
-    # sources that give only a date
-    execute "ALTER TABLE votes ALTER COLUMN voted_at DROP NOT NULL"
-
-    execute """
-    UPDATE votes v SET voted_at = NULL FROM sources s
-    WHERE s.id = v.source_id AND s.url LIKE 'https://voteview.com/%'
-    """
-
     execute """
     UPDATE events e SET date = ((e.start_at AT TIME ZONE 'UTC') AT TIME ZONE j.time_zone)::date
     FROM jurisdictions j WHERE j.id = e.jurisdiction_id
     """
 
-    execute "ALTER TABLE votes ALTER COLUMN voted_on SET NOT NULL"
+    execute "ALTER TABLE votes ALTER COLUMN voted_at DROP NOT NULL"
     execute "ALTER TABLE events ALTER COLUMN start_at DROP NOT NULL"
+    # the code before this reads all_day first, and its queries skip a nil start_at
     execute "UPDATE events SET start_at = NULL WHERE all_day"
-    execute "ALTER TABLE events ALTER COLUMN date SET NOT NULL"
 
-    alter table(:events), do: remove(:all_day)
     create index(:votes, [:voted_on])
-    create index(:events, [:jurisdiction_id, :date])
+    create index(:events, [:date])
   end
 
   def down do
-    alter table(:events), do: add(:all_day, :boolean, default: false, null: false)
-    flush()
+    execute """
+    UPDATE votes v SET voted_at = (v.voted_on::timestamp AT TIME ZONE j.time_zone) AT TIME ZONE 'UTC'
+    FROM legislative_sessions s JOIN jurisdictions j ON j.id = s.jurisdiction_id
+    WHERE s.id = v.session_id AND v.voted_at IS NULL
+    """
 
     execute """
     UPDATE events e SET all_day = true,
@@ -58,15 +54,9 @@ defmodule EverydayCitizen.Repo.Migrations.VotesAndEventsKeepDates do
     FROM jurisdictions j WHERE j.id = e.jurisdiction_id AND e.start_at IS NULL
     """
 
-    execute """
-    UPDATE votes v SET voted_at = (v.voted_on::timestamp AT TIME ZONE j.time_zone) AT TIME ZONE 'UTC'
-    FROM legislative_sessions s JOIN jurisdictions j ON j.id = s.jurisdiction_id
-    WHERE s.id = v.session_id AND v.voted_at IS NULL
-    """
-
     execute "ALTER TABLE votes ALTER COLUMN voted_at SET NOT NULL"
     execute "ALTER TABLE events ALTER COLUMN start_at SET NOT NULL"
-    drop index(:events, [:jurisdiction_id, :date])
+    drop index(:events, [:date])
     drop index(:votes, [:voted_on])
     alter table(:events), do: remove(:date)
     alter table(:votes), do: remove(:voted_on)
