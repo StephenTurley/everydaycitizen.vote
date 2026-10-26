@@ -62,9 +62,13 @@ defmodule EverydayCitizenWeb.AiBoxTest do
           "## Who this affects",
           "## Words to know",
           "## For example",
-          "## " <> EverydayCitizen.Summaries.Story.heading()
+          "## " <> EverydayCitizen.Summaries.Story.heading(),
+          "## Tags",
+          "## Subjects"
         ],
         do: assert(prompt =~ heading)
+
+    for tag <- EverydayCitizen.Summaries.Story.tags(), do: assert(prompt =~ tag)
   end
 
   test "clamped, the summary is cut to two lines on phones only" do

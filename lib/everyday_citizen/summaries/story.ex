@@ -2,16 +2,51 @@ defmodule EverydayCitizen.Summaries.Story do
   @moduledoc """
   A bill summary's parts, as `priv/prompts/bill_summary.v4.md` asks for them:
   the groups of its "If this becomes law" part (each line "- label: sentence"),
-  its made-up example, and the rest (the summary, who this affects, words to
-  know) with their "## " headings. A reply without the story part has no groups.
+  its made-up example, its tags (from `tags/0`), its unrelated subjects with the
+  sections each comes from ("- Photo ID to vote: SEC. 3"), and the rest (the
+  summary, who this affects, words to know) with their "## " headings. A reply
+  without the story part has no groups.
   """
 
   @heading "If this becomes law"
   @example "For example"
+  @tags_heading "Tags"
+  @subjects_heading "Subjects"
   @max_groups 4
+  @max_tags 2
+
+  @tags [
+    "Sets rules",
+    "Changes benefits",
+    "Changes taxes",
+    "Spends or authorizes money",
+    "Creates or changes a program",
+    "Directs an agency",
+    "Changes how government works",
+    "Cancels a rule or law",
+    "Transfers land",
+    "Names or honors",
+    "States a view",
+    "Amends the Constitution",
+    "Chamber business"
+  ]
+
+  # a section number as the bill gives it: "SEC. 3", "Sec. 401", "Section 12A"
+  @section ~r/(?:SEC\.|Sec\.|Section)\s*([0-9]+[A-Za-z]?)/
 
   @type group :: %{label: String.t(), sentence: String.t()}
-  @type t :: %{groups: [group()], example: String.t() | nil, rest: String.t()}
+  @type subject :: %{name: String.t(), sections: [String.t()]}
+  @type t :: %{
+          groups: [group()],
+          example: String.t() | nil,
+          tags: [String.t()],
+          subjects: [subject()],
+          rest: String.t()
+        }
+
+  @doc "The tags a story may carry, in the order the prompt lists them."
+  @spec tags() :: [String.t()]
+  def tags, do: @tags
 
   @doc "The story part's heading."
   @spec heading() :: String.t()
@@ -29,10 +64,16 @@ defmodule EverydayCitizen.Summaries.Story do
     %{
       groups: groups(find(parts, @heading)),
       example: find(parts, @example),
+      tags: tags(find(parts, @tags_heading)),
+      subjects: subjects(find(parts, @subjects_heading)),
       rest:
         [
           String.trim(first)
-          | for({h, b} <- parts, h not in [@heading, @example], do: "## #{h}\n#{b}")
+          | for(
+              {h, b} <- parts,
+              h not in [@heading, @example, @tags_heading, @subjects_heading],
+              do: "## #{h}\n#{b}"
+            )
         ]
         |> Enum.reject(&(&1 == ""))
         |> Enum.join("\n\n")
@@ -43,21 +84,44 @@ defmodule EverydayCitizen.Summaries.Story do
     Enum.find_value(parts, fn {h, body} -> if h == heading, do: body end)
   end
 
-  defp groups(nil), do: []
-
   defp groups(body) do
+    body
+    |> labeled_lines()
+    |> Enum.map(fn {label, sentence} -> %{label: label, sentence: sentence} end)
+    |> Enum.take(@max_groups)
+  end
+
+  defp tags(nil), do: []
+
+  defp tags(line) do
+    line
+    |> String.trim_leading("- ")
+    |> String.split("·")
+    |> Enum.map(&String.trim/1)
+    |> Enum.filter(&(&1 in @tags))
+    |> Enum.take(@max_tags)
+  end
+
+  defp subjects(body) do
+    for {name, where} <- labeled_lines(body),
+        do: %{name: name, sections: for([_, n] <- Regex.scan(@section, where), do: n)}
+  end
+
+  # "- label: text" lines, each split on its first colon; others are skipped
+  defp labeled_lines(nil), do: []
+
+  defp labeled_lines(body) do
     body
     |> String.split("\n", trim: true)
     |> Enum.flat_map(fn line ->
       with "- " <> item <- String.trim(line),
-           [label, sentence] <- String.split(item, ":", parts: 2),
-           {label, sentence} when label != "" and sentence != "" <-
-             {String.trim(label), String.trim(sentence)} do
-        [%{label: label, sentence: sentence}]
+           [label, text] <- String.split(item, ":", parts: 2),
+           {label, text} when label != "" and text != "" <-
+             {String.trim(label), String.trim(text)} do
+        [{label, text}]
       else
         _ -> []
       end
     end)
-    |> Enum.take(@max_groups)
   end
 end

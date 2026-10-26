@@ -52,4 +52,53 @@ defmodule EverydayCitizen.Summaries.StoryTest do
     assert [%{label: "State officials", sentence: "they could sue: in federal court."}] =
              Story.split(text).groups
   end
+
+  @tagged """
+  It funds a program.
+
+  ## If this becomes law
+  - The Defense Department: it could be given up to $23 billion in 2026.
+
+  ## Tags
+  Spends or authorizes money · Made-up tag · Creates or changes a program · Sets rules
+
+  ## Subjects
+  - Missile defense program: SEC. 2, SEC. 3
+  - Retirement savings: SEC. 401 through SEC. 450
+  - Not a subject line
+  """
+
+  test "tags come back in order, only from the list, at most two" do
+    assert Story.split(@tagged).tags == [
+             "Spends or authorizes money",
+             "Creates or changes a program"
+           ]
+  end
+
+  test "subjects come with their section numbers, and the parts leave the rest" do
+    story = Story.split(@tagged)
+
+    assert story.subjects == [
+             %{name: "Missile defense program", sections: ["2", "3"]},
+             %{name: "Retirement savings", sections: ["401", "450"]}
+           ]
+
+    assert story.rest == "It funds a program."
+  end
+
+  test "a reply without tags or subjects has none" do
+    assert %{tags: [], subjects: []} = Story.split("S.\n\n## Who this affects\n- P: x.")
+  end
+
+  test "the tag list is the thirteen of the design" do
+    assert length(Story.tags()) == 13
+    assert "Transfers land" in Story.tags()
+  end
+
+  test "tags written as a bullet are still read" do
+    assert Story.split("S.\n\n## Tags\n- Sets rules · Changes taxes").tags == [
+             "Sets rules",
+             "Changes taxes"
+           ]
+  end
 end
