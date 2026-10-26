@@ -22,6 +22,22 @@ defmodule EverydayCitizenWeb.SentryScrubTest do
     refute inspect(headers) =~ "Main"
   end
 
+  test "headers never carry the visitor's IP address" do
+    conn =
+      Enum.reduce(
+        ~w(x-forwarded-for fly-client-ip x-real-ip forwarded true-client-ip cf-connecting-ip),
+        Plug.Test.conn(:get, "/bills/119-s-5"),
+        &Plug.Conn.put_req_header(&2, &1, "203.0.113.7")
+      )
+
+    refute inspect(SentryScrub.headers(conn)) =~ "203.0.113.7"
+  end
+
+  test "the remote address is never read" do
+    conn = %{Plug.Test.conn(:get, "/") | remote_ip: {203, 0, 113, 7}}
+    assert SentryScrub.remote_address(conn) == ""
+  end
+
   test "bodies and cookies are never sent" do
     conn = Plug.Test.conn(:post, "/reps", %{"address" => "1 Main St"})
     assert SentryScrub.nothing(conn) == %{}
@@ -50,9 +66,13 @@ defmodule EverydayCitizenWeb.SentryScrubTest do
           query_string: "q=123+Main+St",
           headers: %{
             "referer" => "https://everydaycitizen.vote/search?q=50309",
-            "user-agent" => "UA"
-          }
-        }
+            "user-agent" => "UA",
+            "x-forwarded-for" => "203.0.113.7",
+            "fly-client-ip" => "203.0.113.7"
+          },
+          env: %{"REMOTE_ADDR" => "203.0.113.7", "SERVER_PORT" => 443}
+        },
+        user: %{id: 1, ip_address: "203.0.113.7"}
       }
     end
 
@@ -70,6 +90,14 @@ defmodule EverydayCitizenWeb.SentryScrubTest do
       refute inspect(event) =~ "50309"
     end
 
+    test "drops the visitor's IP address wherever the event holds it" do
+      event = SentryScrub.before_send(crash_event())
+
+      refute inspect(event) =~ "203.0.113.7"
+      assert event.request.env == %{"SERVER_PORT" => 443}
+      assert event.user == %{id: 1}
+    end
+
     test "leaves every other field alone" do
       before = crash_event()
       event = SentryScrub.before_send(before)
@@ -79,11 +107,12 @@ defmodule EverydayCitizenWeb.SentryScrubTest do
       assert event.request.method == "GET"
       assert event.request.headers["user-agent"] == "UA"
 
-      assert Map.drop(event, [:extra, :request]) == Map.drop(before, [:extra, :request])
+      assert Map.drop(event, [:extra, :request, :user]) ==
+               Map.drop(before, [:extra, :request, :user])
     end
 
     test "an event without a request or extras passes through" do
-      event = %{crash_event() | request: nil, extra: %{}}
+      event = %{crash_event() | request: nil, extra: %{}, user: %{}}
       assert SentryScrub.before_send(event) == event
     end
 

@@ -2,7 +2,8 @@ defmodule EverydayCitizenWeb.SentryScrub do
   @moduledoc """
   What a request error report may carry. Bodies and cookies are never sent, and
   URLs, the referer included, lose their query string: a visitor's address (for finding their
-  representatives) must never leave the app.
+  representatives) must never leave the app. Nor does a visitor's IP address: it
+  is not read, and the proxy headers that carry it are dropped.
 
   Wired into `Sentry.PlugContext` in the endpoint, and `before_send/1` into the
   Sentry config for every report, crash reports included.
@@ -15,6 +16,9 @@ defmodule EverydayCitizenWeb.SentryScrub do
   # what Sentry's logger handler copies from a crashing process: for a LiveView,
   # its assigns (what was searched) and its join payload (a URL with the query)
   @process_extras [:genserver_state, :last_message, "genserver_state", "last_message"]
+
+  # headers a proxy (Fly's, or any in front of it) uses to pass on the visitor's IP
+  @ip_headers ~w(x-forwarded-for fly-client-ip x-real-ip forwarded true-client-ip cf-connecting-ip)
 
   @doc """
   Sentry's `before_send` callback: drops a crashed process's state and last
@@ -36,7 +40,7 @@ defmodule EverydayCitizenWeb.SentryScrub do
       end)
       |> Map.new()
 
-    %{event | extra: extra, request: scrub_request(event.request)}
+    %{event | extra: extra, request: scrub_request(event.request), user: scrub_user(event.user)}
   end
 
   def before_send(other), do: other
@@ -48,9 +52,19 @@ defmodule EverydayCitizenWeb.SentryScrub do
       request
       | url: scrubbed_or_nil(request.url),
         query_string: nil,
-        headers: scrubbed_or_nil(request.headers)
+        headers: request.headers |> without_ip_headers() |> scrubbed_or_nil(),
+        env: without_remote_addr(request.env)
     }
   end
+
+  defp without_ip_headers(headers) when is_map(headers), do: Map.drop(headers, @ip_headers)
+  defp without_ip_headers(headers), do: headers
+
+  defp without_remote_addr(env) when is_map(env), do: Map.drop(env, ["REMOTE_ADDR", :REMOTE_ADDR])
+  defp without_remote_addr(env), do: env
+
+  defp scrub_user(user) when is_map(user), do: Map.drop(user, [:ip_address, "ip_address"])
+  defp scrub_user(user), do: user
 
   defp scrubbed_or_nil(value) do
     case safely_strip(value) do
@@ -82,16 +96,21 @@ defmodule EverydayCitizenWeb.SentryScrub do
   def nothing(_conn), do: %{}
 
   @doc """
-  Request headers as Sentry scrubs them by default, with the query string
-  dropped from the referer: a search results page's URL holds what was typed.
+  Request headers as Sentry scrubs them by default, without the headers that
+  carry the visitor's IP, and with the query string dropped from the referer: a
+  search results page's URL holds what was typed.
   """
   @spec headers(Plug.Conn.t()) :: map()
   def headers(%Plug.Conn{} = conn) do
-    case Sentry.PlugContext.default_header_scrubber(conn) do
+    case conn |> Sentry.PlugContext.default_header_scrubber() |> Map.drop(@ip_headers) do
       %{"referer" => referer} = headers -> %{headers | "referer" => without_query(referer)}
       headers -> headers
     end
   end
+
+  @doc "The remote address Sentry reports: none, so a visitor's IP is never sent."
+  @spec remote_address(Plug.Conn.t()) :: String.t()
+  def remote_address(%Plug.Conn{}), do: ""
 
   defp without_query(url), do: url |> URI.parse() |> Map.put(:query, nil) |> URI.to_string()
 

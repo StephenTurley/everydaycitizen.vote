@@ -56,8 +56,9 @@ defmodule EverydayCitizenWeb.Endpoint do
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()
 
-  # Error reports carry no request body or cookies, and no query string.
+  # Error reports carry no request body or cookies, no query string and no IP address.
   plug Sentry.PlugContext,
+    remote_address_reader: {EverydayCitizenWeb.SentryScrub, :remote_address},
     body_scrubber: {EverydayCitizenWeb.SentryScrub, :nothing},
     cookie_scrubber: {EverydayCitizenWeb.SentryScrub, :nothing},
     header_scrubber: {EverydayCitizenWeb.SentryScrub, :headers},
