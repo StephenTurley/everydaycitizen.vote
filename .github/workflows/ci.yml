@@ -55,7 +55,14 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       # one tiny call to each Claude model in use, with the settings summaries
       # send: a setting a model refuses fails here, not silently in the jobs
+      # through the Machines API: `ssh console` needs a WireGuard tunnel, which
+      # times out from GitHub's runners
       - name: Check Claude answers
-        run: flyctl ssh console -a thefloor-vote -C "/app/bin/everyday_citizen rpc 'EverydayCitizen.Release.check_claude()'"
+        run: |
+          machine=$(flyctl machine list -a thefloor-vote --json | jq -r '[.[] | select(.state == "started")][0].id')
+          result=$(flyctl machine exec "$machine" -a thefloor-vote --timeout 120 --json \
+            "/app/bin/everyday_citizen rpc 'EverydayCitizen.Release.check_claude()'")
+          echo "$result" | jq -r '.stdout // empty, .stderr // empty'
+          test "$(echo "$result" | jq -r '.exit_code')" = "0"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
