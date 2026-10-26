@@ -152,7 +152,7 @@ defmodule EverydayCitizenWeb.FloorComponents do
   attr :report, :map,
     default: nil,
     doc:
-      "what a \"Report a problem\" form sends (kind, subject, prompt_version, page, user, remote_ip)"
+      "what a \"Report a problem\" form sends (kind, subject, prompt_version, page, user; remote_ip only for its rate limit, never stored)"
 
   @doc """
   A plain-English AI summary box: `title`, the summary (paragraphs; lines

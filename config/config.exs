@@ -134,7 +134,8 @@ config :everyday_citizen, Oban,
        {"0 3,12,18 * * *", EverydayCitizen.Adapters.Federal.Jobs.SyncSenateFloor},
        {"30 5 * * *", EverydayCitizen.Adapters.Federal.Jobs.Relink},
        {"0 6 * * *", EverydayCitizen.Adapters.Federal.Jobs.Coverage},
-       {"0 7 * * *", EverydayCitizen.Jobs.DigestScheduler}
+       {"0 7 * * *", EverydayCitizen.Jobs.DigestScheduler},
+       {"30 4 * * *", EverydayCitizen.Jobs.PruneAccounts}
      ]}
   ]
 

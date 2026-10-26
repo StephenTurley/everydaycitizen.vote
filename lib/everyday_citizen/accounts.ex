@@ -307,4 +307,21 @@ defmodule EverydayCitizen.Accounts do
       end
     end)
   end
+
+  @doc """
+  Deletes sign-in tokens past their validity (they keep the email they were
+  sent to) and accounts never confirmed `days` days after they were made.
+  Returns the counts.
+  """
+  @spec prune(pos_integer()) :: %{tokens: non_neg_integer(), users: non_neg_integer()}
+  def prune(days \\ 30) do
+    {tokens, _} = Repo.delete_all(UserToken.expired_query())
+
+    {users, _} =
+      Repo.delete_all(
+        from u in User, where: is_nil(u.confirmed_at) and u.inserted_at <= ago(^days, "day")
+      )
+
+    %{tokens: tokens, users: users}
+  end
 end
