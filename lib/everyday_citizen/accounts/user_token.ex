@@ -202,6 +202,18 @@ defmodule EverydayCitizen.Accounts.UserToken do
     end
   end
 
+  @doc "Tokens past their validity: a sign-in link, an email change, a session or a passkey hand-off."
+  def expired_query do
+    from t in UserToken,
+      where:
+        (t.context == "login" and t.inserted_at <= ago(@magic_link_validity_in_minutes, "minute")) or
+          (like(t.context, "change:%") and
+             t.inserted_at <= ago(@change_email_validity_in_days, "day")) or
+          (t.context == "session" and t.inserted_at <= ago(@session_validity_in_days, "day")) or
+          (t.context == "passkey_login" and
+             t.inserted_at <= ago(@passkey_login_validity_in_seconds, "second"))
+  end
+
   defp by_token_and_context_query(token, context) do
     from UserToken, where: [token: ^token, context: ^context]
   end
