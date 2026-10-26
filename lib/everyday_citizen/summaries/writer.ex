@@ -11,7 +11,7 @@ defmodule EverydayCitizen.Summaries.Writer do
   stored by its text's hash, so a retry pays only for the calls still to make.
   """
   alias EverydayCitizen.Summaries
-  alias EverydayCitizen.Summaries.Claude
+  alias EverydayCitizen.Summaries.{Claude, Story}
 
   @max_part 250_000
   # reply caps leave room for the who-it-affects, words, example and story parts
@@ -43,6 +43,27 @@ defmodule EverydayCitizen.Summaries.Writer do
   def write(:change, input), do: call(:change, input, [])
 
   def write(:bill, text) do
+    with {:ok, draft} <- draft(text), do: check(draft, text)
+  end
+
+  # The summary before its story is checked: cached, so a check that fails is
+  # retried without paying for the summary again.
+  defp draft(text) do
+    subject = "draft:" <> Base.encode16(:crypto.hash(:sha256, text), case: :lower)
+
+    case Summaries.get_ai(:bill_draft, subject, text) do
+      nil ->
+        with {:ok, written} <- write_draft(text) do
+          {:ok, _} = Summaries.put_ai(:bill_draft, subject, text, written)
+          {:ok, written}
+        end
+
+      cached ->
+        {:ok, Map.take(cached, [:summary, :model, :input_tokens, :output_tokens])}
+    end
+  end
+
+  defp write_draft(text) do
     {name, cap} = band(text)
     opts = [note: "Length: #{name}", max_tokens: cap]
 
@@ -56,12 +77,67 @@ defmodule EverydayCitizen.Summaries.Writer do
     end
   end
 
+  # The story's lines checked against the bill (or, for a long bill, its parts'
+  # summaries): only the lines the check keeps, as it corrects them, are kept.
+  defp check(draft, text) do
+    case Story.split(draft.summary).groups do
+      [] ->
+        {:ok, draft}
+
+      groups ->
+        lines = Enum.map_join(groups, "\n", &"- #{&1.label}: #{&1.sentence}")
+
+        with {:ok, source} <- check_source(text),
+             {:ok, checked} <-
+               run_check("<bill>\n#{source}\n</bill>\n<story>\n#{lines}\n</story>") do
+          {:ok,
+           %{
+             draft
+             | summary: Story.put_groups(draft.summary, checked.summary),
+               input_tokens: (draft.input_tokens || 0) + (checked.input_tokens || 0),
+               output_tokens: (draft.output_tokens || 0) + (checked.output_tokens || 0)
+           }}
+        end
+    end
+  end
+
+  # an empty reply is a check that kept no line
+  defp run_check(input) do
+    case call(:bill_check, input, []) do
+      {:error, :empty} -> {:ok, %{summary: "", input_tokens: nil, output_tokens: nil}}
+      result -> result
+    end
+  end
+
+  # a long bill's parts are already summarized (and cached) by its draft
+  defp check_source(text) do
+    if String.length(text) <= @max_part do
+      {:ok, text}
+    else
+      with {:ok, done} <- part_summaries(text), do: {:ok, combined(done)}
+    end
+  end
+
   @doc false
   # The model sometimes starts by restating the length it was given; that line
   # is not part of the summary.
   def drop_length_echo(summary), do: String.replace(summary, @length_echo, "")
 
   defp write_in_parts(text, opts) do
+    with {:ok, done} <- part_summaries(text),
+         {:ok, final} <- call(:bill, combined(done), opts) do
+      {:ok,
+       %{
+         final
+         | input_tokens: total(done, final, :input_tokens),
+           output_tokens: total(done, final, :output_tokens)
+       }}
+    end
+  end
+
+  defp combined(done), do: Enum.map_join(done, "\n", &"<part>\n#{&1.summary}\n</part>")
+
+  defp part_summaries(text) do
     text
     |> parts()
     |> Enum.reduce_while({:ok, []}, fn part, {:ok, done} ->
@@ -71,21 +147,8 @@ defmodule EverydayCitizen.Summaries.Writer do
       end
     end)
     |> case do
-      {:ok, done} ->
-        done = Enum.reverse(done)
-        combined = Enum.map_join(done, "\n", &"<part>\n#{&1.summary}\n</part>")
-
-        with {:ok, final} <- call(:bill, combined, opts) do
-          {:ok,
-           %{
-             final
-             | input_tokens: total(done, final, :input_tokens),
-               output_tokens: total(done, final, :output_tokens)
-           }}
-        end
-
-      error ->
-        error
+      {:ok, done} -> {:ok, Enum.reverse(done)}
+      error -> error
     end
   end
 

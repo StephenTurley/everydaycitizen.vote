@@ -101,4 +101,14 @@ defmodule EverydayCitizen.Summaries.StoryTest do
              "Changes taxes"
            ]
   end
+
+  test "checked lines replace the story's, and none removes the part" do
+    text = "S.\n\n## If this becomes law\n- A: one.\n- B: two.\n\n## Tags\nSets rules"
+
+    assert Story.put_groups(text, "- A: one, fixed.\nnot a line") ==
+             "S.\n\n## If this becomes law\n- A: one, fixed.\n\n## Tags\nSets rules"
+
+    assert Story.put_groups(text, "") == "S.\n\n## Tags\nSets rules"
+    assert Story.put_groups("S.", "- A: x.") == "S."
+  end
 end

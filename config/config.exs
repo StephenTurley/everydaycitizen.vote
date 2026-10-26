@@ -59,8 +59,17 @@ config :everyday_citizen, :summaries,
   model: "claude-haiku-5-5",
   # kinds written by another model (bill summaries need the stronger one to pick
   # the groups a bill affects most; owner's choice, 2026-10-26)
-  models: %{bill: "claude-sonnet-5-5"},
-  prompt_versions: %{section: "v2", bill: "v4", bill_chunk: "v2", rep_week: "v1", change: "v1"},
+  models: %{bill: "claude-sonnet-5-5", bill_check: "claude-sonnet-5-5"},
+  prompt_versions: %{
+    section: "v2",
+    bill: "v4",
+    # a bill summary before its story is checked, kept so a retry pays only for the check
+    bill_draft: "v4",
+    bill_check: "v1",
+    bill_chunk: "v2",
+    rep_week: "v1",
+    change: "v1"
+  },
   # new summaries pause once today's Claude spend reaches this (dollars)
   daily_budget_usd: 4.0,
   # summaries one visitor may ask for in an hour

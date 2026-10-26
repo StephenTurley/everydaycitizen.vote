@@ -80,6 +80,28 @@ defmodule EverydayCitizen.Summaries.Story do
     }
   end
 
+  @doc """
+  The summary with its story's lines replaced by the valid "- label: sentence"
+  lines of `lines` (a check's reply), or without the story part when none is
+  valid. A summary without the part is returned as it is.
+  """
+  @spec put_groups(String.t(), String.t()) :: String.t()
+  def put_groups(text, lines) do
+    part = ~r/^##[ \t]+#{@heading}[ \t]*\n.*?(?=^##[ \t]|\z)/ms
+
+    kept =
+      lines
+      |> labeled_lines()
+      |> Enum.take(@max_groups)
+      |> Enum.map_join("\n", fn {l, s} -> "- #{l}: #{s}" end)
+
+    replacement = if kept == "", do: "", else: "## #{@heading}\n#{kept}\n\n"
+
+    text
+    |> String.replace(part, replacement)
+    |> String.trim()
+  end
+
   defp find(parts, heading) do
     Enum.find_value(parts, fn {h, body} -> if h == heading, do: body end)
   end

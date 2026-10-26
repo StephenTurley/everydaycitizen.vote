@@ -2,7 +2,8 @@ defmodule EverydayCitizen.Summaries.Claude do
   @moduledoc """
   Writes plain-English summaries with the Claude Messages API. Each kind has a
   published system prompt (`priv/prompts/<file>.<version>.md`), a tag the input
-  goes in as data, and a reply cap: `:section`, `:bill`, `:bill_chunk` (one part
+  goes in as data, and a reply cap: `:section`, `:bill`, `:bill_check` (a bill
+  story checked against its text), `:bill_chunk` (one part
   of a long bill) and `:rep_week`. Options: `:max_tokens` (override the cap) and
   `:note` (a line before the input, such as the bill's length band). The model
   is the kind's (`Summaries.model/1`); it takes no temperature.
@@ -17,6 +18,7 @@ defmodule EverydayCitizen.Summaries.Claude do
     section: {"section_summary", "section", 300},
     bill: {"bill_summary", "bill", 800},
     bill_chunk: {"bill_chunk", "part", 600},
+    bill_check: {"bill_check", "check", 600},
     rep_week: {"rep_week", "activity", 300},
     change: {"change_summary", "change", 400}
   }

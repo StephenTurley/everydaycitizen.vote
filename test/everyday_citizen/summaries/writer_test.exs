@@ -31,6 +31,97 @@ defmodule EverydayCitizen.Summaries.WriterTest do
     end)
   end
 
+  @draft "It warns members.\n\n## If this becomes law\n- Apps: they would warn members.\n- States: they could not set rules."
+
+  # a bill call answers with @draft, a check call with `check` (or the status)
+  defp stub_check(check) do
+    test = self()
+
+    Req.Test.stub(EverydayCitizen.Claude, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      body = Jason.decode!(body)
+      [%{"content" => content}] = body["messages"]
+      checking? = String.starts_with?(content, "<check>")
+      send(test, {:call, if(checking?, do: :check, else: :bill), body})
+
+      case {checking?, check} do
+        {true, status} when is_integer(status) ->
+          Plug.Conn.send_resp(conn, status, "{}")
+
+        {true, text} ->
+          reply(conn, text)
+
+        {false, _} ->
+          reply(conn, @draft)
+      end
+    end)
+  end
+
+  defp reply(conn, text) do
+    conn
+    |> Plug.Conn.put_resp_content_type("application/json")
+    |> Plug.Conn.send_resp(
+      200,
+      Jason.encode!(%{
+        "model" => "m",
+        "content" => [%{"type" => "text", "text" => text}],
+        "usage" => %{"input_tokens" => 1_000, "output_tokens" => 50}
+      })
+    )
+  end
+
+  test "a bill's story is checked against its text before it is kept" do
+    stub_check("- Apps: they would warn members within a day.")
+
+    assert {:ok, %{summary: summary}} = Writer.write(:bill, "SEC. 1. Short text.")
+    assert summary =~ "- Apps: they would warn members within a day."
+    refute summary =~ "States: they could not set rules."
+    assert summary =~ "It warns members."
+
+    assert_received {:call, :bill, _}
+    assert_received {:call, :check, check}
+    assert check["model"] == "claude-sonnet-5-5"
+
+    assert check["system"] ==
+             File.read!(Application.app_dir(:everyday_citizen, "priv/prompts/bill_check.v1.md"))
+
+    [%{"content" => content}] = check["messages"]
+    assert content =~ "<bill>\nSEC. 1. Short text.\n</bill>"
+
+    assert content =~
+             "<story>\n- Apps: they would warn members.\n- States: they could not set rules.\n</story>"
+
+    # both calls at Sonnet's rates: 2 × (1,000 × $2/M + 50 × $10/M)
+    assert_in_delta Summaries.spent_today_usd(), 0.005, 0.000001
+  end
+
+  test "a failed check keeps nothing but the draft, so a retry pays only for the check" do
+    stub_check(500)
+    assert {:error, {:http_status, 500}} = Writer.write(:bill, "SEC. 1. Short text.")
+    assert_received {:call, :bill, _}
+    assert_received {:call, :check, _}
+
+    stub_check("- Apps: they would warn members.")
+    assert {:ok, %{summary: summary}} = Writer.write(:bill, "SEC. 1. Short text.")
+    assert summary =~ "- Apps: they would warn members."
+    refute_received {:call, :bill, _}
+    assert_received {:call, :check, _}
+  end
+
+  test "a check that supports no line leaves the summary without its story" do
+    stub_check("")
+    assert {:ok, %{summary: summary}} = Writer.write(:bill, "SEC. 1. Short text.")
+    refute summary =~ "If this becomes law"
+    assert summary =~ "It warns members."
+  end
+
+  test "a draft without a story is not checked" do
+    stub_claude()
+    assert {:ok, %{summary: "Final summary."}} = Writer.write(:bill, "SEC. 1. Short text.")
+    assert_received {:call, _}
+    refute_received {:call, _}
+  end
+
   test "the length band follows the bill's size" do
     assert Writer.band(String.duplicate("a", 9_000)) == {"short", 1100}
     assert Writer.band(String.duplicate("a", 40_000)) == {"medium", 1400}
@@ -189,8 +280,9 @@ defmodule EverydayCitizen.Summaries.WriterTest do
     # both calls are paid for
     assert_in_delta Summaries.spent_today_usd(), 0.005, 0.000001
 
+    # another text: the first one's draft is cached
     stub_stops(["max_tokens", "max_tokens"])
-    assert {:error, :truncated} = Writer.write(:bill, "SEC. 1. Short text.")
+    assert {:error, :truncated} = Writer.write(:bill, "SEC. 1. Other text.")
   end
 
   test "once the budget is spent, a long bill stops before its next call" do
