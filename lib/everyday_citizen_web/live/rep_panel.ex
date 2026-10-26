@@ -13,13 +13,10 @@ defmodule EverydayCitizenWeb.RepPanel do
   """
   use EverydayCitizenWeb, :html
 
-  import Phoenix.LiveView, only: [connected?: 1]
+  alias EverydayCitizen.{Activity, Follows, Legislation, Reps}
+  alias EverydayCitizen.Summaries.Inputs
+  alias EverydayCitizenWeb.AiSummary
 
-  alias EverydayCitizen.{Activity, Follows, Legislation, RateLimit, Reps, Summaries}
-  alias EverydayCitizen.Summaries.{Claude, Inputs}
-
-  @repo_url "https://github.com/StephenTurley/everydaycitizen.vote/blob/main/"
-  @hour :timer.hours(1)
   @zone "America/New_York"
 
   @filters [
@@ -35,8 +32,7 @@ defmodule EverydayCitizenWeb.RepPanel do
     assign(socket,
       remote_ip: EverydayCitizenWeb.RemoteIp.from_socket(socket),
       crawler: EverydayCitizenWeb.Crawler.crawler?(socket),
-      week_summary: nil,
-      week_topic: nil
+      week_summary: nil
     )
   end
 
@@ -67,12 +63,8 @@ defmodule EverydayCitizenWeb.RepPanel do
   end
 
   @doc "A week summary finished writing."
-  def handle_info({:ai_summary, "rep_week", subject, result}, socket) do
-    case socket.assigns.week_summary do
-      {^subject, _} -> {:noreply, assign(socket, :week_summary, {subject, ai_state(result)})}
-      _ -> {:noreply, socket}
-    end
-  end
+  def handle_info({:ai_summary, "rep_week", subject, result}, socket),
+    do: {:noreply, AiSummary.put_result(socket, :week_summary, subject, result)}
 
   @doc "`toggle_follow` follows or unfollows the rep; `more` loads the next page of the week."
   def handle_event("toggle_follow", _params, %{assigns: %{rep: %{} = rep}} = socket),
@@ -86,10 +78,6 @@ defmodule EverydayCitizenWeb.RepPanel do
   @spec query(keyword()) :: keyword()
   def query(pairs),
     do: Enum.reject(pairs, fn {k, v} -> is_nil(v) or (k == :filter and v == "all") end)
-
-  defp ai_state({:ok, text}), do: {:ok, text}
-  defp ai_state({:error, :paused}), do: :paused
-  defp ai_state({:error, _}), do: :unavailable
 
   defp this_monday, do: DateTime.now!(@zone) |> DateTime.to_date() |> Date.beginning_of_week()
 
@@ -115,55 +103,18 @@ defmodule EverydayCitizenWeb.RepPanel do
     do:
       "#{Calendar.strftime(monday, "%b %-d")} – #{Calendar.strftime(Date.add(monday, 6), "%b %-d")}"
 
-  # The week's summary: cached, or asked for once the page is live (listening
-  # first); none for a week with nothing on the record.
+  # The week's summary (see `AiSummary`); none for a week with nothing on the record.
   defp load_week_summary(socket) do
-    if topic = socket.assigns.week_topic,
-      do: Phoenix.PubSub.unsubscribe(EverydayCitizen.PubSub, topic)
+    subject_input =
+      with %{rep: %{} = rep, week: %Date{} = week} <- socket.assigns,
+           {subject, input} when is_binary(input) <- Inputs.rep_week(rep.person.id, week) do
+        {subject, input}
+      else
+        _ -> nil
+      end
 
-    socket = assign(socket, week_summary: nil, week_topic: nil)
-
-    with %{rep: %{} = rep, week: %Date{} = week} <- socket.assigns,
-         true <- Claude.enabled?(),
-         {subject, input} when is_binary(input) <- Inputs.rep_week(rep.person.id, week) do
-      week_summary_state(socket, subject, input)
-    else
-      _ -> socket
-    end
+    AiSummary.load(socket, :week_summary, :rep_week, subject_input)
   end
-
-  defp week_summary_state(socket, subject, input) do
-    cond do
-      summary = Summaries.get_ai(:rep_week, subject, input) ->
-        assign(socket, :week_summary, {subject, {:ok, summary.summary}})
-
-      socket.assigns.crawler ->
-        socket
-
-      not connected?(socket) ->
-        assign(socket, :week_summary, {subject, :loading})
-
-      true ->
-        topic = Summaries.ai_topic(:rep_week, subject)
-        Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, topic)
-
-        state =
-          if RateLimit.hit(
-               {:summaries, socket.assigns.remote_ip},
-               Summaries.visitor_limit(),
-               @hour
-             ) ==
-               :limited,
-             do: :limited,
-             else: requested(Summaries.request_ai(:rep_week, subject, input))
-
-        assign(socket, week_summary: {subject, state}, week_topic: topic)
-    end
-  end
-
-  defp requested({:cached, summary}), do: {:ok, summary.summary}
-  defp requested(:queued), do: :loading
-  defp requested(other), do: other
 
   defp load_feed(%{assigns: %{rep: nil}} = socket, _before, _items),
     do: assign(socket, items: [], days: [], next: nil, summaries: %{}, latest: %{})
@@ -226,7 +177,7 @@ defmodule EverydayCitizenWeb.RepPanel do
   attr :remote_ip, :any, required: true
 
   def rep_panel(assigns) do
-    assigns = assign(assigns, filters: @filters, repo_url: @repo_url)
+    assigns = assign(assigns, filters: @filters)
 
     ~H"""
     <section class="pb-3 flex flex-col gap-3.5 lg:gap-4">
@@ -274,17 +225,8 @@ defmodule EverydayCitizenWeb.RepPanel do
         title="In plain English: this week"
         source="this week's record below"
         state={elem(@week_summary, 1)}
-        prompt_url={@repo_url <> Claude.prompt_path(:rep_week)}
-        report={
-          %{
-            kind: "rep_week",
-            subject: elem(@week_summary, 0),
-            prompt_version: Summaries.prompt_version(:rep_week),
-            page: @path,
-            user: @current_scope && @current_scope.user,
-            remote_ip: @remote_ip
-          }
-        }
+        prompt_url={AiSummary.prompt_url(:rep_week)}
+        report={AiSummary.report(assigns, :rep_week, elem(@week_summary, 0))}
       />
       <p :if={@items == []} class="m-0 py-6 text-[15px] text-floor-muted">
         Nothing on the record for this week.

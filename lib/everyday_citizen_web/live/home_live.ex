@@ -1,7 +1,7 @@
 defmodule EverydayCitizenWeb.HomeLive do
   @moduledoc """
   The home page, news first: the laws signed most recently (each with its
-  plain-English summary, see `AiBillSummary`), what is coming up for a vote,
+  plain-English summary, see `AiSummary`), what is coming up for a vote,
   and the visitor's reps when their district is known, otherwise the finder.
 
   Finding a visitor's district: a ZIP code first; if it is split between
@@ -14,9 +14,8 @@ defmodule EverydayCitizenWeb.HomeLive do
 
   alias EverydayCitizen.{Legislation, Reps, Summaries}
   alias EverydayCitizen.Summaries.{Claude, Inputs}
-  alias EverydayCitizenWeb.AiBillSummary
+  alias EverydayCitizenWeb.AiSummary
 
-  @repo_url "https://github.com/StephenTurley/everydaycitizen.vote/blob/main/"
   @zone "America/New_York"
   @page 5
 
@@ -79,13 +78,13 @@ defmodule EverydayCitizenWeb.HomeLive do
 
   defp summary(_socket, _bill, subject, %{summary: text}), do: {subject, {:ok, text}}
   defp summary(%{assigns: %{crawler: true}}, _bill, _subject, nil), do: nil
-  defp summary(socket, bill, _subject, nil), do: AiBillSummary.load(socket, bill)
+  defp summary(socket, bill, _subject, nil), do: AiSummary.load(socket, bill)
 
   @impl true
   def handle_info({:ai_summary, "bill", subject, result}, socket) do
     summaries =
       Map.new(socket.assigns.summaries, fn
-        {id, {^subject, _state}} -> {id, {subject, AiBillSummary.result_state(result)}}
+        {id, {^subject, _state}} -> {id, {subject, AiSummary.result_state(result)}}
         other -> other
       end)
 
@@ -178,20 +177,11 @@ defmodule EverydayCitizenWeb.HomeLive do
 
   defp law_story(_summary), do: nil
 
-  defp report(assigns, subject) do
-    %{
-      kind: "bill",
-      subject: subject,
-      prompt_version: Summaries.cache_version(:bill),
-      page: "/",
-      user: assigns.current_scope && assigns.current_scope.user,
-      remote_ip: assigns.remote_ip
-    }
-  end
+  defp report(assigns, subject), do: AiSummary.report(assigns, :bill, subject, "/")
 
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, prompt_url: @repo_url <> Claude.prompt_path(:bill))
+    assigns = assign(assigns, prompt_url: AiSummary.prompt_url(:bill))
 
     ~H"""
     <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>

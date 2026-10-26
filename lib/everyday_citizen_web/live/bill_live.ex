@@ -10,14 +10,11 @@ defmodule EverydayCitizenWeb.BillLive do
   """
   use EverydayCitizenWeb, :live_view
 
-  alias EverydayCitizen.{BillHistory, BillPage, Follows, RateLimit, Reps, Summaries}
+  alias EverydayCitizen.{BillHistory, BillPage, Follows, Reps, Summaries}
   alias EverydayCitizen.Summaries.{Claude, Inputs, Story}
-  alias EverydayCitizenWeb.AiBillSummary
+  alias EverydayCitizenWeb.AiSummary
 
   import EverydayCitizenWeb.BillHistoryComponents
-
-  @repo_url "https://github.com/StephenTurley/everydaycitizen.vote/blob/main/"
-  @hour :timer.hours(1)
 
   @impl true
   def mount(%{"id" => id}, session, socket) do
@@ -42,8 +39,7 @@ defmodule EverydayCitizenWeb.BillLive do
            origins: %{},
            origins_code: nil,
            version_dates: %{},
-           change_summary: nil,
-           change_topic: nil
+           change_summary: nil
          )
          |> load_bill_summary()}
 
@@ -88,25 +84,11 @@ defmodule EverydayCitizenWeb.BillLive do
   def handle_info({:section_summary, index, {:ok, text}}, socket),
     do: {:noreply, update(socket, :summaries, &Map.put(&1, index, {:ok, text}))}
 
-  def handle_info({:ai_summary, "change", subject, result}, socket) do
-    case socket.assigns.change_summary do
-      {^subject, _state} ->
-        {:noreply, assign(socket, :change_summary, {subject, AiBillSummary.result_state(result)})}
+  def handle_info({:ai_summary, "change", subject, result}, socket),
+    do: {:noreply, AiSummary.put_result(socket, :change_summary, subject, result)}
 
-      _other ->
-        {:noreply, socket}
-    end
-  end
-
-  def handle_info({:ai_summary, "bill", subject, result}, socket) do
-    case socket.assigns.bill_summary do
-      {^subject, _state} ->
-        {:noreply, assign(socket, :bill_summary, {subject, AiBillSummary.result_state(result)})}
-
-      _other ->
-        {:noreply, socket}
-    end
-  end
+  def handle_info({:ai_summary, "bill", subject, result}, socket),
+    do: {:noreply, AiSummary.put_result(socket, :bill_summary, subject, result)}
 
   def handle_info({:section_summary, index, {:error, :paused}}, socket),
     do: {:noreply, update(socket, :summaries, &Map.put(&1, index, :paused))}
@@ -205,53 +187,18 @@ defmodule EverydayCitizenWeb.BillLive do
   # The opened change's explanation: cached, or asked for once the page is live
   # (not by crawlers); none for an unchanged section.
   defp load_change_summary(socket) do
-    if topic = socket.assigns.change_topic,
-      do: Phoenix.PubSub.unsubscribe(EverydayCitizen.PubSub, topic)
+    subject_input =
+      case socket.assigns.history do
+        %{index: i} -> Inputs.change(socket.assigns.page.bill, socket.assigns.version.code, i)
+        _ -> nil
+      end
 
-    socket = assign(socket, change_summary: nil, change_topic: nil)
-
-    with %{index: i} <- socket.assigns.history,
-         true <- Claude.enabled?(),
-         {subject, input} <-
-           Inputs.change(socket.assigns.page.bill, socket.assigns.version.code, i) do
-      change_summary_state(socket, subject, input)
-    else
-      _ -> socket
-    end
+    AiSummary.load(socket, :change_summary, :change, subject_input)
   end
 
-  defp change_summary_state(socket, subject, input) do
-    cond do
-      summary = Summaries.get_ai(:change, subject, input) ->
-        assign(socket, :change_summary, {subject, {:ok, summary.summary}})
-
-      socket.assigns.crawler ->
-        socket
-
-      not connected?(socket) ->
-        assign(socket, :change_summary, {subject, :loading})
-
-      true ->
-        topic = Summaries.ai_topic(:change, subject)
-        Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, topic)
-
-        state =
-          if RateLimit.hit(
-               {:summaries, socket.assigns.remote_ip},
-               Summaries.visitor_limit(),
-               @hour
-             ) ==
-               :limited,
-             do: :limited,
-             else: AiBillSummary.requested(Summaries.request_ai(:change, subject, input))
-
-        assign(socket, change_summary: {subject, state}, change_topic: topic)
-    end
-  end
-
-  # The bill's executive summary (see `AiBillSummary`).
+  # The bill's executive summary.
   defp load_bill_summary(socket),
-    do: assign(socket, :bill_summary, AiBillSummary.load(socket, socket.assigns.page.bill))
+    do: AiSummary.load(socket, :bill_summary, :bill, Inputs.bill(socket.assigns.page.bill))
 
   # The summaries to show for the open section(s). Pages stop listening for the
   # sections they showed before (another version or section).
@@ -296,29 +243,18 @@ defmodule EverydayCitizenWeb.BillLive do
     live? = connected?(socket)
     if live?, do: Phoenix.PubSub.subscribe(EverydayCitizen.PubSub, topic)
 
-    state = summary_state(socket, version_id, i, Summaries.section_text(entry), live?)
+    state = summary_state(socket, version_id, i, Summaries.section_text(entry))
     socket = keep_listening(socket, topic, live? and state == :loading)
 
     if state == :disabled, do: socket, else: update(socket, :summaries, &Map.put(&1, i, state))
   end
 
-  defp summary_state(socket, version_id, i, text, live?) do
-    cond do
-      summary = Summaries.get(version_id, i, text) ->
-        {:ok, summary.summary}
-
-      socket.assigns.crawler ->
-        :disabled
-
-      not live? ->
-        :loading
-
-      RateLimit.hit({:summaries, socket.assigns.remote_ip}, Summaries.visitor_limit(), @hour) ==
-          :limited ->
-        :limited
-
-      true ->
-        AiBillSummary.requested(Summaries.request(version_id, i, text))
+  defp summary_state(socket, version_id, i, text) do
+    case AiSummary.state(socket, Summaries.get(version_id, i, text), fn ->
+           Summaries.request(version_id, i, text)
+         end) do
+      :none -> :disabled
+      state -> state
     end
   end
 
@@ -497,22 +433,9 @@ defmodule EverydayCitizenWeb.BillLive do
     """
   end
 
-  # What a "Report a problem" form under a summary sends with the report.
-  defp report(assigns, kind, subject) do
-    %{
-      kind: to_string(kind),
-      subject: subject,
-      prompt_version: Summaries.cache_version(kind),
-      page: assigns.path,
-      user: assigns.current_scope && assigns.current_scope.user,
-      remote_ip: assigns.remote_ip
-    }
-  end
-
   @impl true
   def render(assigns) do
-    assigns =
-      assign(assigns, prompt_url: @repo_url <> Claude.prompt_path(:section), repo_url: @repo_url)
+    assigns = assign(assigns, prompt_url: AiSummary.prompt_url(:section))
 
     ~H"""
     <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>
@@ -754,8 +677,8 @@ defmodule EverydayCitizenWeb.BillLive do
               title="In plain English: what this bill does"
               source={bill_summary_source(elem(@bill_summary, 0), @version, @page.versions)}
               state={elem(@bill_summary, 1)}
-              prompt_url={@repo_url <> Claude.prompt_path(:bill)}
-              report={report(assigns, :bill, elem(@bill_summary, 0))}
+              prompt_url={AiSummary.prompt_url(:bill)}
+              report={AiSummary.report(assigns, :bill, elem(@bill_summary, 0))}
               added={added_parts(assigns)}
             />
           </section>
@@ -880,8 +803,8 @@ defmodule EverydayCitizenWeb.BillLive do
                             else: "the two versions below"
                         }
                         state={elem(@change_summary, 1)}
-                        prompt_url={@repo_url <> Claude.prompt_path(:change)}
-                        report={report(assigns, :change, elem(@change_summary, 0))}
+                        prompt_url={AiSummary.prompt_url(:change)}
+                        report={AiSummary.report(assigns, :change, elem(@change_summary, 0))}
                       />
                     </:explanation>
                   </.origin_panel>
@@ -890,7 +813,7 @@ defmodule EverydayCitizenWeb.BillLive do
                     index={i}
                     state={@summaries[i]}
                     prompt_url={@prompt_url}
-                    report={report(assigns, :section, "section:#{@version.id}:#{i}")}
+                    report={AiSummary.report(assigns, :section, "section:#{@version.id}:#{i}")}
                   />
                   <div
                     :if={open?(@open, i)}
