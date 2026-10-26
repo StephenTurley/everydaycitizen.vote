@@ -116,4 +116,23 @@ defmodule EverydayCitizen.Summaries.StoryTest do
     text = "S.\n\n## If this becomes law\n- A: one."
     assert Story.put_groups(text, "- A: one.\n- B: invented.", 1) == text
   end
+
+  test "tags on separate bulleted lines are read" do
+    assert Story.split("S.\n\n## Tags\n- Sets rules\n- Changes taxes").tags == [
+             "Sets rules",
+             "Changes taxes"
+           ]
+  end
+
+  test "a label with a time in it stays whole" do
+    text = "S.\n\n## If this becomes law\n- Starting at 12:01 a.m.: the rule would apply."
+
+    assert [%{label: "Starting at 12:01 a.m.", sentence: "the rule would apply."}] =
+             Story.split(text).groups
+  end
+
+  test "a reply with the story heading twice keeps the checked lines once" do
+    text = "S — “x”.\n\n## If this becomes law\n- A: one.\n\n## If this becomes law\n- A: one."
+    assert Story.put_groups(text, "- A: one.") == "S — “x”.\n\n## If this becomes law\n- A: one."
+  end
 end
