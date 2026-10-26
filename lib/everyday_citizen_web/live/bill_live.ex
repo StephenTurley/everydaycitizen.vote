@@ -187,18 +187,18 @@ defmodule EverydayCitizenWeb.BillLive do
   # The opened change's explanation: cached, or asked for once the page is live
   # (not by crawlers); none for an unchanged section.
   defp load_change_summary(socket) do
-    subject_input =
+    AiSummary.load(socket, :change_summary, :change, fn ->
       case socket.assigns.history do
         %{index: i} -> Inputs.change(socket.assigns.page.bill, socket.assigns.version.code, i)
         _ -> nil
       end
-
-    AiSummary.load(socket, :change_summary, :change, subject_input)
+    end)
   end
 
   # The bill's executive summary.
   defp load_bill_summary(socket),
-    do: AiSummary.load(socket, :bill_summary, :bill, Inputs.bill(socket.assigns.page.bill))
+    do:
+      AiSummary.load(socket, :bill_summary, :bill, fn -> Inputs.bill(socket.assigns.page.bill) end)
 
   # The summaries to show for the open section(s). Pages stop listening for the
   # sections they showed before (another version or section).

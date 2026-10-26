@@ -28,7 +28,7 @@ defmodule EverydayCitizenWeb.AiSummaryTest do
   end
 
   test "past the visitor's hourly limit, nothing is asked for" do
-    ip = "203.0.113.250"
+    ip = "198.51.100.#{System.unique_integer([:positive])}"
 
     for _ <- 1..Summaries.visitor_limit(),
         do: RateLimit.hit({:summaries, ip}, Summaries.visitor_limit(), :timer.hours(1))
@@ -58,10 +58,12 @@ defmodule EverydayCitizenWeb.AiSummaryTest do
   end
 
   test "loading another summary under the same key stops listening for the first" do
-    socket = AiSummary.load(socket(live: true), :week_summary, :rep_week, {"week:a", "input a"})
+    socket =
+      AiSummary.load(socket(live: true), :week_summary, :rep_week, fn -> {"week:a", "input a"} end)
+
     assert {"week:a", :loading} = socket.assigns.week_summary
 
-    socket = AiSummary.load(socket, :week_summary, :rep_week, {"week:b", "input b"})
+    socket = AiSummary.load(socket, :week_summary, :rep_week, fn -> {"week:b", "input b"} end)
     assert {"week:b", :loading} = socket.assigns.week_summary
 
     for subject <- ["week:a", "week:b"],
@@ -75,6 +77,14 @@ defmodule EverydayCitizenWeb.AiSummaryTest do
     assert_receive "week:b"
     refute_receive "week:a", 50
 
-    assert AiSummary.load(socket, :week_summary, :rep_week, nil).assigns.week_summary == nil
+    assert AiSummary.load(socket, :week_summary, :rep_week, fn -> nil end).assigns.week_summary ==
+             nil
+  end
+
+  test "a summary's input can be given as a function, built only when needed" do
+    socket =
+      AiSummary.load(socket(live: true), :week_summary, :rep_week, fn -> {"week:f", "input"} end)
+
+    assert {"week:f", :loading} = socket.assigns.week_summary
   end
 end

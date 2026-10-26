@@ -171,12 +171,12 @@ defmodule EverydayCitizenWeb.HomeLive do
       do: "Next on the calendar: #{day(next.start_at)}, #{next.title}"
   end
 
-  # What a "Report a problem" form under a law's summary sends with the report.
   # a written summary's story, if it has one
   defp law_story({_subject, {:ok, text}}), do: story_of(text)
 
   defp law_story(_summary), do: nil
 
+  # What a "Report a problem" form under a law's summary sends with the report.
   defp report(assigns, subject), do: AiSummary.report(assigns, :bill, subject, "/")
 
   @impl true

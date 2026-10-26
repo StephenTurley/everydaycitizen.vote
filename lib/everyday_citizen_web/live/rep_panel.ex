@@ -105,15 +105,14 @@ defmodule EverydayCitizenWeb.RepPanel do
 
   # The week's summary (see `AiSummary`); none for a week with nothing on the record.
   defp load_week_summary(socket) do
-    subject_input =
+    AiSummary.load(socket, :week_summary, :rep_week, fn ->
       with %{rep: %{} = rep, week: %Date{} = week} <- socket.assigns,
            {subject, input} when is_binary(input) <- Inputs.rep_week(rep.person.id, week) do
         {subject, input}
       else
         _ -> nil
       end
-
-    AiSummary.load(socket, :week_summary, :rep_week, subject_input)
+    end)
   end
 
   defp load_feed(%{assigns: %{rep: nil}} = socket, _before, _items),

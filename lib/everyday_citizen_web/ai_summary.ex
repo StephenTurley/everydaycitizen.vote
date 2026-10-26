@@ -44,15 +44,17 @@ defmodule EverydayCitizenWeb.AiSummary do
   @doc """
   Assigns `key` the summary of `kind` for `{subject, input}` as `{subject, state}`,
   or nil when there is none to show; stops listening on the topic `key` held
-  before, and listens while the summary is being written.
+  before, and listens while the summary is being written. The subject and input
+  come from a function, called only when summaries are on (building an input can
+  read a whole bill's text).
   """
-  @spec load(Phoenix.LiveView.Socket.t(), atom(), atom(), {String.t(), String.t()} | nil) ::
+  @spec load(Phoenix.LiveView.Socket.t(), atom(), atom(), (-> {String.t(), String.t()} | nil)) ::
           Phoenix.LiveView.Socket.t()
-  def load(socket, key, kind, subject_input) do
+  def load(socket, key, kind, subject_input) when is_function(subject_input, 0) do
     socket = unwatch(socket, key)
 
-    with {subject, input} <- subject_input,
-         true <- Claude.enabled?(),
+    with true <- Claude.enabled?(),
+         {subject, input} <- subject_input.(),
          {state, topic} when state != :none <- lookup(socket, kind, subject, input) do
       socket
       |> assign(key, {subject, state})
