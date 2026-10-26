@@ -173,6 +173,32 @@ defmodule EverydayCitizen.SearchBillsTest do
   end
 
   describe "bills_by_name/2" do
+    # a summary is found by its subject, which names a version: no text is read
+    test "cached summaries are found without reading any bill's text" do
+      bill = bill!("119-hr-23", "H.R. 23", "Sunshine Clock Act")
+      version!(bill, "ih", ~D[2026-01-03], "Sec. 1. Clocks stay put.")
+      {subject, input} = Inputs.bill(bill)
+      {:ok, _} = Summaries.put_ai(:bill, subject, input, %{summary: "Keeps clocks.", model: "m"})
+
+      test = self()
+      id = "text-queries-#{inspect(test)}"
+
+      :telemetry.attach(
+        id,
+        [:everyday_citizen, :repo, :query],
+        fn _event, _measures, %{query: sql}, _config ->
+          if self() == test and sql =~ ~r/SELECT[^F]*plain_text/,
+            do: send(test, {:text_query, sql})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(id) end)
+
+      assert [%{summary: "Keeps clocks."}] = Search.bills_by_name(search("sunshine clock"), 10)
+      refute_received {:text_query, _}
+    end
+
     test "a popular name finds the bill stored under its formal title" do
       bill!("119-hr-1", "H.R. 1", "An act to provide for reconciliation pursuant to title II",
         titles: ["One Big Beautiful Bill Act"]

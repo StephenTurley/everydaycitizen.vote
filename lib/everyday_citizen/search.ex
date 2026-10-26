@@ -135,16 +135,16 @@ defmodule EverydayCitizen.Search do
         [key, "%#{escape_like(key)}%", longest, patterns, limit]
       )
 
-    bills = bills_by_id(Enum.map(rows, &hd/1))
+    ids = Enum.map(rows, &hd/1)
+    bills = bills_by_id(ids)
+    summaries = cached_summaries(ids)
 
     for [id, title, stage] <- rows do
-      bill = Map.fetch!(bills, id)
-
       %{
-        bill: bill,
+        bill: Map.fetch!(bills, id),
         title: title,
         stage: Map.fetch!(@stages, stage),
-        summary: cached_summary(bill)
+        summary: summaries[id]
       }
     end
   end
@@ -336,14 +336,14 @@ defmodule EverydayCitizen.Search do
     tree in ["", "T"]
   end
 
-  # the summary the bill page shows above the text, if one is cached
-  defp cached_summary(bill) do
-    with {subject, input} <- Inputs.bill(bill),
-         %{summary: summary} <- Summaries.get_ai(:bill, subject, input) do
-      summary
-    else
-      _ -> nil
-    end
+  # The summaries the bill pages show above the text, where cached, by bill id:
+  # found by subject (which names a version, whose text does not change), so no
+  # bill's text is read.
+  defp cached_summaries(bill_ids) do
+    subjects = Inputs.bill_subjects(bill_ids)
+    cached = Summaries.cached_ai(:bill, Map.values(subjects))
+
+    for {id, subject} <- subjects, summary = cached[subject], into: %{}, do: {id, summary.summary}
   end
 
   defp bills_by_id([]), do: %{}

@@ -264,3 +264,6 @@ Owner's direction: most visitors give a bill a moment, so the first thing shown 
 
 ## 2026-10-26 — Bill summaries are written by Sonnet; the daily budget is $4
 Sample v4 stories from Haiku often led with a minor or agency-only group (a retirement bill's hardship-withdrawal rule instead of automatic enrollment), so bill summaries use Claude Sonnet 5.5 ($2/$10 per million tokens, about 3–4¢ a summary); every other kind stays on Haiku. The model and the cost rates are now per kind (`models`, `rates` by model in the summaries config). The daily budget rises from $2 to $4 (owner's decision). The story part's sentences are capped at 20 words, and it never names the legislature, which both models did on samples.
+
+## 2026-10-26 — Search finds cached bill summaries by subject, as the home page does
+Search used to read each named bill's full text to find its cached summary (up to 20 heavy queries a search). It now finds them by subject in one query, like the home page: a subject names a version, whose text does not change, so the text's hash is not checked. If a version's text were ever re-ingested under the same code, search and the home page could show the older summary until the bill page writes the new one.
