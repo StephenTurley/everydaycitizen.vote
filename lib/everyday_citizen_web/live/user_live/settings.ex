@@ -1,9 +1,9 @@
 defmodule EverydayCitizenWeb.UserLive.Settings do
   @moduledoc """
   The account page: what you follow (with Unfollow), the daily email on or
-  off, passkeys (add one on this
-  device, remove any), the email, and signing out. Changing the email needs a recent sign-in (sudo mode); the
-  rest of the page does not.
+  off, passkeys (add one on this device, remove any), the email, deleting the
+  account, and signing out. Changing the email and deleting the account need a
+  recent sign-in (sudo mode); the rest of the page does not.
   """
   use EverydayCitizenWeb, :live_view
 
@@ -159,6 +159,29 @@ defmodule EverydayCitizenWeb.UserLive.Settings do
         </p>
       </section>
 
+      <section id="delete-account" aria-label="Delete your account" class="pb-6 flex flex-col gap-2">
+        <h2 class="m-0 text-[18px] font-bold">Delete your account</h2>
+        <p class="m-0 text-[15px] text-floor-ink-2">
+          This deletes your account, what you follow and your passkeys, and stops the daily
+          email. It can't be undone. Reports you sent stay, without your name or email.
+        </p>
+        <button
+          :if={@sudo}
+          id="delete-account-button"
+          type="button"
+          phx-click="delete_account"
+          phx-disable-with="Deleting…"
+          class="self-start px-4 py-2.5 rounded-xl border-2 border-floor-ink text-floor-ink text-[15px] font-semibold"
+        >
+          Delete my account
+        </button>
+        <p :if={!@sudo} class="m-0 text-[15px] text-floor-ink-2">
+          To delete it,
+          <.link navigate={~p"/users/log-in"} class="font-semibold text-floor-accent">confirm it's you</.link>
+          first.
+        </p>
+      </section>
+
       <.link
         href={~p"/users/log-out"}
         method="delete"
@@ -265,6 +288,23 @@ defmodule EverydayCitizenWeb.UserLive.Settings do
       |> to_form()
 
     {:noreply, assign(socket, email_form: email_form)}
+  end
+
+  def handle_event("delete_account", _params, socket) do
+    user = socket.assigns.current_scope.user
+
+    with true <- Accounts.sudo_mode?(user, -10),
+         {:ok, tokens} <- Accounts.delete_user(user) do
+      UserAuth.disconnect_sessions(tokens)
+      {:noreply, socket |> put_flash(:info, "Your account is deleted.") |> redirect(to: ~p"/")}
+    else
+      false ->
+        {:noreply, push_navigate(socket, to: ~p"/users/log-in")}
+
+      {:error, _} ->
+        {:noreply,
+         put_flash(socket, :error, "We couldn't delete your account. Please try again.")}
+    end
   end
 
   def handle_event("update_email", %{"user" => user_params}, socket) do

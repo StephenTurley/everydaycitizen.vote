@@ -309,6 +309,24 @@ defmodule EverydayCitizen.Accounts do
   end
 
   @doc """
+  Deletes the account with what it follows, its passkeys and its sign-ins.
+  Reports it sent stay, without the account. Returns the deleted sessions'
+  tokens so their open pages can be disconnected.
+  """
+  @spec delete_user(User.t()) :: {:ok, [UserToken.t()]} | {:error, term()}
+  def delete_user(%User{} = user) do
+    Repo.transact(fn ->
+      tokens =
+        Repo.all(from t in UserToken, where: t.user_id == ^user.id and t.context == "session")
+
+      case Repo.delete(user) do
+        {:ok, _} -> {:ok, tokens}
+        {:error, _} = error -> error
+      end
+    end)
+  end
+
+  @doc """
   Deletes sign-in tokens past their validity (they keep the email they were
   sent to) and accounts never confirmed `days` days after they were made.
   Returns the counts.
