@@ -248,6 +248,10 @@ defmodule EverydayCitizenWeb.FloorComponents do
   attr :prompt_url, :string, required: true
   attr :report, :map, default: nil
 
+  attr :added, :list,
+    default: [],
+    doc: "subjects added after the first version: %{name, date, href} (not AI-written)"
+
   @doc """
   A bill's AI summary led by its story: "If this becomes law", one card per
   group the bill affects, then the made-up example and the full summary folded
@@ -276,6 +280,12 @@ defmodule EverydayCitizenWeb.FloorComponents do
         <p class="m-0 text-[12px] text-floor-muted">
           Written by AI from {@source}; it can be wrong.
           <a href={@prompt_url} class="underline">How it's written</a>
+        </p>
+        <p :for={part <- @added} class="m-0 text-[14px] text-floor-ink-2">
+          The {part.name} part was added in the <.link
+            navigate={part.href}
+            class="text-floor-accent underline"
+          >version of {part.date}</.link>.
         </p>
         <details
           :if={length(@story.subjects) > 1}

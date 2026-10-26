@@ -86,6 +86,32 @@ defmodule EverydayCitizenWeb.BillHistoryLiveTest do
     Map.merge(people, %{bill: bill, conn: init_test_session(conn, %{district: "IA-1"})})
   end
 
+  test "a part added in a later version says which version added it", %{conn: conn, bill: bill} do
+    EverydayCitizen.Repo.update_all(EverydayCitizen.Legislation.BillVersion,
+      set: [plain_text: "SEC. 1. The text."]
+    )
+
+    {subject, input} = EverydayCitizen.Summaries.Inputs.bill(bill)
+    assert subject =~ ~r/:eh$/
+
+    story =
+      "It limits trading.\n\n## If this becomes law\n- Lawmakers: they could not buy stocks.\n- If you vote: you would need photo ID.\n\n## Subjects\n- Trading rules: SEC. 2\n- Photo ID to vote: SEC. 3"
+
+    {:ok, _} =
+      EverydayCitizen.Summaries.put_ai(:bill, subject, input, %{summary: story, model: "m"})
+
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=eh")
+
+    assert has_element?(
+             view,
+             "#bill-summary",
+             "The Photo ID to vote part was added in the version of Jul 22, 2026"
+           )
+
+    assert has_element?(view, ~s(#bill-summary a[href="/bills/119-s-5?version=eh"]))
+    refute has_element?(view, "#bill-summary", "Trading rules part was added")
+  end
+
   test "each section says where it came from", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=eh")
     assert has_element?(view, "#section-0", "Since introduced")

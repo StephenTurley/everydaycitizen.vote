@@ -11,7 +11,7 @@ defmodule EverydayCitizenWeb.BillLive do
   use EverydayCitizenWeb, :live_view
 
   alias EverydayCitizen.{BillHistory, BillPage, Follows, RateLimit, Reps, Summaries}
-  alias EverydayCitizen.Summaries.{Claude, Inputs}
+  alias EverydayCitizen.Summaries.{Claude, Inputs, Story}
   alias EverydayCitizenWeb.AiBillSummary
 
   import EverydayCitizenWeb.BillHistoryComponents
@@ -408,6 +408,31 @@ defmodule EverydayCitizenWeb.BillLive do
     end
   end
 
+  # The summary's subjects that later versions added, from the text's history
+  # (only beside the version the summary was written from)
+  defp added_parts(%{bill_summary: {subject, {:ok, text}}, version: %{code: code}} = assigns) do
+    if String.ends_with?(subject, ":" <> code) do
+      text
+      |> Story.split()
+      |> Map.fetch!(:subjects)
+      |> BillHistory.added_subjects(Enum.map(assigns.sections, &elem(&1, 0)), assigns.origins)
+      |> Enum.map(fn %{name: name, added_in: added_in} ->
+        %{
+          name: name,
+          href: ~p"/bills/#{assigns.page.bill.external_id}?version=#{added_in}",
+          date: full_date(assigns.version_dates[added_in])
+        }
+      end)
+    else
+      []
+    end
+  end
+
+  defp added_parts(_assigns), do: []
+
+  defp full_date(nil), do: "a later date"
+  defp full_date(d), do: Calendar.strftime(d, "%b %-d, %Y")
+
   defp version_label(v), do: "#{v.classification || v.code}#{if v.date, do: " · #{date(v.date)}"}"
 
   defp rep_note(%{state: :sponsor}), do: "Sponsor of this bill"
@@ -727,6 +752,7 @@ defmodule EverydayCitizenWeb.BillLive do
               state={elem(@bill_summary, 1)}
               prompt_url={@repo_url <> Claude.prompt_path(:bill)}
               report={report(assigns, :bill, elem(@bill_summary, 0))}
+              added={added_parts(assigns)}
             />
           </section>
 

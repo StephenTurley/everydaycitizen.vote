@@ -55,6 +55,35 @@ defmodule EverydayCitizen.BillHistory do
   end
 
   @doc """
+  The subjects of a version's summary (each naming the section numbers it comes
+  from) whose sections were all added after the bill's first version, each with
+  the version that added it (its first section's). A subject naming a section
+  the version doesn't have, or none, is left out. `sections` are the version's
+  stored sections and `origins` theirs, from `origins/3`.
+  """
+  @spec added_subjects([%{name: String.t(), sections: [String.t()]}], [map()], %{
+          non_neg_integer() => origin()
+        }) :: [%{name: String.t(), added_in: String.t()}]
+  def added_subjects(subjects, sections, origins) do
+    index = sections |> Enum.with_index() |> Map.new(fn {s, i} -> {number(s["enum"]), i} end)
+
+    for %{name: name, sections: [_ | _] = numbers} <- subjects,
+        found = Enum.map(numbers, &(index[&1] && origins[index[&1]])),
+        Enum.all?(found, &match?(%{status: :added}, &1)),
+        do: %{name: name, added_in: hd(found).added_in}
+  end
+
+  # "3." and "SEC. 3" both number section "3"
+  defp number(nil), do: nil
+
+  defp number(enum),
+    do:
+      enum
+      |> to_string()
+      |> String.replace(~r/[^0-9A-Za-z]/, "")
+      |> String.replace_prefix("SEC", "")
+
+  @doc """
   Section `index` of version `code` against its wording before its most recent
   change: `%{from, to, paragraphs}`, each paragraph a list of `{:eq | :del | :ins,
   text}`. nil for a section never changed (or added and never changed since).
