@@ -153,6 +153,37 @@ defmodule EverydayCitizenWeb.HomeLiveTest do
       refute has_element?(view, "button", "Show 5 more")
     end
 
+    @story "It warns members.\n\n## For example\nMade-up situation: an app bans an account.\n\n## If this becomes law\n- If you use a dating app: you'd be warned within a day.\n- If you run a dating app: you'd send the warnings.\n- State attorneys general: they could sue."
+
+    test "a law's card shows its first group and how many more", %{conn: conn} do
+      cache!(7, @story)
+      {:ok, view, html} = live(conn, ~p"/")
+      assert has_element?(view, "#law-summary-119-hr-7", "If you use a dating app")
+      assert has_element?(view, "#law-summary-119-hr-7", "you'd be warned within a day.")
+
+      assert has_element?(
+               view,
+               ~s(#law-summary-119-hr-7 a[href="/bills/119-hr-7"]),
+               "+2 more groups"
+             )
+
+      assert has_element?(
+               view,
+               "#law-summary-119-hr-7",
+               "Written by AI from the bill; it can be wrong"
+             )
+
+      refute html =~ "Made-up situation"
+      refute html =~ "It warns members."
+    end
+
+    test "a law with one group has no more link", %{conn: conn} do
+      cache!(7, "S.\n\n## If this becomes law\n- Post offices: one gets a new name.")
+      {:ok, view, _html} = live(conn, ~p"/")
+      assert has_element?(view, "#law-summary-119-hr-7", "one gets a new name.")
+      refute has_element?(view, "#law-summary-119-hr-7", "more group")
+    end
+
     test "a cached plain-English summary shows with its AI label", %{conn: conn} do
       {subject, input} = Inputs.bill(bill(7))
 

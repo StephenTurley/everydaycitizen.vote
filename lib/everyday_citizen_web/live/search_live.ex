@@ -287,8 +287,13 @@ defmodule EverydayCitizenWeb.SearchLive do
           >{text}</mark><span :if={kind == :text}>{text}</span>
         <% end %>…”
       </p>
+      <.story_line
+        :if={(groups = story_groups(@summary)) != []}
+        class="mt-1 pl-2 border-l-[3px] border-floor-line"
+        group={hd(groups)}
+      />
       <div
-        :if={@summary && opening(@summary) != ""}
+        :if={story_groups(@summary) == [] && @summary && opening(@summary) != ""}
         class="mt-1 pl-2 border-l-[3px] border-floor-line text-[14px] text-floor-ink-2"
       >
         <span class="block text-[12px] text-floor-muted">

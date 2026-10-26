@@ -323,6 +323,39 @@ defmodule EverydayCitizenWeb.FloorComponents do
     """
   end
 
+  attr :id, :string, default: nil
+  attr :class, :any, default: nil
+  attr :group, :map, required: true, doc: "%{label, sentence}, the first of a bill's story"
+  attr :more, :integer, default: 0, doc: "how many more groups the bill page shows"
+  attr :href, :string, default: nil
+
+  @doc """
+  A bill's story in one line, for a list: its first group's label and sentence,
+  "+N more groups" linking to the bill page, and the AI label.
+  """
+  def story_line(assigns) do
+    ~H"""
+    <div id={@id} class={["flex flex-col gap-1", @class]}>
+      <p class="m-0 text-[15px] leading-relaxed text-floor-ink">
+        <span class="font-bold">{@group.label}:</span> {@group.sentence}
+      </p>
+      <.link
+        :if={@more > 0 && @href}
+        navigate={@href}
+        class="self-start text-[13px] font-semibold text-floor-accent hover:underline"
+      >
+        +{@more} more {if @more == 1, do: "group", else: "groups"}
+      </.link>
+      <p class="m-0 text-[12px] text-floor-muted">Written by AI from the bill; it can be wrong</p>
+    </div>
+    """
+  end
+
+  @doc "A summary's story groups (empty for a summary without one)."
+  @spec story_groups(String.t() | nil) :: [Story.group()]
+  def story_groups(nil), do: []
+  def story_groups(text), do: Story.split(text).groups
+
   defp story({:ok, text}) do
     case Story.split(text) do
       %{groups: []} -> nil

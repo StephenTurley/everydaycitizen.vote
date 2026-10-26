@@ -95,6 +95,23 @@ defmodule EverydayCitizenWeb.SearchLiveTest do
            )
   end
 
+  test "a result with a story shows its first group", %{conn: conn} do
+    bill = bill!("119-s-78", "S. 78", "Sunshine Lamp Act", "Sec. 1. Lamps stay lit.")
+    {subject, input} = Inputs.bill(bill)
+
+    story =
+      "Keeps lamps lit.\n\n## If this becomes law\n- If you own a lamp: it would stay lit.\n- Lamp makers: they would label lamps."
+
+    {:ok, _} = Summaries.put_ai(:bill, subject, input, %{summary: story, model: "m"})
+
+    {:ok, view, _html} = live(conn, ~p"/search?q=sunshine lamp")
+    section = "section[aria-label='Bills with this name']"
+    assert has_element?(view, section, "If you own a lamp")
+    assert has_element?(view, section, "it would stay lit.")
+    refute has_element?(view, section, "Keeps lamps lit.")
+    refute has_element?(view, section, "Lamp makers")
+  end
+
   test "text matches show the section and mark the words, escaping the rest", %{conn: conn} do
     bill!(
       "119-s-80",
