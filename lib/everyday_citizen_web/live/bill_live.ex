@@ -1,12 +1,15 @@
 defmodule EverydayCitizenWeb.BillLive do
   @moduledoc """
-  The bill page (mockup "Bill page (M2)"): the bill and its sponsor, where it
-  stands, the visitor's reps' part in it, the official summary labeled with its
-  author, the text by section with a version picker, and its roll calls.
+  The bill page: the bill and its sponsor, where it stands, the visitor's reps'
+  part in it, the AI story of the bill (`FloorComponents.bill_story/1`) beside
+  the official summary labeled with its author, the text by section with a
+  version picker and each section's history, and its roll calls.
 
-  Opening one section asks for its plain-English summary (`Summaries.request/3`):
-  shown from the cache, or written by a job and pushed here over PubSub. "Expand
-  all" shows cached summaries only, so it never sets off a whole bill's worth.
+  AI text comes through `AiSummary`: the bill's story, the explanation of what
+  changed from the previous version, and each section's summary when the
+  section is opened. Each is shown from the cache or written by a job and
+  pushed here over PubSub. "Expand all" shows cached section summaries only, so
+  it never sets off a whole bill's worth.
   """
   use EverydayCitizenWeb, :live_view
 

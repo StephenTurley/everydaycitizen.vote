@@ -123,7 +123,7 @@ defmodule EverydayCitizen.Ingest.Writer.LegislationTest do
     write!(actions([action(1), action(2, classification: nil, raw_type: "Weird")]))
 
     assert [%BillAction{position: 2, unclassified: true, raw_type: "Weird"}] =
-             Legislation.list_unclassified_actions(10)
+             Repo.all(where(BillAction, [a], a.unclassified))
   end
 
   # Congress.gov and BILLSTATUS both carry some Library of Congress actions with
@@ -206,7 +206,7 @@ defmodule EverydayCitizen.Ingest.Writer.LegislationTest do
       source: source_ref()
     })
 
-    assert [%BillVersion{plain_text: nil}] = Legislation.versions_missing_text(10)
+    assert [%BillVersion{plain_text: nil, text_source_id: nil}] = Repo.all(BillVersion)
 
     write!(%Records.BillVersionText{
       jurisdiction: @jur,
@@ -218,8 +218,8 @@ defmodule EverydayCitizen.Ingest.Writer.LegislationTest do
       source: source_ref()
     })
 
-    assert [] = Legislation.versions_missing_text(10)
     [v] = Repo.all(BillVersion)
+    assert v.text_source_id
 
     assert %{
              xml: "<bill/>",

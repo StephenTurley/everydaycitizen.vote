@@ -83,12 +83,6 @@ defmodule EverydayCitizen.SummariesTest do
     assert %SectionSummary{summary: "Second."} = Summaries.get(v.id, 1, text)
   end
 
-  test "created_today counts summaries made today", %{version: v} do
-    assert Summaries.created_today() == 0
-    {:ok, _} = Summaries.put(v.id, 1, "text", summary_attrs())
-    assert Summaries.created_today() == 1
-  end
-
   test "get_many finds every current summary for a version in one query", %{version: v} do
     for i <- 1..3, do: {:ok, _} = Summaries.put(v.id, i, "text #{i}", summary_attrs())
 
