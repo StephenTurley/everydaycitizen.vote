@@ -45,9 +45,8 @@ defmodule EverydayCitizen.Summaries.Claude do
       body = %{
         model: EverydayCitizen.Summaries.model(kind),
         max_tokens: Keyword.get(opts, :max_tokens, cap),
-        # on by default for this model, thinking can use the whole reply cap and
-        # leave no text
-        thinking: %{type: "disabled"},
+        # on by default, thinking can use the whole reply cap and leave no text
+        thinking: thinking_off(EverydayCitizen.Summaries.model(kind)),
         system: prompt(stem, kind),
         messages: [
           %{role: "user", content: if(note = opts[:note], do: "#{note}\n\n#{input}", else: input)}
@@ -95,6 +94,10 @@ defmodule EverydayCitizen.Summaries.Claude do
 
   defp parse({:ok, %Req.Response{status: status}}, _kind), do: {:error, {:http_status, status}}
   defp parse({:error, reason}, _kind), do: {:error, reason}
+
+  # how each model turns thinking off: Sonnet 5.5 refuses "disabled" (HTTP 400)
+  defp thinking_off("claude-sonnet-5-5"), do: %{type: "between_tools"}
+  defp thinking_off(_model), do: %{type: "disabled"}
 
   defp prompt(stem, kind) do
     version = EverydayCitizen.Summaries.prompt_version(kind)
