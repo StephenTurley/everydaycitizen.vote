@@ -63,6 +63,7 @@ jobs:
           result=$(flyctl machine exec "$machine" -a thefloor-vote --timeout 120 --json \
             "/app/bin/everyday_citizen rpc 'EverydayCitizen.Release.check_claude()'")
           echo "$result" | jq -r '.stdout // empty, .stderr // empty'
-          test "$(echo "$result" | jq -r '.exit_code')" = "0"
+          # exit_code is left out of the JSON when it is 0
+          test "$(echo "$result" | jq -r '.exit_code // 0')" = "0"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
