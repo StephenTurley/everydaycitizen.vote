@@ -371,7 +371,7 @@ defmodule EverydayCitizenWeb.BillLive do
   defp toggle(true), do: "−"
   defp toggle(false), do: "+"
 
-  defp date(d), do: Calendar.strftime(d, "%b %-d")
+  defp date(d), do: short_date(d)
 
   defp vote_date(vote),
     do: vote.voted_at |> DateTime.shift_zone!("America/New_York") |> DateTime.to_date() |> date()

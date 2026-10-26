@@ -404,6 +404,17 @@ defmodule EverydayCitizenWeb.FloorComponents do
     """
   end
 
+  @doc """
+  A date as "Jun 23", with its year when it isn't this year ("Jun 23, 2025"):
+  a bill's steps can span two years.
+  """
+  @spec short_date(Date.t()) :: String.t()
+  def short_date(%Date{} = date) do
+    if date.year == Date.utc_today().year,
+      do: Calendar.strftime(date, "%b %-d"),
+      else: Calendar.strftime(date, "%b %-d, %Y")
+  end
+
   @doc "A summary's story, or nil for a summary without one."
   @spec story_of(String.t() | nil) :: Story.t() | nil
   def story_of(nil), do: nil

@@ -48,7 +48,7 @@ defmodule EverydayCitizenWeb.BillHistoryComponents do
     do: "Added#{date_suffix(dates[code], " ")}"
 
   defp date_suffix(nil, _sep), do: ""
-  defp date_suffix(date, sep), do: sep <> Calendar.strftime(date, "%b %-d")
+  defp date_suffix(date, sep), do: sep <> EverydayCitizenWeb.FloorComponents.short_date(date)
 
   defp tag_class(:original), do: "text-floor-muted"
   defp tag_class(:changed), do: "text-[#8a5410] font-semibold"
