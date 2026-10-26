@@ -267,11 +267,8 @@ defmodule EverydayCitizenWeb.FloorComponents do
         <h2 class="m-0 text-[18px] font-bold">If this becomes law</h2>
         <div class="flex flex-col gap-2.5">
           <div
-            :for={{group, i} <- Enum.with_index(@story.groups)}
-            class={[
-              "bg-floor-card rounded-xl px-4 py-3.5 flex flex-col gap-1",
-              if(i == 0, do: "border-2 border-floor-accent", else: "border border-floor-line")
-            ]}
+            :for={group <- @story.groups}
+            class="bg-floor-card border border-floor-line rounded-xl px-4 py-3.5 flex flex-col gap-1"
           >
             <p class="m-0 font-bold">{group.label}</p>
             <p class="m-0 text-[15px] leading-relaxed">{group.sentence}</p>
