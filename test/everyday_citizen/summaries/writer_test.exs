@@ -51,7 +51,7 @@ defmodule EverydayCitizen.Summaries.WriterTest do
              body["messages"]
 
     refute_received {:call, _}
-    assert_in_delta Summaries.spent_today_usd(), 0.000125, 0.000001
+    assert_in_delta Summaries.spent_today_usd(), 0.0025, 0.000001
   end
 
   defp stub_reply(text) do
@@ -187,7 +187,7 @@ defmodule EverydayCitizen.Summaries.WriterTest do
     assert_received {:call, %{"max_tokens" => 1100}}
     assert_received {:call, %{"max_tokens" => 2200}}
     # both calls are paid for
-    assert_in_delta Summaries.spent_today_usd(), 0.00025, 0.000001
+    assert_in_delta Summaries.spent_today_usd(), 0.005, 0.000001
 
     stub_stops(["max_tokens", "max_tokens"])
     assert {:error, :truncated} = Writer.write(:bill, "SEC. 1. Short text.")
@@ -196,7 +196,7 @@ defmodule EverydayCitizen.Summaries.WriterTest do
   test "once the budget is spent, a long bill stops before its next call" do
     stub_claude()
 
-    for _ <- 1..200,
+    for _ <- 1..400,
         do: :ok = Summaries.record_usage(:section, %{input_tokens: 100_000, output_tokens: 0})
 
     assert {:error, :paused} = Writer.write(:bill, String.duplicate("SEC. 1. x\n", 40_000))

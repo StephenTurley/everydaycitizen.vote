@@ -91,6 +91,7 @@ defmodule EverydayCitizen.Summaries.ClaudeTest do
 
     {:ok, _} = Claude.summarize("input", :bill, max_tokens: 900, note: "Length: long")
     assert_received {:body, body}
+    assert body["model"] == "claude-sonnet-5-5"
     assert body["max_tokens"] == 900
     assert [%{"content" => "Length: long\n\n<bill>\ninput\n</bill>"}] = body["messages"]
   end

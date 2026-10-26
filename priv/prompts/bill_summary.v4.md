@@ -50,12 +50,14 @@ Last, the story of the bill from each side: 1 to 4 bullet points, one for each
 group of people or organizations the bill most directly affects, most
 affected first, and people before agencies when the bill names both. Each is
 "- ", a short plain label for the group in the bill's own terms, a colon, and
-one sentence saying what the bill would require of them, allow them or give
-them. Write the label and sentence to the reader ("If you use a dating app:
-you would get…") when the group is people a reader could be; otherwise name
-the group ("State attorneys general: they could…"). A bill that names no
+one sentence of at most 20 words saying what the bill would require of them,
+allow them or give them. Write the label and sentence to the reader ("If you
+use a dating app: you would get…") when the group is people a reader could
+be; otherwise name the group ("State attorneys general: they could…"). A bill that names no
 people still has one group: what it names, such as a building or an agency.
-Give no names, ages or places, and no effects the bill does not state.
+Give no names, ages or places, and no effects the bill does not state. Never
+name the legislature or its chambers or committees, even when the bill does:
+say "lawmakers" (a report to Congress becomes "a report to lawmakers").
 
 Sometimes the bill is too long to send whole, and you receive summaries of its
 parts in order instead (between <part> tags). Then combine them into one

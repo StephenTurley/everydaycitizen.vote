@@ -57,19 +57,32 @@ config :everyday_citizen, :mail_from, {"Everyday Citizen", "hello@everydaycitize
 # view and cached; the prompt is priv/prompts/section_summary.<prompt_version>.md.
 config :everyday_citizen, :summaries,
   model: "claude-haiku-5-5",
+  # kinds written by another model (bill summaries need the stronger one to pick
+  # the groups a bill affects most; owner's choice, 2026-10-26)
+  models: %{bill: "claude-sonnet-5-5"},
   prompt_versions: %{section: "v2", bill: "v4", bill_chunk: "v2", rep_week: "v1", change: "v1"},
   # new summaries pause once today's Claude spend reaches this (dollars)
-  daily_budget_usd: 2.0,
+  daily_budget_usd: 4.0,
   # summaries one visitor may ask for in an hour
   visitor_limit: 30,
-  # dollars per million tokens; the long-prompt rates apply to a whole request
-  # whose input exceeds long_prompt_tokens
+  # dollars per million tokens, by model; the long-prompt rates apply to a whole
+  # request whose input exceeds long_prompt_tokens (bill text is split well
+  # under it, so the Sonnet rates are its base rates throughout)
   rates: %{
-    input: 0.10,
-    output: 0.50,
-    long_input: 0.50,
-    long_output: 2.50,
-    long_prompt_tokens: 100_000
+    "claude-haiku-5-5" => %{
+      input: 0.10,
+      output: 0.50,
+      long_input: 0.50,
+      long_output: 2.50,
+      long_prompt_tokens: 100_000
+    },
+    "claude-sonnet-5-5" => %{
+      input: 2.0,
+      output: 10.0,
+      long_input: 2.0,
+      long_output: 10.0,
+      long_prompt_tokens: 100_000
+    }
   }
 
 # Searches one visitor may run in a minute (EverydayCitizenWeb.SearchLive):
