@@ -154,6 +154,18 @@ defmodule EverydayCitizen.Summaries do
   @spec model(atom()) :: String.t()
   def model(kind), do: Map.get(config(:models) || %{}, kind, config(:model))
 
+  @doc """
+  Raises unless every model in use has rates, so the app never starts when a
+  call would be paid for and then fail to be recorded.
+  """
+  @spec check_config!() :: :ok
+  def check_config! do
+    case Enum.reject(models(), &Map.has_key?(config(:rates), &1)) do
+      [] -> :ok
+      missing -> raise ArgumentError, "no summary rates for #{Enum.join(missing, ", ")}"
+    end
+  end
+
   @doc "Every model a kind of summary is written by, the default first."
   @spec models() :: [String.t()]
   def models, do: Enum.uniq([config(:model) | Map.values(config(:models) || %{})])
