@@ -177,6 +177,21 @@ defmodule EverydayCitizenWeb.HomeLiveTest do
       refute html =~ "It warns members."
     end
 
+    test "a law's story card keeps the prompt link and Report a problem, with the whole reply",
+         %{conn: conn} do
+      cache!(7, @story)
+      {:ok, view, _html} = live(conn, ~p"/")
+      assert has_element?(view, "#law-summary-119-hr-7 a", "How it's written")
+      view |> element("#law-summary-119-hr-7 button", "Report a problem") |> render_click()
+
+      view
+      |> form("#law-summary-119-hr-7 form", report: %{reason: "other"})
+      |> render_submit()
+
+      assert [report] = EverydayCitizen.Repo.all(EverydayCitizen.Feedback.Report)
+      assert report.summary =~ "## If this becomes law"
+    end
+
     test "a law's card shows its tags", %{conn: conn} do
       cache!(7, @story <> "\n\n## Tags\nSets rules · Changes taxes · States a view")
       {:ok, view, _html} = live(conn, ~p"/")

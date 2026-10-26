@@ -58,17 +58,23 @@ defmodule EverydayCitizen.BillHistory do
   The subjects of a version's summary (each naming the section numbers it comes
   from) whose sections were all added after the bill's first version, each with
   the version that added it (its first section's). A subject naming a section
-  the version doesn't have, or none, is left out. `sections` are the version's
+  the version doesn't have, or one whose number two sections share, or none, is
+  left out. `sections` are the version's
   stored sections and `origins` theirs, from `origins/3`.
   """
   @spec added_subjects([%{name: String.t(), sections: [String.t()]}], [map()], %{
           non_neg_integer() => origin()
         }) :: [%{name: String.t(), added_in: String.t()}]
   def added_subjects(subjects, sections, origins) do
-    index = sections |> Enum.with_index() |> Map.new(fn {s, i} -> {number(s["enum"]), i} end)
+    # a number two sections share names neither
+    index =
+      sections
+      |> Enum.with_index()
+      |> Enum.group_by(fn {s, _} -> number(s["enum"]) end, fn {_, i} -> i end)
+      |> Map.new(fn {n, is} -> {n, match?([_], is) && hd(is)} end)
 
     for %{name: name, sections: [_ | _] = numbers} <- subjects,
-        found = Enum.map(numbers, &(index[&1] && origins[index[&1]])),
+        found = Enum.map(numbers, &(is_integer(index[&1]) && origins[index[&1]])),
         Enum.all?(found, &match?(%{status: :added}, &1)),
         do: %{name: name, added_in: hd(found).added_in}
   end

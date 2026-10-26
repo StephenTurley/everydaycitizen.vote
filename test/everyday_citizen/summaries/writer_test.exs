@@ -45,6 +45,9 @@ defmodule EverydayCitizen.Summaries.WriterTest do
       send(test, {:call, if(checking?, do: :check, else: :bill), body})
 
       case {checking?, check} do
+        {true, {:truncated, text}} ->
+          reply(conn, text, "max_tokens")
+
         {true, status} when is_integer(status) ->
           Plug.Conn.send_resp(conn, status, "{}")
 
@@ -57,7 +60,7 @@ defmodule EverydayCitizen.Summaries.WriterTest do
     end)
   end
 
-  defp reply(conn, text) do
+  defp reply(conn, text, stop \\ "end_turn") do
     conn
     |> Plug.Conn.put_resp_content_type("application/json")
     |> Plug.Conn.send_resp(
@@ -65,9 +68,15 @@ defmodule EverydayCitizen.Summaries.WriterTest do
       Jason.encode!(%{
         "model" => "m",
         "content" => [%{"type" => "text", "text" => text}],
-        "usage" => %{"input_tokens" => 1_000, "output_tokens" => 50}
+        "usage" => %{"input_tokens" => 1_000, "output_tokens" => 50},
+        "stop_reason" => stop
       })
     )
+  end
+
+  test "a check cut off at its cap is not kept" do
+    stub_check({:truncated, "- Apps: they would warn mem"})
+    assert {:error, :truncated} = Writer.write(:bill, "SEC. 1. Short text.")
   end
 
   test "a bill's story is checked against its text before it is kept" do

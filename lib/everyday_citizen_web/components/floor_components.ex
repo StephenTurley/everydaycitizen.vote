@@ -171,7 +171,7 @@ defmodule EverydayCitizenWeb.FloorComponents do
       </p>
       <%= case @state do %>
         <% {:ok, text} -> %>
-          <.summary_body text={text} clamp={@clamp} />
+          <.summary_body text={Story.without_meta(text)} clamp={@clamp} />
           <p class="m-0 text-[12px] text-floor-muted">
             Written by AI from {@source}; it can be wrong.
             <a href={@prompt_url} class="underline">How it's written</a>
@@ -367,6 +367,9 @@ defmodule EverydayCitizenWeb.FloorComponents do
   attr :group, :map, required: true, doc: "%{label, sentence}, the first of a bill's story"
   attr :more, :integer, default: 0, doc: "how many more groups the bill page shows"
   attr :href, :string, default: nil
+  attr :prompt_url, :string, default: nil
+  attr :report, :map, default: nil, doc: "as `ai_box`'s; the form sends `text`, the whole reply"
+  attr :text, :string, default: nil
 
   @doc """
   A bill's story in one line, for a list: its first group's label and sentence,
@@ -386,7 +389,19 @@ defmodule EverydayCitizenWeb.FloorComponents do
       >
         +{@more} more {if @more == 1, do: "group", else: "groups"}
       </.link>
-      <p class="m-0 text-[12px] text-floor-muted">Written by AI from the bill; it can be wrong</p>
+      <p class="m-0 text-[12px] text-floor-muted">
+        Written by AI from the bill; it can be wrong<a
+          :if={@prompt_url}
+          href={@prompt_url}
+          class="ml-1 underline"
+        >How it's written</a>
+      </p>
+      <.live_component
+        :if={@report && @text}
+        module={EverydayCitizenWeb.FeedbackForm}
+        id={"#{@id}-report"}
+        report={Map.put(@report, :summary, @text)}
+      />
     </div>
     """
   end

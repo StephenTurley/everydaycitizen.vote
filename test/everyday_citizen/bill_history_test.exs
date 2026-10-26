@@ -49,6 +49,18 @@ defmodule EverydayCitizen.BillHistoryTest do
            ]
   end
 
+  test "a section number used twice in a version names no subject's origin" do
+    sections = [%{"enum" => "101."}, %{"enum" => "101."}]
+
+    origins = %{
+      0 => %{status: :original, added_in: "ih", changed_in: []},
+      1 => %{status: :added, added_in: "eh", changed_in: []}
+    }
+
+    assert BillHistory.added_subjects([%{name: "Twice", sections: ["101"]}], sections, origins) ==
+             []
+  end
+
   test "a changed section compares against the wording before its last change", %{bill: bill} do
     %{from: "ih", to: "rh", paragraphs: paragraphs} = BillHistory.comparison(bill, "eh", 1)
     ops = List.flatten(paragraphs)

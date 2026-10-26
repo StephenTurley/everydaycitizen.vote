@@ -93,7 +93,7 @@ defmodule EverydayCitizen.Summaries.Writer do
           {:ok,
            %{
              draft
-             | summary: Story.put_groups(draft.summary, checked.summary),
+             | summary: Story.put_groups(draft.summary, checked.summary, length(groups)),
                input_tokens: (draft.input_tokens || 0) + (checked.input_tokens || 0),
                output_tokens: (draft.output_tokens || 0) + (checked.output_tokens || 0)
            }}
@@ -101,10 +101,11 @@ defmodule EverydayCitizen.Summaries.Writer do
     end
   end
 
-  # an empty reply is a check that kept no line
+  # an empty reply is a check that kept no line; one cut off at its cap is not kept
   defp run_check(input) do
     case call(:bill_check, input, []) do
       {:error, :empty} -> {:ok, %{summary: "", input_tokens: nil, output_tokens: nil}}
+      {:ok, %{truncated: true}} -> {:error, :truncated}
       result -> result
     end
   end

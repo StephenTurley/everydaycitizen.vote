@@ -82,23 +82,32 @@ defmodule EverydayCitizen.Summaries.Story do
 
   @doc """
   The summary with its story's lines replaced by the valid "- label: sentence"
-  lines of `lines` (a check's reply), or without the story part when none is
-  valid. A summary without the part is returned as it is.
+  lines of `lines` (a check's reply), at most `limit` (the lines it was sent), or
+  without the story part when none is valid. A summary without the part is
+  returned as it is.
   """
-  @spec put_groups(String.t(), String.t()) :: String.t()
-  def put_groups(text, lines) do
+  @spec put_groups(String.t(), String.t(), pos_integer()) :: String.t()
+  def put_groups(text, lines, limit \\ @max_groups) do
     part = ~r/^##[ \t]+#{@heading}[ \t]*\n.*?(?=^##[ \t]|\z)/ms
 
     kept =
       lines
       |> labeled_lines()
-      |> Enum.take(@max_groups)
+      |> Enum.take(min(limit, @max_groups))
       |> Enum.map_join("\n", fn {l, s} -> "- #{l}: #{s}" end)
 
     replacement = if kept == "", do: "", else: "## #{@heading}\n#{kept}\n\n"
 
     text
     |> String.replace(part, replacement)
+    |> String.trim()
+  end
+
+  @doc "The reply without its Tags and Subjects parts, which are not summary text."
+  @spec without_meta(String.t()) :: String.t()
+  def without_meta(text) do
+    ~r/^##[ \t]+(#{@tags_heading}|#{@subjects_heading})[ \t]*\n.*?(?=^##[ \t]|\z)/ms
+    |> Regex.replace(text, "")
     |> String.trim()
   end
 

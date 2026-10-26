@@ -47,6 +47,13 @@ defmodule EverydayCitizenWeb.AiBoxTest do
     assert LazyHTML.text(example) =~ "2.5 × $100,000 = $250,000"
   end
 
+  test "a reply's tags and subjects are not shown as summary text" do
+    html = box("It does a thing.\n\n## Tags\nSets rules\n\n## Subjects\n- Photo ID: SEC. 3")
+    assert html =~ "It does a thing."
+    refute html =~ "Tags"
+    refute html =~ "SEC. 3"
+  end
+
   test "a summary without headings renders as before" do
     html = box("One sentence.\n- A point.")
     assert html =~ "<p class=\"m-0\">One sentence.</p>"

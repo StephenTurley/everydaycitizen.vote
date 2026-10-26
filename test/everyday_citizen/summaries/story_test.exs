@@ -111,4 +111,9 @@ defmodule EverydayCitizen.Summaries.StoryTest do
     assert Story.put_groups(text, "") == "S.\n\n## Tags\nSets rules"
     assert Story.put_groups("S.", "- A: x.") == "S."
   end
+
+  test "a check keeps no more lines than it was sent" do
+    text = "S.\n\n## If this becomes law\n- A: one."
+    assert Story.put_groups(text, "- A: one.\n- B: invented.", 1) == text
+  end
 end

@@ -303,6 +303,9 @@ defmodule EverydayCitizenWeb.HomeLive do
               more={length(story.groups) - 1}
               tags={story.tags}
               href={~p"/bills/#{bill.external_id}"}
+              prompt_url={@prompt_url}
+              report={report(assigns, elem(@summaries[bill.id], 0))}
+              text={elem(elem(@summaries[bill.id], 1), 1)}
             />
             <.ai_box
               :if={(summary = @summaries[bill.id]) && !law_story(summary)}
