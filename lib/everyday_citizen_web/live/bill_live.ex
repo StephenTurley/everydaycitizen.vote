@@ -17,7 +17,7 @@ defmodule EverydayCitizenWeb.BillLive do
   alias EverydayCitizen.Summaries.{Claude, Inputs, Story}
   alias EverydayCitizenWeb.AiSummary
 
-  import EverydayCitizenWeb.BillHistoryComponents
+  import EverydayCitizenWeb.BillTextComponents
 
   @impl true
   def mount(%{"id" => id}, session, socket) do
@@ -290,25 +290,10 @@ defmodule EverydayCitizenWeb.BillLive do
      push_patch(socket, to: ~p"/bills/#{socket.assigns.page.bill.external_id}?#{[version: code]}")}
   end
 
-  defp section_path(bill, version, enum) do
-    ~p"/bills/#{bill.external_id}?#{Enum.reject([version: version && version.code, section: enum], &is_nil(elem(&1, 1)))}"
-  end
-
-  defp open?(open, i), do: open == :all or open == i
-
-  defp contents_label(%{"enum" => enum, "heading" => heading}),
-    do:
-      [enum && String.trim_trailing(enum, "."), heading]
-      |> Enum.reject(&is_nil/1)
-      |> Enum.join(" ")
-
   defp step_when(%{state: :current}), do: "Now"
   defp step_when(%{skipped: true}), do: "Skipped"
   defp step_when(%{date: %Date{} = d}), do: date(d)
   defp step_when(_step), do: "—"
-
-  defp toggle(true), do: "−"
-  defp toggle(false), do: "+"
 
   defp date(d), do: short_date(d)
 
@@ -371,8 +356,6 @@ defmodule EverydayCitizenWeb.BillLive do
   defp full_date(nil), do: "a later date"
   defp full_date(d), do: Calendar.strftime(d, "%b %-d, %Y")
 
-  defp version_label(v), do: "#{v.classification || v.code}#{if v.date, do: " · #{date(v.date)}"}"
-
   defp rep_note(%{state: :sponsor}), do: "Sponsor of this bill"
   defp rep_note(%{state: :cosponsor}), do: "Cosponsor of this bill"
   defp rep_note(%{state: :no_vote, body: body}), do: "The #{body.name} hasn't voted"
@@ -383,62 +366,8 @@ defmodule EverydayCitizenWeb.BillLive do
   defp rep_note(%{vote: vote}) when not is_nil(vote), do: "#{vote.question}, #{vote_date(vote)}"
   defp rep_note(_), do: nil
 
-  attr :blocks, :list, required: true
-
-  # A section's text by level; law the bill quotes is set off as its own block.
-  defp blocks(assigns) do
-    ~H"""
-    <%= for block <- @blocks do %>
-      <figure
-        :if={block["quote"]}
-        class="m-0 ml-[calc(var(--level)*16px)] lg:ml-[calc(var(--level)*24px)] px-3 py-3 lg:px-5 lg:py-4 rounded-[10px] bg-floor-ground flex flex-col gap-2"
-        style={"--level: #{block["level"]}"}
-      >
-        <figcaption class="font-sans text-[11px] lg:text-[12px] font-semibold uppercase tracking-wide text-floor-muted">
-          Text this section adds to the law
-        </figcaption>
-        <.blocks blocks={block["quote"]} />
-      </figure>
-      <p
-        :if={!block["quote"]}
-        data-level={block["level"]}
-        class="m-0 pl-[calc(var(--level)*16px)] lg:pl-[calc(var(--level)*24px)]"
-        style={"--level: #{block["level"]}"}
-      >
-        <strong :if={block["enum"] || block["heading"]}>
-          {block["enum"]} {block["heading"]}{if block["heading"] && block["text"] not in [nil, ""],
-            do: "."}
-        </strong>
-        {block["text"]}
-      </p>
-    <% end %>
-    """
-  end
-
-  attr :index, :integer, required: true
-  attr :state, :any, required: true
-  attr :prompt_url, :string, required: true
-  attr :report, :map, required: true
-
-  # The plain-English summary above a section's text (labeled as AI-written).
-  defp section_summary(assigns) do
-    ~H"""
-    <.ai_box
-      id={"summary-#{@index}"}
-      class="mx-4 lg:mx-7 mb-3"
-      title="In plain English"
-      source="the text below"
-      state={@state}
-      prompt_url={@prompt_url}
-      report={@report}
-    />
-    """
-  end
-
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, prompt_url: AiSummary.prompt_url(:section))
-
     ~H"""
     <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>
       <%!-- From lg the band's white runs edge to edge (the ::before), past the
@@ -493,38 +422,13 @@ defmodule EverydayCitizenWeb.BillLive do
       <%!-- Phones: one column in the order below (`order-*`; the two wrappers are
            `contents`). lg: text and summary | sidebar. xl: contents | text | sidebar. --%>
       <div class="flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] xl:grid-cols-[220px_minmax(0,720px)_minmax(280px,340px)] lg:gap-10 lg:pt-7 lg:items-start">
-        <nav
+        <.bill_contents
           :if={@sections != []}
-          aria-label="Sections"
-          class="hidden xl:flex xl:col-start-1 xl:row-start-1 flex-col gap-0.5 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto"
-        >
-          <p class="m-0 mb-2 text-[12px] font-semibold uppercase tracking-wide text-floor-muted">
-            Contents
-          </p>
-          <%= for {entry, i} <- @sections do %>
-            <p
-              :if={entry["kind"] == "title"}
-              class="m-0 mt-3 mb-0.5 text-[13px] font-semibold text-floor-ink-2"
-            >
-              {contents_label(entry)}
-            </p>
-            <.link
-              :if={entry["kind"] == "section"}
-              patch={section_path(@page.bill, @version, i)}
-              phx-click={JS.focus(to: "#section-#{i}")}
-              aria-current={if @open == i, do: "location"}
-              class={[
-                "px-2.5 py-1.5 rounded-lg text-[14px] leading-snug",
-                if(@open == i,
-                  do: "bg-floor-line-soft font-semibold text-floor-ink",
-                  else: "text-floor-ink-2 hover:bg-floor-line-soft"
-                )
-              ]}
-            >
-              {contents_label(entry)}
-            </.link>
-          <% end %>
-        </nav>
+          bill={@page.bill}
+          version={@version}
+          sections={@sections}
+          open={@open}
+        />
 
         <aside class="contents lg:flex lg:flex-col lg:gap-4 lg:col-start-2 xl:col-start-3 lg:row-start-1 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
           <section
@@ -713,120 +617,19 @@ defmodule EverydayCitizenWeb.BillLive do
             <% end %>
           </section>
 
-          <section
-            aria-label="Text of the bill"
-            class="order-5 lg:order-2 pb-5 flex flex-col gap-3 lg:gap-4"
-          >
-            <h2 class="m-0 text-[18px] lg:text-[22px] font-bold">Text of the bill</h2>
-            <p :if={@page.versions == []} class="m-0 text-[15px] text-floor-muted">
-              No text published yet.
-            </p>
-            <div :if={@page.versions != []} class="flex flex-wrap items-end gap-2.5">
-              <form
-                id="version-form"
-                phx-change="version"
-                class="flex-1 min-w-[200px] flex flex-col gap-1.5"
-              >
-                <label for="version" class="text-[13px] font-semibold text-floor-muted">Version</label>
-                <select
-                  id="version"
-                  name="version"
-                  class="text-[15px] p-3 border border-[#b8bdc4] rounded-xl bg-floor-card"
-                >
-                  <option
-                    :for={v <- @page.versions}
-                    value={v.code}
-                    selected={@version && v.code == @version.code}
-                  >
-                    {version_label(v)}
-                  </option>
-                </select>
-              </form>
-              <.link
-                :if={@sections != []}
-                patch={section_path(@page.bill, @version, if(@open == :all, do: nil, else: "all"))}
-                class="px-3.5 py-3 rounded-xl border border-[#b8bdc4] bg-floor-card text-[14px] font-semibold text-floor-accent"
-              >
-                {if @open == :all, do: "Collapse all", else: "Expand all"}
-              </.link>
-            </div>
-            <p :if={@version && @sections == []} class="m-0 text-[15px] text-floor-muted">
-              The text of this version isn't available yet.
-            </p>
-            <div
-              :if={@sections != []}
-              class="bg-floor-card border border-floor-line rounded-xl overflow-hidden"
-            >
-              <%= for {entry, i} <- @sections do %>
-                <p
-                  :if={entry["kind"] == "title"}
-                  class="m-0 px-4 lg:px-7 pt-4 pb-1 text-[12px] font-semibold uppercase tracking-wide text-floor-muted"
-                >
-                  {entry["enum"]} {entry["heading"]}
-                </p>
-                <div :if={entry["kind"] == "section"} class="border-b border-floor-line-soft">
-                  <.link
-                    id={"section-#{i}"}
-                    patch={
-                      section_path(
-                        @page.bill,
-                        @version,
-                        if(open?(@open, i), do: nil, else: i)
-                      )
-                    }
-                    class="flex justify-between items-center gap-2 px-4 lg:px-7 py-3.5 text-floor-ink"
-                    aria-expanded={to_string(open?(@open, i))}
-                  >
-                    <span class="flex flex-col gap-1">
-                      <span class="text-[15px] lg:text-[16px]">
-                        <strong :if={entry["enum"]} class="font-semibold">Sec. {entry["enum"]}</strong>
-                        {entry["heading"]}
-                      </span>
-                      <.origin_tag origin={@origins[i]} dates={@version_dates} />
-                    </span>
-                    <span aria-hidden="true" class="text-floor-muted">{toggle(open?(@open, i))}</span>
-                  </.link>
-                  <.origin_panel
-                    :if={@history && @history.index == i}
-                    index={i}
-                    origin={@history.origin}
-                    steps={@history.steps}
-                    involvement={@history.involvement}
-                    comparison={@history.comparison}
-                  >
-                    <:explanation>
-                      <.ai_box
-                        :if={@change_summary}
-                        id={"change-summary-#{i}"}
-                        title="In plain English: what this change does"
-                        source={
-                          if @history.origin.status == :added,
-                            do: "the section's text below",
-                            else: "the two versions below"
-                        }
-                        state={elem(@change_summary, 1)}
-                        prompt_url={AiSummary.prompt_url(:change)}
-                        report={AiSummary.report(assigns, :change, elem(@change_summary, 0))}
-                      />
-                    </:explanation>
-                  </.origin_panel>
-                  <.section_summary
-                    :if={open?(@open, i) and Map.has_key?(@summaries, i)}
-                    index={i}
-                    state={@summaries[i]}
-                    prompt_url={@prompt_url}
-                    report={AiSummary.report(assigns, :section, "section:#{@version.id}:#{i}")}
-                  />
-                  <div
-                    :if={open?(@open, i)}
-                    class="section-text px-4 lg:px-7 pb-4 lg:pb-7 font-serif text-[16px] leading-[1.6] lg:text-[17px] lg:leading-[1.65] flex flex-col gap-2.5"
-                  >
-                    <.blocks blocks={entry["blocks"]} />
-                  </div>
-                </div>
-              <% end %>
-            </div>
-          </section>
+          <.bill_text
+            bill={@page.bill}
+            versions={@page.versions}
+            version={@version}
+            sections={@sections}
+            open={@open}
+            origins={@origins}
+            version_dates={@version_dates}
+            history={@history}
+            change_summary={@change_summary}
+            summaries={@summaries}
+            report={&AiSummary.report(assigns, &1, &2)}
+          />
         </div>
       </div>
     </Layouts.app>
