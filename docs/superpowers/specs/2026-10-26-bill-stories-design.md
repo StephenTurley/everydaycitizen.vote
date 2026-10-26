@@ -224,3 +224,55 @@ shows no label and no "added" line; the story still shows.
   or worse than another.
 - The second fresh sample read only each bill's opening (3,000 characters), so
   it checks the kinds, not the subject-splitting; H.R. 7008 was read whole.
+
+---
+
+## Revision 2, 2026-10-26: ranked effects and tags (supersedes "Kinds of bill")
+
+A re-test showed one kind per bill fits only about 77% of bills cleanly, and
+nearly every poor fit was a bill doing two kinds of thing. So the single kind
+is dropped (owner, 2026-10-26). A trial on the 8 sample bills and H.R. 7008
+confirmed the replacement below; its prompt is the starting point for v4.
+
+### The story: biggest effects first
+
+"If this becomes law" lists the bill's 1 to 4 biggest effects, largest first.
+Size means, in order: the most money, the most people, the strongest legal
+force. Each line is still `- label: sentence` (who or what the effect falls on;
+at most 20 words; "you" when it falls on people a reader could be). Simple
+lines lead, details follow, as before.
+
+- Money the bill only authorizes is said to be authorized ("could be given up
+  to…" or "authorizes"), never spent; only money it appropriates is spent.
+- Lines cover the biggest subjects first; when a bill has more subjects than
+  lines, the rest are listed in a fold (below).
+
+### Tags
+
+One or two tags from a fixed list, each defined in the prompt, shown beside the
+bill's title wherever its story shows (bill page, home cards, search results),
+in one style for all: Sets rules, Changes benefits, Changes taxes, Spends or
+authorizes money, Creates or changes a program, Directs an agency, Changes how
+government works, Cancels a rule or law, Transfers land, Names or honors,
+States a view, Amends the Constitution, Chamber business. A tag not in the list
+is not shown.
+
+### Unrelated subjects
+
+`## Subjects` lists the version's unrelated subjects, each with the sections it
+comes from. Unrelated means the parts would make sense as separate bills;
+parts that serve one program or purpose are one subject. With more than one,
+"Does N unrelated things" shows beside the tags, and a fold "All N subjects"
+lists them. The "added in" line (Revision 1, "Where a part came from") applies
+to each subject.
+
+### Each story is checked before it is shown
+
+A second Claude call (Sonnet, prompt `priv/prompts/bill_check.v1.md`,
+published) gets the bill's text (or, for a bill split into parts, the parts'
+summaries) and the story's lines. It returns the lines corrected where the text
+says otherwise and drops any line the text does not support. Only checked lines
+are stored and shown. The written summary is cached before the check, so a
+check that cannot run (budget spent, an error) is retried later without paying
+for the summary again. Both calls count against the daily budget; a bill
+summary now costs about 6 to 8 cents.
