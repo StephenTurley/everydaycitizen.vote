@@ -7,6 +7,9 @@ defmodule EverydayCitizen.Application do
 
   @impl true
   def start(_type, _args) do
+    # a model without rates would be paid for and then fail to be recorded
+    :ok = EverydayCitizen.Summaries.check_config!()
+
     children = [
       EverydayCitizenWeb.Telemetry,
       EverydayCitizen.Repo,

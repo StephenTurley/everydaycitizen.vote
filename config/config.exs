@@ -63,8 +63,6 @@ config :everyday_citizen, :summaries,
   prompt_versions: %{
     section: "v2",
     bill: "v4",
-    # a bill summary before its story is checked, kept so a retry pays only for the check
-    bill_draft: "v4",
     bill_check: "v1",
     bill_chunk: "v2",
     rep_week: "v1",

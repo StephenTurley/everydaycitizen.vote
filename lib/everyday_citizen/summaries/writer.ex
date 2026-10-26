@@ -73,7 +73,12 @@ defmodule EverydayCitizen.Summaries.Writer do
         else: write_in_parts(text, opts)
 
     with {:ok, %{summary: summary} = written} <- result do
-      {:ok, %{written | summary: drop_length_echo(summary)}}
+      summary = drop_length_echo(summary)
+
+      summary =
+        if String.length(text) <= @max_part, do: summary, else: Story.forget_sections(summary)
+
+      {:ok, %{written | summary: summary}}
     end
   end
 

@@ -379,28 +379,12 @@ defmodule EverydayCitizen.SearchBillsTest do
       version!(bill, "ih", ~D[2026-01-03], "Daylight saving time rules.")
       assert %{total: 2} = Search.bills_by_text(search("daylight saving time"), [], 1)
 
-      # thousands more matches, so ranking them takes longer than the 1 ms allowed
-      Repo.query!(
-        """
-        WITH copies AS (
-          SELECT n, nextval('bills_id_seq') AS id FROM generate_series(1, 3000) n
-        ), new_bills AS (
-          INSERT INTO bills
-          SELECT (jsonb_populate_record(b, jsonb_build_object(
-            'id', c.id, 'external_id', 'copy-' || c.n, 'identifier', 'H.R. ' || (1000 + c.n)))).*
-          FROM bills b, copies c WHERE b.id = $1
-          RETURNING id
-        )
-        INSERT INTO bill_versions
-        SELECT (jsonb_populate_record(v, jsonb_build_object(
-          'id', nextval('bill_versions_id_seq'), 'bill_id', nb.id))).*
-        FROM bill_versions v, new_bills nb WHERE v.bill_id = $1
-        """,
-        [bill.id]
-      )
-
+      # a statement in the search that outlasts the timeout, whatever the machine's speed
       assert %{results: [], total: 0, more?: false} =
-               Search.bills_by_text(search("daylight saving time"), [], 1, timeout_ms: 1)
+               Search.bills_by_text(search("daylight saving time"), [], 1,
+                 timeout_ms: 20,
+                 sleep_ms: 200
+               )
     end
 
     test "a query of only stopwords finds nothing" do

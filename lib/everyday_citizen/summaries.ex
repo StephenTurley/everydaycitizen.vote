@@ -20,6 +20,16 @@ defmodule EverydayCitizen.Summaries do
   def prompt_version(kind \\ :section), do: Map.fetch!(config(:prompt_versions), kind)
 
   @doc """
+  The version a stored bill or week summary is kept under: its prompt's, and for
+  a bill summary its check's too, so a new version of either prompt writes it
+  again. A bill's draft (before its check) follows the bill prompt's version.
+  """
+  @spec cache_version(atom()) :: String.t()
+  def cache_version(:bill), do: prompt_version(:bill) <> "+check." <> prompt_version(:bill_check)
+  def cache_version(:bill_draft), do: prompt_version(:bill)
+  def cache_version(kind), do: prompt_version(kind)
+
+  @doc """
   The text of a section as sent to the model: its number and heading, then each
   block on its own line with its number and heading; text the bill inserts into
   the law is marked `[Inserted into the law: … ]`.
@@ -144,6 +154,22 @@ defmodule EverydayCitizen.Summaries do
   @spec model(atom()) :: String.t()
   def model(kind), do: Map.get(config(:models) || %{}, kind, config(:model))
 
+  @doc """
+  Raises unless every model in use has rates, so the app never starts when a
+  call would be paid for and then fail to be recorded.
+  """
+  @spec check_config!() :: :ok
+  def check_config! do
+    case Enum.reject(models(), &Map.has_key?(config(:rates), &1)) do
+      [] -> :ok
+      missing -> raise ArgumentError, "no summary rates for #{Enum.join(missing, ", ")}"
+    end
+  end
+
+  @doc "Every model a kind of summary is written by, the default first."
+  @spec models() :: [String.t()]
+  def models, do: Enum.uniq([config(:model) | Map.values(config(:models) || %{})])
+
   @doc "Whether today's spending (America/New_York day) has reached `daily_budget_usd`."
   @spec over_budget?() :: boolean()
   def over_budget?, do: spent_today_usd() >= config(:daily_budget_usd)
@@ -200,7 +226,7 @@ defmodule EverydayCitizen.Summaries do
       from s in AiSummary,
         where:
           s.kind == ^to_string(kind) and s.subject == ^subject and
-            s.prompt_version == ^prompt_version(kind) and s.source_hash == ^hash(input)
+            s.prompt_version == ^cache_version(kind) and s.source_hash == ^hash(input)
     )
   end
 
@@ -217,7 +243,7 @@ defmodule EverydayCitizen.Summaries do
       from s in AiSummary,
         where:
           s.kind == ^to_string(kind) and s.subject in ^subjects and
-            s.prompt_version == ^prompt_version(kind)
+            s.prompt_version == ^cache_version(kind)
     )
     |> Map.new(&{&1.subject, &1})
   end
@@ -244,7 +270,7 @@ defmodule EverydayCitizen.Summaries do
         %{
           "kind" => to_string(kind),
           "subject" => subject,
-          "prompt_version" => prompt_version(kind)
+          "prompt_version" => cache_version(kind)
         }
         |> EverydayCitizen.Jobs.SummarizeSubject.new()
         |> Oban.insert!()
@@ -263,7 +289,7 @@ defmodule EverydayCitizen.Summaries do
     row = %AiSummary{
       kind: to_string(kind),
       subject: subject,
-      prompt_version: prompt_version(kind),
+      prompt_version: cache_version(kind),
       source_hash: hash(input),
       summary: attrs.summary,
       model: attrs.model,

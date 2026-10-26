@@ -93,4 +93,12 @@ defmodule EverydayCitizenWeb.AiBoxTest do
     assert clamped =~ "max-lg:contents"
     refute box("One.") =~ "line-clamp"
   end
+
+  test "a short date shows its year only when it isn't this year" do
+    this_year = Date.utc_today().year
+    assert FloorComponents.short_date(Date.new!(this_year, 6, 23)) == "Jun 23"
+
+    assert FloorComponents.short_date(Date.new!(this_year - 1, 6, 23)) ==
+             "Jun 23, #{this_year - 1}"
+  end
 end

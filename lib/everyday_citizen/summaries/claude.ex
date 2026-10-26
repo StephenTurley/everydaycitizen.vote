@@ -39,19 +39,45 @@ defmodule EverydayCitizen.Summaries.Claude do
   def summarize(text, kind \\ :section, opts \\ []) when is_binary(text) do
     {stem, tag, cap} = Map.fetch!(@kinds, kind)
 
-    with {:ok, header} <- Credentials.auth_header() do
-      input = "<#{tag}>\n#{text}\n</#{tag}>"
+    input = "<#{tag}>\n#{text}\n</#{tag}>"
 
-      body = %{
-        model: EverydayCitizen.Summaries.model(kind),
-        max_tokens: Keyword.get(opts, :max_tokens, cap),
-        # on by default, thinking can use the whole reply cap and leave no text
-        thinking: thinking_off(EverydayCitizen.Summaries.model(kind)),
-        system: prompt(stem, kind),
-        messages: [
-          %{role: "user", content: if(note = opts[:note], do: "#{note}\n\n#{input}", else: input)}
-        ]
-      }
+    %{
+      model: EverydayCitizen.Summaries.model(kind),
+      max_tokens: Keyword.get(opts, :max_tokens, cap),
+      system: prompt(stem, kind),
+      messages: [
+        %{role: "user", content: if(note = opts[:note], do: "#{note}\n\n#{input}", else: input)}
+      ]
+    }
+    |> post()
+    |> parse(kind)
+  end
+
+  @doc """
+  One tiny call to each model in use, with the settings summaries send, so a
+  setting a model refuses shows up right after a deploy (`Release.check_claude/0`).
+  """
+  @spec check() :: :ok | {:error, [{String.t(), term()}]}
+  def check do
+    failures =
+      for model <- EverydayCitizen.Summaries.models(),
+          result =
+            post(%{model: model, max_tokens: 5, messages: [%{role: "user", content: "Say ok."}]}),
+          not match?({:ok, %Req.Response{status: 200}}, result),
+          do: {model, failure(result)}
+
+    if failures == [], do: :ok, else: {:error, failures}
+  end
+
+  defp failure({:ok, %Req.Response{status: status, body: body}}),
+    do: {:http_status, status, error_message(body)}
+
+  defp failure(error), do: error
+
+  defp post(body) do
+    with {:ok, header} <- Credentials.auth_header() do
+      # on by default, thinking can use the whole reply cap and leave no text
+      body = Map.put(body, :thinking, thinking_off(body.model))
 
       [
         url: @url,
@@ -61,7 +87,6 @@ defmodule EverydayCitizen.Summaries.Claude do
       ]
       |> Keyword.merge(Application.get_env(:everyday_citizen, :anthropic_req_options, []))
       |> Req.post()
-      |> parse(kind)
     end
   end
 
@@ -92,8 +117,14 @@ defmodule EverydayCitizen.Summaries.Claude do
     end
   end
 
-  defp parse({:ok, %Req.Response{status: status}}, _kind), do: {:error, {:http_status, status}}
+  # the error's message says what was wrong; it goes with the failed job to Sentry
+  defp parse({:ok, %Req.Response{status: status, body: body}}, _kind),
+    do: {:error, {:http_status, status, error_message(body)}}
+
   defp parse({:error, reason}, _kind), do: {:error, reason}
+
+  defp error_message(%{"error" => %{"message" => message}}) when is_binary(message), do: message
+  defp error_message(_body), do: nil
 
   # how each model turns thinking off: Sonnet 5.5 refuses "disabled" (HTTP 400)
   defp thinking_off("claude-sonnet-5-5"), do: %{type: "between_tools"}

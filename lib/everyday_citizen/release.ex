@@ -40,6 +40,19 @@ defmodule EverydayCitizen.Release do
   end
 
   @doc """
+  Raises unless every Claude model in use answers a tiny call with the settings
+  summaries send. CI runs it in the running app right after each deploy:
+
+      bin/everyday_citizen rpc 'EverydayCitizen.Release.check_claude()'
+  """
+  def check_claude do
+    case EverydayCitizen.Summaries.Claude.check() do
+      :ok -> IO.puts("Claude: every model answered")
+      {:error, failures} -> raise "Claude check failed: #{inspect(failures)}"
+    end
+  end
+
+  @doc """
   Prints the latest coverage checks from the running app and returns `:ok`, or
   `{:error, failed_count}` if any failed. The release counterpart of
   `mix everyday_citizen.coverage`:

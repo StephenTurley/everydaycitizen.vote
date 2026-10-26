@@ -98,9 +98,34 @@ defmodule EverydayCitizen.Summaries.Story do
 
     replacement = if kept == "", do: "", else: "## #{@heading}\n#{kept}\n\n"
 
-    text
-    |> String.replace(part, replacement)
-    |> String.trim()
+    # the first story part takes the lines; any other is dropped
+    case Regex.run(part, text, return: :index) do
+      # byte offsets, so text before them can hold any character
+      [{at, length}] ->
+        before = binary_part(text, 0, at)
+        rest = binary_part(text, at + length, byte_size(text) - at - length)
+        String.trim(before <> replacement <> Regex.replace(part, rest, ""))
+
+      nil ->
+        String.trim(text)
+    end
+  end
+
+  @doc """
+  The reply with its subjects' section numbers replaced by "sections not known":
+  for a reply written from summaries of a bill's parts, which carry none, so any
+  it gives are guesses.
+  """
+  @spec forget_sections(String.t()) :: String.t()
+  def forget_sections(text) do
+    Regex.replace(
+      ~r/(^##[ \t]+#{@subjects_heading}[ \t]*\n)(.*?)(?=^##[ \t]|\z)/ms,
+      text,
+      fn _, heading, body ->
+        heading <>
+          Regex.replace(~r/^(\s*-\s*[^:\n]+):.*$/m, body, "\\1: sections not known")
+      end
+    )
   end
 
   @doc "The reply without its Tags and Subjects parts, which are not summary text."
@@ -124,10 +149,11 @@ defmodule EverydayCitizen.Summaries.Story do
 
   defp tags(nil), do: []
 
-  defp tags(line) do
-    line
-    |> String.trim_leading("- ")
-    |> String.split("·")
+  # one line ("A · B") or one bulleted tag per line
+  defp tags(body) do
+    body
+    |> String.split("\n", trim: true)
+    |> Enum.flat_map(&(&1 |> String.trim() |> String.trim_leading("- ") |> String.split("·")))
     |> Enum.map(&String.trim/1)
     |> Enum.filter(&(&1 in @tags))
     |> Enum.take(@max_tags)
@@ -138,7 +164,8 @@ defmodule EverydayCitizen.Summaries.Story do
         do: %{name: name, sections: for([_, n] <- Regex.scan(@section, where), do: n)}
   end
 
-  # "- label: text" lines, each split on its first colon; others are skipped
+  # "- label: text" lines, each split on its first ": " (a label may hold a time,
+  # "12:01"); others are skipped
   defp labeled_lines(nil), do: []
 
   defp labeled_lines(body) do
@@ -146,7 +173,7 @@ defmodule EverydayCitizen.Summaries.Story do
     |> String.split("\n", trim: true)
     |> Enum.flat_map(fn line ->
       with "- " <> item <- String.trim(line),
-           [label, text] <- String.split(item, ":", parts: 2),
+           [label, text] <- String.split(item, ": ", parts: 2),
            {label, text} when label != "" and text != "" <-
              {String.trim(label), String.trim(text)} do
         [{label, text}]

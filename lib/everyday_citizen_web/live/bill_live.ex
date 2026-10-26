@@ -371,7 +371,7 @@ defmodule EverydayCitizenWeb.BillLive do
   defp toggle(true), do: "−"
   defp toggle(false), do: "+"
 
-  defp date(d), do: Calendar.strftime(d, "%b %-d")
+  defp date(d), do: short_date(d)
 
   defp vote_date(vote),
     do: vote.voted_at |> DateTime.shift_zone!("America/New_York") |> DateTime.to_date() |> date()
@@ -502,7 +502,7 @@ defmodule EverydayCitizenWeb.BillLive do
     %{
       kind: to_string(kind),
       subject: subject,
-      prompt_version: Summaries.prompt_version(kind),
+      prompt_version: Summaries.cache_version(kind),
       page: assigns.path,
       user: assigns.current_scope && assigns.current_scope.user,
       remote_ip: assigns.remote_ip
