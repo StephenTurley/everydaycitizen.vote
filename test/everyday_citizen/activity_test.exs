@@ -35,7 +35,14 @@ defmodule EverydayCitizen.ActivityTest do
     }
 
   setup do
-    write!(%Records.Jurisdiction{key: "j", name: "J", classification: "state", source: @src})
+    write!(%Records.Jurisdiction{
+      key: "j",
+      name: "J",
+      classification: "state",
+      time_zone: "America/New_York",
+      source: @src
+    })
+
     write!(%Records.LegislativeSession{jurisdiction: "j", identifier: "1", source: @src})
 
     write!(%Records.Body{
@@ -128,6 +135,7 @@ defmodule EverydayCitizen.ActivityTest do
       session_identifier: "1",
       external_id: "v1",
       question: "On Passage",
+      voted_on: ~D[2025-04-01],
       voted_at: ~U[2025-04-01 16:00:00Z],
       bill_external_id: "b-co",
       counts: %{yea: 1, nay: 0, present: 0, absent: 0},
@@ -210,9 +218,9 @@ defmodule EverydayCitizen.ActivityTest do
     assert %{items: [], next: nil} = Activity.feed(p2, filter: :votes)
   end
 
-  test "a late-evening vote is on its Eastern date", %{p1: p1} do
+  test "a vote is on the legislature's own date, whatever its UTC time", %{p1: p1} do
     EverydayCitizen.Repo.update_all(EverydayCitizen.Votes.Vote,
-      set: [voted_at: ~U[2025-04-02 00:30:00Z]]
+      set: [voted_on: ~D[2025-04-01], voted_at: ~U[2025-04-02 00:30:00Z]]
     )
 
     assert [%{date: ~D[2025-04-01]}] = Activity.feed(p1, filter: :votes).items

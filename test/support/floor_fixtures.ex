@@ -20,6 +20,7 @@ defmodule EverydayCitizen.FloorFixtures do
       key: "federal",
       name: "United States",
       classification: "federal",
+      time_zone: "America/New_York",
       source: @src
     })
 
@@ -127,6 +128,7 @@ defmodule EverydayCitizen.FloorFixtures do
       classification: "passage",
       result: "Bill Passed",
       passed: true,
+      voted_on: ~D[2026-01-20],
       voted_at: ~U[2026-01-20 17:00:00Z],
       bill_external_id: "119-s-5",
       counts: %{yea: 64, nay: 35, present: 0, absent: 1},

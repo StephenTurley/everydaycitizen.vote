@@ -14,6 +14,7 @@ defmodule EverydayCitizen.Search.ExcerptTest do
             key: "fed",
             name: "Fed",
             classification: "federal",
+            time_zone: "America/New_York",
             source: source_ref()
           },
           %Records.LegislativeSession{

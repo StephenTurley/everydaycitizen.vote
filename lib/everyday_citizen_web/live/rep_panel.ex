@@ -17,8 +17,6 @@ defmodule EverydayCitizenWeb.RepPanel do
   alias EverydayCitizen.Summaries.Inputs
   alias EverydayCitizenWeb.AiSummary
 
-  @zone "America/New_York"
-
   @filters [
     {"all", "Everything", :all},
     {"votes", "Votes", :votes},
@@ -52,7 +50,11 @@ defmodule EverydayCitizenWeb.RepPanel do
 
     socket
     |> assign(rep: rep, filter: filter, panel_path: path)
-    |> assign(week: rep && week(params["week"], rep), this_monday: this_monday())
+    |> then(fn socket ->
+      today = EverydayCitizen.Clock.today(socket.assigns.time_zone)
+      monday = Date.beginning_of_week(today)
+      assign(socket, week: rep && week(params["week"], rep, today, monday), this_monday: monday)
+    end)
     |> assign(counts: rep && Activity.counts(rep.person.id))
     |> assign(
       following:
@@ -79,22 +81,20 @@ defmodule EverydayCitizenWeb.RepPanel do
   def query(pairs),
     do: Enum.reject(pairs, fn {k, v} -> is_nil(v) or (k == :filter and v == "all") end)
 
-  defp this_monday, do: DateTime.now!(@zone) |> DateTime.to_date() |> Date.beginning_of_week()
-
   # The Monday of the week to show: the one asked for (not in the future), else
   # the rep's most recent active week, else this week.
-  defp week(param, rep) do
+  defp week(param, rep, today, this_monday) do
     with {:ok, date} <- Date.from_iso8601(param || ""),
-         false <- Date.after?(date, DateTime.now!(@zone) |> DateTime.to_date()) do
+         false <- Date.after?(date, today) do
       Date.beginning_of_week(date)
     else
-      _ -> latest_week(rep)
+      _ -> latest_week(rep, this_monday)
     end
   end
 
-  defp latest_week(rep) do
+  defp latest_week(rep, this_monday) do
     case Activity.latest_date(rep.person.id) do
-      nil -> this_monday()
+      nil -> this_monday
       date -> Date.beginning_of_week(date)
     end
   end

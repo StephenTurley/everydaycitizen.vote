@@ -231,6 +231,7 @@ defmodule EverydayCitizenWeb.RepsLiveTest do
           classification: "cloture",
           result: "Cloture Motion Agreed to",
           passed: true,
+          voted_on: ~D[2026-01-21],
           voted_at: ~U[2026-01-21 17:00:00Z],
           description: "Todd Blanche, of Florida, to be Attorney General",
           subject_ref: "PN1078",

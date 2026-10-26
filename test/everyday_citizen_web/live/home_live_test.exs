@@ -89,6 +89,7 @@ defmodule EverydayCitizenWeb.HomeLiveTest do
           external_id: id,
           classification: "floor",
           title: "Floor session #{id}",
+          date: DateTime.to_date(at),
           start_at: at,
           bill_external_ids: bills,
           raw_bill_labels: [],

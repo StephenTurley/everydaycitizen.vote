@@ -18,6 +18,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.BackfillBillSectionsTest do
             key: "federal",
             name: "F",
             classification: "federal",
+            time_zone: "America/New_York",
             source: src
           },
           %Records.LegislativeSession{jurisdiction: "federal", identifier: "119", source: src},

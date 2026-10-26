@@ -11,6 +11,7 @@ defmodule EverydayCitizenWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :fetch_current_scope_for_user
+    plug EverydayCitizenWeb.TimeZone
   end
 
   # The daily email's unsubscribe link: the signed token is the credential, and

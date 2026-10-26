@@ -48,6 +48,7 @@ defmodule EverydayCitizen.CalendarWeekTest do
             external_id: id,
             classification: if(body == "ssju00", do: "hearing", else: "floor"),
             title: "Event #{id}",
+            date: DateTime.to_date(at),
             start_at: at,
             bill_external_ids: bills,
             raw_bill_labels: labels,

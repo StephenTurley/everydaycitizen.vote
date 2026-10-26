@@ -55,6 +55,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.HouseVoteTest do
   test "Aye and No map to yea and nay; July timestamp uses -04:00" do
     vote = vote("house_vote_119_1_259")
     assert vote.voted_at == ~U[2025-09-10 21:36:00Z]
+    assert vote.voted_on == ~D[2025-09-10]
     assert vote.passed == false
     assert vote.bill_external_id == "119-hr-3838"
     # an amendment vote names the amendment and links its official page

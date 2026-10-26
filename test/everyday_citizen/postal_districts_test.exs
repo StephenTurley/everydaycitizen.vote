@@ -10,7 +10,13 @@ defmodule EverydayCitizen.PostalDistrictsTest do
   setup do
     {:ok, _} =
       Ingest.write(
-        %Records.Jurisdiction{key: "federal", name: "F", classification: "federal", source: @src},
+        %Records.Jurisdiction{
+          key: "federal",
+          name: "F",
+          classification: "federal",
+          time_zone: "America/New_York",
+          source: @src
+        },
         nil
       )
 

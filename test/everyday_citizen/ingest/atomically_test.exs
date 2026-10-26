@@ -10,6 +10,7 @@ defmodule EverydayCitizen.Ingest.AtomicallyTest do
       key: "federal",
       name: "Federal",
       classification: "federal",
+      time_zone: "America/New_York",
       source: Records.SourceRef.new("https://x.test/a", "a")
     }
   end

@@ -13,8 +13,6 @@ defmodule EverydayCitizen.Summaries do
 
   @max_chars 40_000
 
-  @zone "America/New_York"
-
   @doc "The prompt version a kind of summary is written and looked up with."
   @spec prompt_version(atom()) :: String.t()
   def prompt_version(kind \\ :section), do: Map.fetch!(config(:prompt_versions), kind)
@@ -170,7 +168,7 @@ defmodule EverydayCitizen.Summaries do
   @spec models() :: [String.t()]
   def models, do: Enum.uniq([config(:model) | Map.values(config(:models) || %{})])
 
-  @doc "Whether today's spending (America/New_York day) has reached `daily_budget_usd`."
+  @doc "Whether today's spending (the site's day, `Clock.site_zone/0`) has reached `daily_budget_usd`."
   @spec over_budget?() :: boolean()
   def over_budget?, do: spent_today_usd() >= config(:daily_budget_usd)
 
@@ -206,7 +204,7 @@ defmodule EverydayCitizen.Summaries do
     :ok
   end
 
-  @doc "Dollars spent on Claude today (America/New_York)."
+  @doc "Dollars spent on Claude today (the site's day)."
   @spec spent_today_usd() :: float()
   def spent_today_usd do
     micros =
@@ -309,8 +307,7 @@ defmodule EverydayCitizen.Summaries do
   @spec topic(integer(), non_neg_integer()) :: String.t()
   def topic(version_id, index), do: "section_summary:#{version_id}:#{index}"
 
-  defp today_start,
-    do: DateTime.now!(@zone) |> DateTime.to_date() |> DateTime.new!(~T[00:00:00], @zone)
+  defp today_start, do: EverydayCitizen.Clock.start_of_today(EverydayCitizen.Clock.site_zone())
 
   defp hash(text), do: :crypto.hash(:sha256, text)
 

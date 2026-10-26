@@ -33,9 +33,12 @@ defmodule EverydayCitizen.Ingest.Records do
   end
 
   defmodule Jurisdiction do
-    @moduledoc "A legislative jurisdiction (`federal`, `state`, `local`)."
-    @enforce_keys [:key, :name, :classification, :source]
-    defstruct [:key, :name, :classification, :source]
+    @moduledoc """
+    A legislative jurisdiction (`federal`, `state`, `local`); `time_zone` is the
+    IANA zone its legislature keeps its days in.
+    """
+    @enforce_keys [:key, :name, :classification, :time_zone, :source]
+    defstruct [:key, :name, :classification, :time_zone, :source]
   end
 
   defmodule Body do
@@ -228,14 +231,15 @@ defmodule EverydayCitizen.Ingest.Records do
     `description` is what was voted on in the source's words; `subject_ref` and `subject_url`
     name it and its official page when it is not the bill (a nomination, an amendment).
     Each position is `%{person: {scheme, value} | nil, raw_label, option, raw_option}` where
-    `option` is one of `yea nay present absent`.
+    `option` is one of `yea nay present absent`. `voted_on` is the legislature's
+    date of the vote; `voted_at` its time, only when the source gives one.
     """
     @enforce_keys [
       :jurisdiction,
       :body_external_id,
       :session_identifier,
       :external_id,
-      :voted_at,
+      :voted_on,
       :source
     ]
     defstruct [
@@ -251,6 +255,7 @@ defmodule EverydayCitizen.Ingest.Records do
       :classification,
       :result,
       :passed,
+      :voted_on,
       :voted_at,
       :bill_external_id,
       :source,
@@ -280,8 +285,9 @@ defmodule EverydayCitizen.Ingest.Records do
     @moduledoc """
     A calendar item (floor, hearing, markup). `bill_external_ids` are links to attempt;
     `raw_bill_labels` are labels the adapter could not normalize. `status` is the raw source status.
+    `date` is the legislature's own date; `start_at` only when the source gives a clock time.
     """
-    @enforce_keys [:jurisdiction, :external_id, :classification, :start_at, :source]
+    @enforce_keys [:jurisdiction, :external_id, :classification, :date, :source]
     defstruct [
       :jurisdiction,
       :body_external_id,
@@ -289,11 +295,11 @@ defmodule EverydayCitizen.Ingest.Records do
       :classification,
       :raw_classification,
       :title,
+      :date,
       :start_at,
       :location,
       :source,
       status: "scheduled",
-      all_day: false,
       bill_external_ids: [],
       raw_bill_labels: []
     ]

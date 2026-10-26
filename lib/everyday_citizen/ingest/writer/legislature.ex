@@ -29,7 +29,13 @@ defmodule EverydayCitizen.Ingest.Writer.Legislature do
   defp do_write(%Records.Jurisdiction{} = r, source_id) do
     upsert(
       Jurisdiction,
-      %{key: r.key, name: r.name, classification: r.classification, source_id: source_id},
+      %{
+        key: r.key,
+        name: r.name,
+        classification: r.classification,
+        time_zone: r.time_zone,
+        source_id: source_id
+      },
       [:key]
     )
   end

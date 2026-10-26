@@ -8,7 +8,14 @@ defmodule EverydayCitizen.Ingest.RelinkTest do
 
   setup do
     for key <- ["a", "b"] do
-      write!(%Records.Jurisdiction{key: key, name: key, classification: "state", source: src()})
+      write!(%Records.Jurisdiction{
+        key: key,
+        name: key,
+        classification: "state",
+        time_zone: "America/New_York",
+        source: src()
+      })
+
       write!(%Records.LegislativeSession{jurisdiction: key, identifier: "1", source: src()})
 
       write!(%Records.Body{
@@ -61,6 +68,7 @@ defmodule EverydayCitizen.Ingest.RelinkTest do
       body_external_id: "lower",
       session_identifier: "1",
       external_id: "v1",
+      voted_on: ~D[2026-02-01],
       voted_at: ~U[2026-02-01 15:00:00Z],
       bill_external_id: "hb-1",
       counts: %{yea: length(people), nay: 0, present: 0, absent: 0},

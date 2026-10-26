@@ -25,7 +25,6 @@ defmodule EverydayCitizen.Digest do
   alias EverydayCitizen.Votes.{Vote, VotePosition}
 
   @moved ~w(reported scheduled passed_chamber enrolled signed became_law)
-  @zone "America/New_York"
   @salt "digest unsubscribe"
 
   @type item :: %{
@@ -238,8 +237,7 @@ defmodule EverydayCitizen.Digest do
   defp vote_line(%Vote{question: q, result: r, yea_count: y, nay_count: n}),
     do: "#{q}. #{r}, #{y}–#{n}"
 
-  defp vote_date(%Vote{voted_at: nil}), do: nil
-  defp vote_date(%Vote{voted_at: at}), do: at |> DateTime.shift_zone!(@zone) |> DateTime.to_date()
+  defp vote_date(%Vote{voted_on: date}), do: date
 
   defp option(option) when is_binary(option), do: String.capitalize(option)
   defp option(_), do: "—"

@@ -30,6 +30,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.LinkVoteSubjectsTest do
             question: question,
             description: description,
             subject_ref: ref,
+            voted_on: ~D[2026-09-28],
             voted_at: ~U[2026-09-28 16:00:00Z],
             bill_external_id: bill,
             source: Records.SourceRef.new("https://x.test/v", "v")

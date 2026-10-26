@@ -17,6 +17,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBillTextTest do
       key: "federal",
       name: "Federal",
       classification: "federal",
+      time_zone: "America/New_York",
       source: src()
     })
 

@@ -16,6 +16,7 @@ defmodule EverydayCitizen.Adapters.Federal.CoverageTest do
       key: "federal",
       name: "Federal",
       classification: "federal",
+      time_zone: "America/New_York",
       source: src()
     })
 
@@ -185,6 +186,7 @@ defmodule EverydayCitizen.Adapters.Federal.CoverageTest do
           body_external_id: "senate",
           session_identifier: session,
           external_id: "senate-#{session}-#{id}",
+          voted_on: ~D[2025-01-09],
           voted_at: ~U[2025-01-09 05:00:00Z],
           counts: %{yea: yea, nay: nay, present: 0, absent: 0},
           positions: [],

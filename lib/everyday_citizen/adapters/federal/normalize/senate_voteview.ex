@@ -9,7 +9,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.SenateVoteview do
   it). Totals are counted from the positions, so they equal the recorded tally:
   only Yea, Nay and Present are recorded; Not Voting, paired and announced
   positions count as absent and keep their label in `raw_option`. Voteview gives
-  only the date of a vote, stored as midnight America/New_York.
+  only the date of a vote, so `voted_at` is nil.
 
   Two differences from the Senate's own tally:
   - Voteview's vote file also carries the President's announced position (a
@@ -87,7 +87,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.SenateVoteview do
       classification: VoteClassifier.classify(row["vote_question"]),
       result: result,
       passed: passed,
-      voted_at: midnight_eastern(row["date"]),
+      voted_on: Date.from_iso8601!(row["date"]),
       bill_external_id: BillId.from_label(row["bill_number"], congress),
       counts: positions |> counts() |> vice_president(passed),
       positions: positions,
@@ -120,13 +120,6 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.SenateVoteview do
     do: %{counts | yea: same + 1}
 
   defp vice_president(counts, _passed), do: counts
-
-  defp midnight_eastern(date) do
-    date
-    |> Date.from_iso8601!()
-    |> NaiveDateTime.new!(~T[00:00:00])
-    |> VoteSupport.eastern_to_utc()
-  end
 
   defp rows(csv) do
     [header | rows] = CSV.parse_string(csv, skip_headers: false)

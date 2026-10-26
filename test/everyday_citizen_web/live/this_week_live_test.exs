@@ -43,6 +43,7 @@ defmodule EverydayCitizenWeb.ThisWeekLiveTest do
           external_id: "floor-1",
           classification: "floor",
           title: "Consideration of S. 5",
+          date: ~D[2026-10-26],
           start_at: ~U[2026-10-26 14:00:00Z],
           bill_external_ids: ["119-s-5"],
           raw_bill_labels: ["H.R. 999999"],
@@ -60,6 +61,60 @@ defmodule EverydayCitizenWeb.ThisWeekLiveTest do
     assert has_element?(view, "a", "My reps")
   end
 
+  describe "times in the reader's zone" do
+    setup do
+      for {id, start_at} <- [{"timed", ~U[2026-10-26 14:00:00Z]}, {"untimed", nil}] do
+        {:ok, _} =
+          EverydayCitizen.Ingest.write(
+            %EverydayCitizen.Ingest.Records.Event{
+              jurisdiction: "federal",
+              body_external_id: "senate",
+              external_id: id,
+              classification: "floor",
+              title: "Event #{id}",
+              date: ~D[2026-10-26],
+              start_at: start_at,
+              source: EverydayCitizen.Ingest.Records.SourceRef.new("https://x.test/#{id}", id)
+            },
+            nil
+          )
+      end
+
+      :ok
+    end
+
+    test "the browser's zone sets clock times; the day stays the legislature's", %{conn: conn} do
+      conn = put_connect_params(conn, %{"time_zone" => "America/Los_Angeles"})
+      {:ok, view, _html} = live(conn, ~p"/this-week?from=2026-10-26")
+      html = render(view)
+
+      assert html =~ "7:00 AM"
+      assert html =~ "times in PDT"
+      assert html =~ "Monday, Oct 26"
+      assert html =~ "All day"
+    end
+
+    test "without a zone from the browser, the legislature's zone", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/this-week?from=2026-10-26")
+      assert html =~ "10:00 AM"
+      assert html =~ "times in EDT"
+    end
+
+    test "a name the time-zone database doesn't know is ignored", %{conn: conn} do
+      conn = put_connect_params(conn, %{"time_zone" => "Mars/Olympus_Mons"})
+      {:ok, view, _html} = live(conn, ~p"/this-week?from=2026-10-26")
+      assert render(view) =~ "10:00 AM"
+    end
+
+    test "the tz cookie gives the first render the reader's zone", %{conn: conn} do
+      conn =
+        conn |> put_req_cookie("tz", "America/Chicago") |> get(~p"/this-week?from=2026-10-26")
+
+      assert html_response(conn, 200) =~ "9:00 AM"
+      assert get_session(conn, "time_zone") == "America/Chicago"
+    end
+  end
+
   test "signed in, the Followed filter shows events on followed bills", %{conn: conn} do
     for {id, bills} <- [{"floor-1", ["119-s-5"]}, {"floor-2", []}] do
       {:ok, _} =
@@ -70,6 +125,7 @@ defmodule EverydayCitizenWeb.ThisWeekLiveTest do
             external_id: id,
             classification: "floor",
             title: "Event #{id}",
+            date: ~D[2026-10-26],
             start_at: ~U[2026-10-26 14:00:00Z],
             bill_external_ids: bills,
             source: EverydayCitizen.Ingest.Records.SourceRef.new("https://x.test/#{id}", id)
@@ -108,6 +164,7 @@ defmodule EverydayCitizenWeb.ThisWeekLiveTest do
             external_id: id,
             classification: "floor",
             title: title,
+            date: ~D[2026-10-26],
             start_at: DateTime.new!(~D[2026-10-26], Time.new!(hour, 0, 0)),
             source: EverydayCitizen.Ingest.Records.SourceRef.new("https://x.test/e", "e")
           },

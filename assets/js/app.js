@@ -27,9 +27,12 @@ import {PasskeyLogin, PasskeyRegister} from "./passkeys"
 import topbar from "../vendor/topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
+// the reader's time zone, for "today" and clock times (EverydayCitizenWeb.TimeZone)
+const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+if (timeZone) document.cookie = `tz=${timeZone}; path=/; max-age=31536000; SameSite=Lax; Secure`
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  params: {_csrf_token: csrfToken},
+  params: {_csrf_token: csrfToken, time_zone: timeZone},
   hooks: {...colocatedHooks, PasskeyLogin, PasskeyRegister},
 })
 

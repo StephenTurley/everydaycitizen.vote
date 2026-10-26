@@ -14,6 +14,7 @@ defmodule EverydayCitizen.Ingest.Writer.CalendarTest do
       key: @jur,
       name: "Fed",
       classification: "federal",
+      time_zone: "America/New_York",
       source: source_ref()
     })
 
@@ -60,8 +61,8 @@ defmodule EverydayCitizen.Ingest.Writer.CalendarTest do
         classification: "hearing",
         raw_classification: "Hearing",
         title: "A hearing",
+        date: ~D[2026-03-01],
         start_at: ~U[2026-03-01 15:00:00Z],
-        all_day: false,
         location: "Room 1",
         bill_external_ids: ["119-hr-1", "119-hr-404"],
         raw_bill_labels: ["H.R. 99ish"],
@@ -92,12 +93,14 @@ defmodule EverydayCitizen.Ingest.Writer.CalendarTest do
     assert {:error, {:unknown_body, "nope"}} = Ingest.write(event(body_external_id: "nope"), nil)
   end
 
-  test "list_events returns events in range ordered by start" do
+  test "list_events returns events dated in range, untimed ones first on their day" do
     write!(event())
-    write!(event(external_id: "ev-2", start_at: ~U[2026-03-02 15:00:00Z]))
-    write!(event(external_id: "ev-3", start_at: ~U[2026-04-02 15:00:00Z]))
-    list = Calendar.list_events(~U[2026-03-01 00:00:00Z], ~U[2026-03-10 00:00:00Z])
-    assert Enum.map(list, & &1.external_id) == ["ev-1", "ev-2"]
+    write!(event(external_id: "ev-2", date: ~D[2026-03-02], start_at: ~U[2026-03-02 15:00:00Z]))
+    write!(event(external_id: "ev-0", start_at: nil))
+    write!(event(external_id: "ev-3", date: ~D[2026-04-02], start_at: ~U[2026-04-02 15:00:00Z]))
+    list = Calendar.list_events(~D[2026-03-01], ~D[2026-03-10])
+    assert Enum.map(list, & &1.external_id) == ["ev-0", "ev-1", "ev-2"]
+    assert %{start_at: nil, date: ~D[2026-03-01]} = hd(list)
   end
 
   test "unknown classification is rejected by changeset" do

@@ -40,8 +40,8 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.SenateVoteviewTest do
     assert vote.source == @src
   end
 
-  test "Voteview gives only a date, stored as midnight Eastern" do
-    assert votes()["senate-119-1-1"].voted_at == ~U[2025-01-09 05:00:00Z]
+  test "Voteview gives only a date, so the vote has no time" do
+    assert %{voted_on: ~D[2025-01-09], voted_at: nil} = votes()["senate-119-1-1"]
   end
 
   test "positions are keyed by bioguide id and totals are counted from them" do

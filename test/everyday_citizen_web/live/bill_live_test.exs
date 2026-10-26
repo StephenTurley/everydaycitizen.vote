@@ -712,6 +712,7 @@ defmodule EverydayCitizenWeb.BillLiveTest do
           classification: "amendment",
           result: "Amendment Rejected",
           passed: false,
+          voted_on: ~D[2026-01-19],
           voted_at: ~U[2026-01-19 17:00:00Z],
           bill_external_id: "119-s-5",
           description: "To limit price increases for tickets.",

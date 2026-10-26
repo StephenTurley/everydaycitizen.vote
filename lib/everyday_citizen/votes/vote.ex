@@ -24,6 +24,8 @@ defmodule EverydayCitizen.Votes.Vote do
     field :classification, :string, default: "other"
     field :result, :string
     field :passed, :boolean
+    # the legislature's date of the vote; its time only when the source gives one
+    field :voted_on, :date
     field :voted_at, :utc_datetime_usec
     field :yea_count, :integer, default: 0
     field :nay_count, :integer, default: 0
@@ -53,6 +55,7 @@ defmodule EverydayCitizen.Votes.Vote do
       :classification,
       :result,
       :passed,
+      :voted_on,
       :voted_at,
       :yea_count,
       :nay_count,
@@ -60,7 +63,12 @@ defmodule EverydayCitizen.Votes.Vote do
       :absent_count,
       :source_id
     ])
-    |> validate_required([:body_id, :session_id, :external_id, :voted_at, :source_id])
+    |> validate_required([:body_id, :session_id, :external_id, :voted_on, :source_id])
     |> validate_inclusion(:classification, @classifications)
   end
+
+  @doc "Sorts votes by date, then time (votes with no time first on their day)."
+  @spec order_key(t()) :: {integer(), integer()}
+  def order_key(%__MODULE__{voted_on: date, voted_at: at}),
+    do: {Date.to_gregorian_days(date), if(at, do: DateTime.to_unix(at, :microsecond), else: -1)}
 end

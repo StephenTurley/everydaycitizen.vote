@@ -2,6 +2,8 @@ defmodule EverydayCitizen.Calendar.Event do
   @moduledoc """
   A calendar item. `status` is the raw source status (cancelled events keep their row);
   `unresolved_bill_labels` holds bill references that could not be linked to a bill.
+  `date` is the legislature's own date; `start_at` is set only when the source
+  gives a clock time (nil means all day, or no time given).
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -16,8 +18,8 @@ defmodule EverydayCitizen.Calendar.Event do
     field :raw_classification, :string
     field :status, :string, default: "scheduled"
     field :title, :string
+    field :date, :date
     field :start_at, :utc_datetime_usec
-    field :all_day, :boolean, default: false
     field :location, :string
     field :unresolved_bill_labels, {:array, :string}, default: []
     belongs_to :jurisdiction, EverydayCitizen.Legislature.Jurisdiction
@@ -37,8 +39,8 @@ defmodule EverydayCitizen.Calendar.Event do
       :raw_classification,
       :status,
       :title,
+      :date,
       :start_at,
-      :all_day,
       :location,
       :unresolved_bill_labels,
       :source_id
@@ -48,7 +50,7 @@ defmodule EverydayCitizen.Calendar.Event do
       :external_id,
       :classification,
       :status,
-      :start_at,
+      :date,
       :source_id
     ])
     |> validate_inclusion(:classification, @classifications)

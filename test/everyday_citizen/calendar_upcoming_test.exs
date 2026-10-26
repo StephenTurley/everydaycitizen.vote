@@ -6,7 +6,7 @@ defmodule EverydayCitizen.CalendarUpcomingTest do
   alias EverydayCitizen.Ingest.Records
 
   @src Records.SourceRef.new("https://x.test/up", "u")
-  @now ~U[2026-10-25 12:00:00Z]
+  @today ~D[2026-10-25]
 
   defp event!(id, classification, at, bills) do
     {:ok, _} =
@@ -17,6 +17,7 @@ defmodule EverydayCitizen.CalendarUpcomingTest do
           external_id: id,
           classification: classification,
           title: "Event #{id}",
+          date: DateTime.to_date(at),
           start_at: at,
           bill_external_ids: bills,
           raw_bill_labels: [],
@@ -38,7 +39,7 @@ defmodule EverydayCitizen.CalendarUpcomingTest do
     event!("later", "floor", ~U[2026-10-29 14:00:00Z], ["119-s-5"])
     event!("soon", "floor", ~U[2026-10-27 14:00:00Z], ["119-s-5"])
 
-    %{items: items, next: next} = Calendar.upcoming_floor(5, @now)
+    %{items: items, next: next} = Calendar.upcoming_floor(5, @today)
     assert Enum.map(items, & &1.external_id) == ["soon", "later"]
 
     assert [%{body: %{name: "Senate"}, event_bills: [%{bill: %{external_id: "119-s-5"}}]} | _] =
@@ -46,11 +47,11 @@ defmodule EverydayCitizen.CalendarUpcomingTest do
 
     assert next.external_id == "bare"
 
-    assert %{items: [%{external_id: "soon"}]} = Calendar.upcoming_floor(1, @now)
+    assert %{items: [%{external_id: "soon"}]} = Calendar.upcoming_floor(1, @today)
   end
 
   test "nothing upcoming: no items and no next" do
     event!("past", "floor", ~U[2026-10-24 14:00:00Z], ["119-s-5"])
-    assert Calendar.upcoming_floor(5, @now) == %{items: [], next: nil}
+    assert Calendar.upcoming_floor(5, @today) == %{items: [], next: nil}
   end
 end

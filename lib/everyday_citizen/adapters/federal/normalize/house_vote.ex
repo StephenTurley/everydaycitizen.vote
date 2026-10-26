@@ -55,6 +55,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.HouseVote do
       classification: VoteClassifier.classify(detail["voteQuestion"]),
       result: detail["result"],
       passed: VoteSupport.passed(detail["result"]),
+      voted_on: detail["startDate"] |> parse_datetime() |> VoteSupport.eastern_date(),
       voted_at: parse_datetime(detail["startDate"]),
       bill_external_id: bill_id(detail, congress),
       counts: counts(detail["votePartyTotal"] || []),

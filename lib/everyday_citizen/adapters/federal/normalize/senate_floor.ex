@@ -42,8 +42,8 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.SenateFloor do
         classification: "floor",
         raw_classification: "record-next-meeting",
         title: if(program == "", do: nil, else: program),
-        start_at: VoteSupport.eastern_to_utc(NaiveDateTime.new!(date, clock || ~T[00:00:00])),
-        all_day: is_nil(clock),
+        date: date,
+        start_at: clock && VoteSupport.eastern_to_utc(NaiveDateTime.new!(date, clock)),
         bill_external_ids: BillId.scan(program, congress),
         source: source
       }

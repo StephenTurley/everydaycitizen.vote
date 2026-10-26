@@ -4,7 +4,7 @@ defmodule EverydayCitizen.Activity do
   and those bills' progress (reported, scheduled, passed a chamber, enrolled,
   signed) and becoming law. One `union_all` query per page; on a tie in date,
   became-law comes before progress, then introductions, then votes. Vote dates
-  are the day in America/New_York. Cosponsored bills are counted, not listed.
+  are the legislature's own dates. Cosponsored bills are counted, not listed.
   """
   import Ecto.Query
 
@@ -75,9 +75,7 @@ defmodule EverydayCitizen.Activity do
         kind: "vote",
         rank: 1,
         ref_id: v.id,
-        # voted_at holds UTC without a zone: mark it UTC, then take the Eastern date
-        date:
-          fragment("((? AT TIME ZONE 'UTC') AT TIME ZONE 'America/New_York')::date", v.voted_at),
+        date: v.voted_on,
         bill_id: v.bill_id,
         option: p.option
       }

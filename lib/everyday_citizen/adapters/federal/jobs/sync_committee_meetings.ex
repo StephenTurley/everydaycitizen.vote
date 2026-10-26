@@ -11,7 +11,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeetings do
   """
   use Oban.Worker, queue: :ingest, max_attempts: 3
 
-  alias EverydayCitizen.Adapters.Federal.{CongressGov, Job, Prerequisites}
+  alias EverydayCitizen.Adapters.Federal.{CongressGov, Job, Prerequisites, VoteSupport}
   alias EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeeting
   alias EverydayCitizen.Calendar
 
@@ -62,10 +62,10 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeetings do
   end
 
   defp upcoming(congress) do
-    now = DateTime.utc_now()
+    today = VoteSupport.eastern_date(DateTime.utc_now())
 
-    now
-    |> Calendar.source_urls(DateTime.add(now, @upcoming_days * 86_400))
+    today
+    |> Calendar.source_urls(Date.add(today, @upcoming_days))
     |> Enum.flat_map(fn url ->
       case Regex.run(~r{/committee-meeting/#{congress}/(house|senate)/(\d+)}, url) do
         [_, chamber, event_id] -> [{chamber, event_id}]

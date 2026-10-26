@@ -15,6 +15,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.ReclassifyVotesTest do
             key: "federal",
             name: "F",
             classification: "federal",
+            time_zone: "America/New_York",
             source: src
           },
           %Records.LegislativeSession{jurisdiction: "federal", identifier: "119", source: src},
@@ -31,6 +32,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.ReclassifyVotesTest do
             session_identifier: "119",
             external_id: "senate-119-1-1",
             question: "On the Cloture Motion",
+            voted_on: ~D[2025-01-09],
             voted_at: ~U[2025-01-09 05:00:00Z],
             counts: %{yea: 1, nay: 0, present: 0, absent: 0},
             positions: [],
