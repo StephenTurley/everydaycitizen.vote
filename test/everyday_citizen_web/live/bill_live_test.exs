@@ -554,6 +554,8 @@ defmodule EverydayCitizenWeb.BillLiveTest do
       assert has_element?(view, "#bill-summary-full:not([open])", "Who this affects")
       assert has_element?(view, "#bill-summary", "Written by AI from the bill")
       assert html =~ ~r/If this becomes law.*Text of the bill/s
+      # every card looks the same: the order alone ranks them
+      refute has_element?(view, "#bill-summary .border-floor-accent")
     end
 
     test "tags and unrelated subjects show with the story", %{conn: conn, bill: bill} do

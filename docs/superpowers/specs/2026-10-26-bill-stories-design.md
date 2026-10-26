@@ -276,3 +276,9 @@ are stored and shown. The written summary is cached before the check, so a
 check that cannot run (budget spent, an error) is retried later without paying
 for the summary again. Both calls count against the daily budget; a bill
 summary now costs about 6 to 8 cents.
+
+## Revision 3, 2026-10-26: no card is set apart
+
+The first story card's accent border is dropped (owner): it read as unexplained
+emphasis, and "biggest" is the model's ranking, which the page should not seem
+to endorse. All cards look the same; their order alone ranks them.
