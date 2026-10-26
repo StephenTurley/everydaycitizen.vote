@@ -188,8 +188,8 @@ defmodule EverydayCitizenWeb.HomeLive do
     ~H"""
     <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>
       <h1 class="sr-only">New laws and your representatives</h1>
-      <%!-- Phones, one column: your reps (when known), new laws, coming up,
-           then the finder (when not). Large screens: new laws in a 640px column,
+      <%!-- Phones, one column: your reps when known, else the finder, then new
+           laws and coming up. Large screens: new laws in a 640px column,
            a sticky sidebar with your reps or the finder, then coming up. --%>
       <div class="flex flex-col gap-7 pt-5 pb-8 lg:grid lg:grid-cols-[minmax(0,640px)_320px] lg:justify-center lg:gap-x-12 lg:pt-8 lg:items-start">
         <aside class="contents lg:flex lg:flex-col lg:gap-6 lg:sticky lg:top-4 lg:col-start-2 lg:row-start-1">
@@ -212,7 +212,7 @@ defmodule EverydayCitizenWeb.HomeLive do
             </.link>
           </.card>
 
-          <.card :if={!@district} id="finder" class="order-4 lg:order-1 flex flex-col gap-2">
+          <.card :if={!@district} id="finder" class="order-1 lg:order-1 flex flex-col gap-2">
             <.finder step={@step} zip={@zip} split={@split} error={@error} value={@value} />
           </.card>
 
