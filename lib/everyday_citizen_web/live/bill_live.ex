@@ -10,14 +10,20 @@ defmodule EverydayCitizenWeb.BillLive do
   section is opened. Each is shown from the cache or written by a job and
   pushed here over PubSub. "Expand all" shows cached section summaries only, so
   it never sets off a whole bill's worth.
+
+  This module holds the page's state: the version and open section from the
+  URL, the text's history, the summaries and the votes' positions once opened.
+  What it shows is in `BillPageComponents` (header, where it stands, reps,
+  votes, the AI story, the official summary) and `BillTextComponents` (the
+  text by section).
   """
   use EverydayCitizenWeb, :live_view
 
   alias EverydayCitizen.{BillHistory, BillPage, Follows, Reps, Summaries}
-  alias EverydayCitizen.Summaries.{Claude, Inputs, Story}
+  alias EverydayCitizen.Summaries.{Claude, Inputs}
   alias EverydayCitizenWeb.AiSummary
 
-  import EverydayCitizenWeb.BillTextComponents
+  import EverydayCitizenWeb.{BillPageComponents, BillTextComponents}
 
   @impl true
   def mount(%{"id" => id}, session, socket) do
@@ -144,46 +150,13 @@ defmodule EverydayCitizenWeb.BillLive do
             index: open,
             origin: origin,
             steps: steps,
-            involvement: involvement(change_steps(origin, steps), page.reps),
+            involvement: BillHistory.rep_involvement(origin, steps, page.reps),
             comparison: BillHistory.comparison(page.bill, socket.assigns.origins_code, open, rows)
           }
         )
 
       _ ->
         socket
-    end
-  end
-
-  # the steps that changed a section (not the version it started in, unless added there)
-  defp change_steps(%{status: status, added_in: added_in, changed_in: changed}, steps) do
-    codes = if(status == :added, do: [added_in], else: []) ++ changed
-    Enum.filter(steps, &(&1.code in codes))
-  end
-
-  # each rep's votes and committees across the steps, and whether their chamber
-  # voted in them at all
-  defp involvement(_steps, []), do: []
-
-  defp involvement(steps, reps) do
-    people = Enum.map(reps, & &1.person)
-    per_step = Enum.map(steps, &BillHistory.involvement(&1, people))
-
-    chambers =
-      for step <- steps,
-          vote <- step.votes ++ Enum.map(step.related_votes, & &1.vote),
-          into: MapSet.new(),
-          do: vote.body_id
-
-    for {rep, i} <- Enum.with_index(reps) do
-      parts = Enum.map(per_step, &Enum.at(&1, i))
-
-      %{
-        person: rep.person,
-        body: rep.body,
-        chamber_voted: MapSet.member?(chambers, rep.body.id),
-        votes: parts |> Enum.flat_map(& &1.votes) |> Enum.uniq_by(fn {v, _} -> v.id end),
-        committees: parts |> Enum.flat_map(& &1.committees) |> Enum.uniq_by(& &1.id)
-      }
     end
   end
 
@@ -290,134 +263,21 @@ defmodule EverydayCitizenWeb.BillLive do
      push_patch(socket, to: ~p"/bills/#{socket.assigns.page.bill.external_id}?#{[version: code]}")}
   end
 
-  defp step_when(%{state: :current}), do: "Now"
-  defp step_when(%{skipped: true}), do: "Skipped"
-  defp step_when(%{date: %Date{} = d}), do: date(d)
-  defp step_when(_step), do: "—"
-
-  defp date(d), do: short_date(d)
-
-  defp vote_date(vote), do: date(vote.voted_on)
-
-  defp option_label("yea"), do: "Yea"
-  defp option_label("nay"), do: "Nay"
-  defp option_label("present"), do: "Present"
-  defp option_label("absent"), do: "Not voting"
-
-  attr :person, :map, required: true
-  attr :class, :string, default: nil
-
-  defp person_link(assigns) do
-    ~H"""
-    <.link navigate={~p"/people/#{@person.id}"} class={["text-floor-accent hover:underline", @class]}>
-      {@person.name}
-    </.link>
-    """
-  end
-
-  defp cosponsors(1), do: "1 cosponsor"
-  defp cosponsors(n), do: "#{n} cosponsors"
-
-  # The summary is of the newest version with text; beside another version it
-  # names the one it was written from rather than pointing at the text below.
-  defp bill_summary_source(subject, version, versions) do
-    [_, _, code] = String.split(subject, ":", parts: 3)
-    summarized = Enum.find(versions, &(&1.code == code))
-
-    cond do
-      version && version.code == code -> "the bill's text below"
-      summarized -> "the “#{summarized.classification || code}” version of this bill"
-      true -> "another version of this bill"
-    end
-  end
-
-  # The summary's subjects that later versions added, from the text's history
-  # (only beside the version the summary was written from)
-  defp added_parts(%{bill_summary: {subject, {:ok, text}}, version: %{code: code}} = assigns) do
-    if String.ends_with?(subject, ":" <> code) do
-      text
-      |> Story.split()
-      |> Map.fetch!(:subjects)
-      |> BillHistory.added_subjects(Enum.map(assigns.sections, &elem(&1, 0)), assigns.origins)
-      |> Enum.map(fn %{name: name, added_in: added_in} ->
-        %{
-          name: name,
-          href: ~p"/bills/#{assigns.page.bill.external_id}?version=#{added_in}",
-          date: full_date(assigns.version_dates[added_in])
-        }
-      end)
-    else
-      []
-    end
-  end
-
-  defp added_parts(_assigns), do: []
-
-  defp full_date(nil), do: "a later date"
-  defp full_date(d), do: Calendar.strftime(d, "%b %-d, %Y")
-
-  defp rep_note(%{state: :sponsor}), do: "Sponsor of this bill"
-  defp rep_note(%{state: :cosponsor}), do: "Cosponsor of this bill"
-  defp rep_note(%{state: :no_vote, body: body}), do: "The #{body.name} hasn't voted"
-
-  defp rep_note(%{state: :unrecorded, body: body, passed_on: date}),
-    do: "The #{body.name} passed it without a recorded vote, #{date(date)}"
-
-  defp rep_note(%{vote: vote}) when not is_nil(vote), do: "#{vote.question}, #{vote_date(vote)}"
-  defp rep_note(_), do: nil
-
   @impl true
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} width={:full} current_scope={@current_scope}>
       <%!-- From lg the band's white runs edge to edge (the ::before), past the
            1280px column --%>
-      <section class="relative z-0 -mx-5 px-5 lg:-mx-10 lg:px-10 pt-4 pb-5 lg:pt-5 lg:pb-7 bg-floor-card border-b border-floor-line lg:bg-transparent lg:border-b-0 lg:before:absolute lg:before:inset-y-0 lg:before:left-1/2 lg:before:w-screen lg:before:-translate-x-1/2 lg:before:-z-10 lg:before:bg-floor-card lg:before:border-b lg:before:border-floor-line flex flex-col gap-2.5">
-        <.link
-          :if={@district}
-          navigate={~p"/reps/#{@district}"}
-          class="self-start text-[14px] font-medium text-floor-accent py-1"
-        >
-          ‹ Back to your reps
-        </.link>
-        <.eyebrow>{@page.bill.identifier}</.eyebrow>
-        <h1 class="m-0 text-[26px] lg:text-[34px] lg:max-w-[920px] leading-tight font-bold tracking-tight">
-          {@page.bill.title}
-        </h1>
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div
-            :if={@page.sponsor}
-            class="flex flex-col gap-1 text-[14px] lg:text-[15px] text-floor-muted"
-          >
-            <p class="m-0">
-              Sponsor: <.person_link person={@page.sponsor} />
-              <span :if={@page.cosponsors == []}>· {cosponsors(@page.cosponsor_count)}</span>
-            </p>
-            <details
-              :if={@page.cosponsors != []}
-              id="cosponsors"
-              class="group"
-              phx-mounted={JS.ignore_attributes(["open"])}
-            >
-              <summary class="list-none cursor-pointer py-1 text-floor-accent font-medium [&::-webkit-details-marker]:hidden">
-                <.disclosure_mark />{cosponsors(@page.cosponsor_count)}
-              </summary>
-              <ul class="m-0 mt-1 p-0 list-none flex flex-col gap-1">
-                <li :for={person <- @page.cosponsors}>
-                  <.person_link person={person} />
-                </li>
-              </ul>
-            </details>
-          </div>
-          <.follow_button
-            id="follow-bill"
-            label="Follow this bill"
-            signed_in={!!(@current_scope && @current_scope.user)}
-            following={@following}
-            return_to={~p"/bills/#{@page.bill.external_id}"}
-          />
-        </div>
-      </section>
+      <.bill_header
+        bill={@page.bill}
+        sponsor={@page.sponsor}
+        cosponsors={@page.cosponsors}
+        cosponsor_count={@page.cosponsor_count}
+        district={@district}
+        signed_in={!!(@current_scope && @current_scope.user)}
+        following={@following}
+      />
 
       <%!-- Phones: one column in the order below (`order-*`; the two wrappers are
            `contents`). lg: text and summary | sidebar. xl: contents | text | sidebar. --%>
@@ -431,136 +291,11 @@ defmodule EverydayCitizenWeb.BillLive do
         />
 
         <aside class="contents lg:flex lg:flex-col lg:gap-4 lg:col-start-2 xl:col-start-3 lg:row-start-1 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
-          <section
-            aria-label="Where it stands"
-            class="order-1 py-5 lg:p-[18px] lg:bg-floor-card lg:border lg:border-floor-line lg:rounded-xl flex flex-col gap-3.5 lg:gap-3"
-          >
-            <h2 class="m-0 text-[18px] lg:text-[17px] font-bold">Where it stands</h2>
-            <ol
-              class="m-0 p-0 list-none grid gap-1 lg:hidden"
-              style={"grid-template-columns: repeat(#{length(@page.steps)}, minmax(0, 1fr))"}
-            >
-              <li
-                :for={step <- @page.steps}
-                aria-current={if step.state == :current, do: "step"}
-                class="flex flex-col gap-1.5"
-              >
-                <span class={[
-                  "h-1.5 rounded-sm",
-                  step.state == :done && "bg-floor-accent",
-                  step.state == :current && "bg-floor-card border-2 border-floor-accent box-border",
-                  step.state == :todo && "bg-floor-line"
-                ]} />
-                <span class={[
-                  "text-[12px] leading-tight [overflow-wrap:anywhere] hyphens-auto",
-                  if(step.state == :todo, do: "font-semibold text-floor-muted", else: "font-semibold")
-                ]}>
-                  {step.label}
-                </span>
-                <span class="text-[12px] text-floor-muted">{step_when(step)}</span>
-              </li>
-            </ol>
-            <ol class="hidden lg:flex m-0 p-0 list-none flex-col gap-2.5">
-              <li
-                :for={step <- @page.steps}
-                aria-current={if step.state == :current, do: "step"}
-                class="flex items-center gap-2.5"
-              >
-                <span
-                  aria-hidden="true"
-                  class={[
-                    "size-3 rounded-full flex-none box-border",
-                    step.state == :done && !step.skipped && "bg-floor-accent",
-                    step.skipped && "bg-floor-card border-2 border-dashed border-[#8a9099]",
-                    step.state == :current && "bg-floor-card border-[3px] border-floor-accent",
-                    step.state == :todo && "bg-floor-line"
-                  ]}
-                />
-                <span class={[
-                  "flex-1 text-[14px]",
-                  step.state == :current && "font-bold",
-                  step.state == :todo && "font-semibold text-floor-muted",
-                  step.state == :done && "font-semibold"
-                ]}>
-                  {step.label}
-                </span>
-                <span class={[
-                  "text-[13px]",
-                  if(step.state == :current,
-                    do: "font-semibold text-floor-ink",
-                    else: "text-floor-muted"
-                  )
-                ]}>
-                  {step_when(step)}
-                </span>
-              </li>
-            </ol>
-            <p :if={@page.latest_action} class="m-0 text-[15px] lg:text-[14px] leading-relaxed">
-              {@page.latest_action.description}{if @page.latest_action.date,
-                do: " (#{date(@page.latest_action.date)})"}
-            </p>
-          </section>
+          <.where_it_stands steps={@page.steps} latest_action={@page.latest_action} />
 
-          <section
-            :if={@page.reps != []}
-            aria-label="Your reps on this bill"
-            class="order-2 pb-5 lg:pb-0"
-          >
-            <.card class="flex flex-col gap-3">
-              <h2 class="m-0 text-[18px] lg:text-[17px] font-bold">Your reps on this bill</h2>
-              <div :for={rep <- @page.reps} class="flex items-center justify-between gap-2">
-                <div class="flex flex-col gap-0.5">
-                  <span class="text-[15px] lg:text-[14px] font-semibold"><.person_link person={
-                    rep.person
-                  } /></span>
-                  <span :if={note = rep_note(rep)} class="text-[13px] text-floor-muted">{note}</span>
-                </div>
-                <.vote_chip option={rep.state} />
-              </div>
-            </.card>
-          </section>
+          <.reps_on_bill :if={@page.reps != []} reps={@page.reps} />
 
-          <section aria-label="Votes on this bill" class="order-6 pb-5 lg:pb-0 flex flex-col gap-2.5">
-            <h2 class="m-0 text-[18px] lg:text-[17px] font-bold">Votes</h2>
-            <p :if={@page.votes == []} class="m-0 text-[15px] text-floor-muted">
-              No roll-call votes yet.
-            </p>
-            <.card :for={vote <- @page.votes} class="!p-3.5 flex flex-col gap-0.5">
-              <span class="text-[15px] lg:text-[14px] font-semibold">{vote.question} · {vote.result}, {vote.yea_count}–{vote.nay_count}</span>
-              <.vote_subject vote={vote} />
-              <span class="text-[13px] text-floor-muted">{vote.body.name} · {vote.identifier} · {vote_date(
-                vote
-              )}</span>
-              <.term_note id={"term-#{vote.id}"} question={vote.question} />
-              <details
-                id={"vote-positions-#{vote.id}"}
-                class="group mt-1.5"
-                phx-mounted={JS.ignore_attributes(["open"])}
-              >
-                <summary
-                  phx-click="positions"
-                  phx-value-vote={vote.id}
-                  class="list-none cursor-pointer py-1 text-[13px] font-semibold text-floor-accent [&::-webkit-details-marker]:hidden"
-                >
-                  <.disclosure_mark />Who voted how
-                </summary>
-                <div
-                  :for={{option, people} <- Map.get(@positions, vote.id, [])}
-                  class="mt-2 flex flex-col gap-1"
-                >
-                  <span class="text-[12px] font-semibold uppercase tracking-wide text-floor-muted">
-                    {option_label(option)} · {length(people)}
-                  </span>
-                  <ul
-                    id={"vote-positions-list-#{vote.id}-#{option}"}
-                    class="m-0 p-0 list-none columns-2 gap-4 text-[14px]"
-                  >
-                    <li :for={person <- people}><.person_link person={person} /></li>
-                  </ul>
-                </div>
-              </details>
-            </.card>
-          </section>
+          <.bill_votes votes={@page.votes} positions={@positions} />
 
           <footer class="order-7 pb-4 flex flex-col gap-2">
             <a
@@ -572,50 +307,19 @@ defmodule EverydayCitizenWeb.BillLive do
         </aside>
 
         <div class="contents lg:flex lg:flex-col lg:gap-6 lg:col-start-1 xl:col-start-2 lg:row-start-1 lg:min-w-0">
-          <section
+          <.bill_story_section
             :if={match?({_, _}, @bill_summary)}
-            aria-label="If this becomes law"
-            class="order-3 lg:order-1 pb-5 lg:pb-0"
-          >
-            <.bill_story
-              id="bill-summary"
-              class="bg-floor-card border border-floor-line"
-              title="In plain English: what this bill does"
-              source={bill_summary_source(elem(@bill_summary, 0), @version, @page.versions)}
-              state={elem(@bill_summary, 1)}
-              prompt_url={AiSummary.prompt_url(:bill)}
-              report={AiSummary.report(assigns, :bill, elem(@bill_summary, 0))}
-              added={added_parts(assigns)}
-            />
-          </section>
+            summary={@bill_summary}
+            bill={@page.bill}
+            version={@version}
+            versions={@page.versions}
+            sections={@sections}
+            origins={@origins}
+            version_dates={@version_dates}
+            report={AiSummary.report(assigns, :bill, elem(@bill_summary, 0))}
+          />
 
-          <section aria-label="Official summary" class="order-4 lg:order-3 pb-5 flex flex-col gap-2.5">
-            <%= if @page.summary do %>
-              <%!-- folded by default: the plain-English summary above comes first --%>
-              <details
-                id="official-summary"
-                class="group flex flex-col gap-2.5"
-                phx-mounted={JS.ignore_attributes(["open"])}
-              >
-                <summary class="list-none cursor-pointer flex items-center justify-between gap-3 py-1">
-                  <span class="flex flex-col gap-0.5">
-                    <h2 class="m-0 text-[18px] lg:text-[22px] font-bold">Official summary</h2>
-                    <span class="text-[13px] text-floor-muted">
-                      Written by the {@page.summary.author}.
-                    </span>
-                  </span>
-                  <span aria-hidden="true" class="text-floor-muted group-open:hidden">+</span>
-                  <span aria-hidden="true" class="text-floor-muted hidden group-open:inline">−</span>
-                </summary>
-                <.card class="mt-2.5 text-[15px] leading-relaxed text-floor-ink-2 [&_p]:m-0 [&_p+p]:mt-2 [&_ul]:list-disc [&_ul]:pl-5">
-                  {Phoenix.HTML.raw(@page.summary.html)}
-                </.card>
-              </details>
-            <% else %>
-              <h2 class="m-0 text-[18px] lg:text-[22px] font-bold">Official summary</h2>
-              <p class="m-0 text-[15px] text-floor-muted">No official summary yet.</p>
-            <% end %>
-          </section>
+          <.official_summary summary={@page.summary} />
 
           <.bill_text
             bill={@page.bill}
