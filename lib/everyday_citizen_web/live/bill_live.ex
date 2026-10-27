@@ -108,10 +108,16 @@ defmodule EverydayCitizenWeb.BillLive do
   # Where each section of the version came from (worked out again only when the
   # version changes); for an opened section that changed or was added, the
   # steps that touched it and the reps' part. All versions' sections are read
-  # at most once per request, and not at all for an unchanged section.
+  # at most once per request, and not at all for an unchanged section. Only
+  # once the page is live: it reads every version's text, too much to do twice
+  # per visit, or for a crawler (which never connects).
   defp load_history(socket) do
-    {socket, rows} = assign_origins(socket)
-    assign_opened(assign(socket, history: nil, history_rows: nil), rows)
+    if connected?(socket) do
+      {socket, rows} = assign_origins(socket)
+      assign_opened(assign(socket, history: nil, history_rows: nil), rows)
+    else
+      assign(socket, history: nil, history_rows: nil)
+    end
   end
 
   # origins for the version, kept while the version stays the same; returns the

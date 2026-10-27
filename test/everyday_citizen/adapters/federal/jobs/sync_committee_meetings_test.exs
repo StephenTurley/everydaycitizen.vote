@@ -155,7 +155,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeetingsTest do
       jurisdiction: "federal",
       external_id: "meeting-#{id}",
       classification: "hearing",
-      date: DateTime.to_date(start_at),
+      date: start_at |> DateTime.shift_zone!("America/New_York") |> DateTime.to_date(),
       start_at: start_at,
       source:
         Records.SourceRef.new(

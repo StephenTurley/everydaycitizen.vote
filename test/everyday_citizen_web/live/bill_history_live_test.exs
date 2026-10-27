@@ -120,6 +120,18 @@ defmodule EverydayCitizenWeb.BillHistoryLiveTest do
     assert has_element?(view, "#section-2", "Added Jul 22")
   end
 
+  # working out each section's history reads every version's text, so the first
+  # render (all a crawler gets) leaves it to the live page
+  test "the first render has no history; the live page adds it", %{conn: conn} do
+    html = conn |> get(~p"/bills/119-s-5?version=eh&section=2") |> html_response(200)
+    assert html =~ "Text of the bill"
+    refute html =~ "Since introduced"
+    refute html =~ "Added Jul 22"
+
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=eh&section=2")
+    assert has_element?(view, "#section-2", "Added Jul 22")
+  end
+
   test "an added section shows the step that added it, the rule's vote and your reps' part", %{
     conn: conn
   } do
