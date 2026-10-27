@@ -68,7 +68,7 @@ defmodule EverydayCitizenWeb.PageViewsTest do
 
   test "a turned-away AI crawler is counted as blocked, not as a view", %{conn: conn} do
     conn |> put_req_header("user-agent", @gptbot) |> get(~p"/bills/119-s-5")
-    assert_received {[:everyday_citizen, :crawler_blocked], %{}}
+    assert_received {[:everyday_citizen, :crawler_blocked], %{agent: "GPTBot"}}
     assert views() == []
   end
 end
