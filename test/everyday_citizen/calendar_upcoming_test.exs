@@ -17,7 +17,7 @@ defmodule EverydayCitizen.CalendarUpcomingTest do
           external_id: id,
           classification: classification,
           title: "Event #{id}",
-          date: DateTime.to_date(at),
+          date: at |> DateTime.shift_zone!("America/New_York") |> DateTime.to_date(),
           start_at: at,
           bill_external_ids: bills,
           raw_bill_labels: [],
