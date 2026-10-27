@@ -25,10 +25,35 @@ defmodule EverydayCitizen.Jobs.ComputeOriginsTest do
     assert %{2 => %{status: :added, added_in: "eh", changed_in: []}} = stored(bill, "eh")
   end
 
-  test "a bill with one version stores nothing to compare", %{bill: bill} do
+  test "a bill with one version is left alone: there is nothing to compare", %{bill: bill} do
     Repo.delete_all(from v in BillVersion, where: v.bill_id == ^bill.id and v.code != "ih")
+    Repo.update_all(from(v in BillVersion, where: v.bill_id == ^bill.id), set: [origins: nil])
     assert :ok = perform_job(ComputeOrigins, %{"bill_id" => bill.id})
-    assert stored(bill, "ih") == %{}
+    assert Repo.one(from v in BillVersion, where: v.bill_id == ^bill.id, select: v.origins) == nil
+  end
+
+  test "origins stored by an older way of working them out count as not worked out", %{
+    bill: bill
+  } do
+    :ok = perform_job(ComputeOrigins, %{"bill_id" => bill.id})
+    v = EverydayCitizen.Legislation.get_version(bill, "eh")
+    assert BillHistory.stored_origins(v)
+    assert BillHistory.stored_origins(%{v | origins: Map.put(v.origins, "v", 0)}) == nil
+    assert BillHistory.stored_origins(%{origins: %{"0" => %{"status" => "added"}}}) == nil
+
+    Repo.update_all(from(x in BillVersion, where: x.id == ^v.id),
+      set: [origins: Map.put(v.origins, "v", 0)]
+    )
+
+    Repo.delete_all(Oban.Job)
+    assert %{queued: 1} = ComputeOrigins.fill()
+  end
+
+  test "a status this code doesn't know counts as not worked out", %{bill: bill} do
+    :ok = perform_job(ComputeOrigins, %{"bill_id" => bill.id})
+    v = EverydayCitizen.Legislation.get_version(bill, "eh")
+    odd = put_in(v.origins, ["sections", "0", "status"], "moved")
+    assert BillHistory.stored_origins(%{v | origins: odd}) == nil
   end
 
   test "running it again changes nothing", %{bill: bill} do
@@ -43,24 +68,18 @@ defmodule EverydayCitizen.Jobs.ComputeOriginsTest do
   end
 
   describe "fill/0" do
-    test "a bill with several versions is queued once", %{bill: bill} do
+    test "a bill with several versions is queued once; one-version bills aren't touched", %{
+      bill: bill
+    } do
       Repo.update_all(BillVersion, set: [origins: nil])
       Repo.delete_all(Oban.Job)
 
-      assert %{one_version: _, queued: 1} = ComputeOrigins.fill()
+      assert %{queued: 1} = ComputeOrigins.fill()
       assert [%{args: %{"bill_id" => id}}] = all_enqueued(worker: ComputeOrigins)
       assert id == bill.id
 
       # run again with the job still waiting: nothing new
       assert %{queued: 0} = ComputeOrigins.fill()
-    end
-
-    test "a bill with one version stores %{} directly", %{bill: bill} do
-      Repo.delete_all(from v in BillVersion, where: v.bill_id == ^bill.id and v.code != "ih")
-      Repo.update_all(BillVersion, set: [origins: nil])
-
-      assert %{one_version: 1, queued: 0} = ComputeOrigins.fill()
-      assert stored(bill, "ih") == %{}
     end
   end
 end

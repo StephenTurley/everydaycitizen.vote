@@ -136,7 +136,10 @@ defmodule EverydayCitizenWeb.BillHistoryLiveTest do
   end
 
   test "the tags come from the origins stored on the version", %{conn: conn, bill: bill} do
-    stored = %{"0" => %{"status" => "added", "added_in" => "rh", "changed_in" => []}}
+    stored =
+      EverydayCitizen.BillHistory.encode_origins(%{
+        0 => %{status: :added, added_in: "rh", changed_in: []}
+      })
 
     Repo.update_all(
       from(v in EverydayCitizen.Legislation.BillVersion,
@@ -173,6 +176,28 @@ defmodule EverydayCitizenWeb.BillHistoryLiveTest do
     queries = collect_sections_queries([])
     assert queries != []
     assert Enum.all?(queries, &(&1 =~ ~r/"code" = \$2/)), Enum.join(queries, "\n")
+  end
+
+  test "opening a changed section reads every version's sections once", %{conn: conn} do
+    test = self()
+    id = "all-sections-#{inspect(test)}"
+
+    :telemetry.attach(
+      id,
+      [:everyday_citizen, :repo, :query],
+      fn _event, _measures, %{query: sql}, _config ->
+        if test in [self() | Process.get(:"$callers", [])] and sql =~ ~r/SELECT[^F]*"sections"/ and
+             not (sql =~ ~r/"code" = \$2/),
+           do: send(test, {:sections_query, sql})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(id) end)
+
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=eh&section=1")
+    assert has_element?(view, "#origin-1")
+    assert [_] = collect_sections_queries([])
   end
 
   defp collect_sections_queries(acc) do

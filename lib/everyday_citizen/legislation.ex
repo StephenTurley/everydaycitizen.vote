@@ -143,8 +143,10 @@ defmodule EverydayCitizen.Legislation do
   def put_origins(bill_id, by_code) do
     Repo.transact(fn ->
       for {code, origins} <- by_code do
+        # unchanged origins aren't rewritten
         BillVersion
         |> where([v], v.bill_id == ^bill_id and v.code == ^code)
+        |> where([v], fragment("? IS DISTINCT FROM ?", v.origins, type(^origins, :map)))
         |> Repo.update_all(set: [origins: origins])
       end
 

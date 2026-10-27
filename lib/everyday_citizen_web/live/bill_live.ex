@@ -158,8 +158,16 @@ defmodule EverydayCitizenWeb.BillLive do
   defp load_change_summary(socket) do
     AiSummary.load(socket, :change_summary, :change, fn ->
       case socket.assigns.history do
-        %{index: i} -> Inputs.change(socket.assigns.page.bill, socket.assigns.version.code, i)
-        _ -> nil
+        %{index: i} ->
+          Inputs.change(
+            socket.assigns.page.bill,
+            socket.assigns.version.code,
+            i,
+            socket.assigns.history_rows
+          )
+
+        _ ->
+          nil
       end
     end)
   end

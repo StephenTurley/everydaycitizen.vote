@@ -59,8 +59,8 @@ defmodule EverydayCitizen.Release do
       bin/everyday_citizen rpc 'EverydayCitizen.Release.compute_origins()'
   """
   def compute_origins do
-    %{one_version: one, queued: queued} = EverydayCitizen.Jobs.ComputeOrigins.fill()
-    IO.puts("origins: #{one} one-version bills filled, #{queued} bills queued")
+    %{queued: queued} = EverydayCitizen.Jobs.ComputeOrigins.fill()
+    IO.puts("origins: #{queued} bills queued")
   end
 
   @doc """
