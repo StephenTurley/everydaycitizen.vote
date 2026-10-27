@@ -37,6 +37,8 @@ defmodule EverydayCitizenWeb.BillLive do
            page: page,
            district: district,
            page_title: page.bill.identifier,
+           # the ?version= and ?section= variants are this page
+           canonical: url(~p"/bills/#{page.bill.external_id}"),
            following: Follows.following?(socket.assigns.current_scope, {:bill, page.bill.id}),
            remote_ip: EverydayCitizenWeb.RemoteIp.from_socket(socket),
            crawler: EverydayCitizenWeb.Crawler.crawler?(socket),
