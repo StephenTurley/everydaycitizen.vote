@@ -157,9 +157,16 @@ defmodule EverydayCitizen.Legislation do
   @doc "Stores a version's sections and the format they were split with."
   @spec put_sections(integer(), [map()], pos_integer()) :: :ok
   def put_sections(version_id, sections, format) do
+    stored =
+      Repo.one(from v in BillVersion, where: v.id == ^version_id, select: {v.bill_id, v.sections})
+
     BillVersion
     |> where([v], v.id == ^version_id)
     |> Repo.update_all(set: [sections: sections, sections_version: format])
+
+    # new sections change where the bill's sections came from
+    with {bill_id, old} when old != sections <- stored,
+         do: {:ok, _} = EverydayCitizen.Jobs.ComputeOrigins.enqueue(bill_id)
 
     :ok
   end
