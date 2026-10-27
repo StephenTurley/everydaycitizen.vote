@@ -35,6 +35,8 @@ defmodule EverydayCitizenWeb.AiCrawlers do
 
   def call(conn, _opts) do
     if conn |> get_req_header("user-agent") |> List.first() |> ai_crawler?() do
+      :telemetry.execute([:everyday_citizen, :crawler_blocked], %{count: 1}, %{})
+
       conn
       |> put_resp_content_type("text/plain")
       |> send_resp(403, "AI crawlers are not allowed on this site; see /robots.txt.\n")
