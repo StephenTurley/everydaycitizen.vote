@@ -43,19 +43,36 @@ defmodule EverydayCitizen.BillHistory do
   @spec origins(map(), String.t(), [map()] | nil) :: %{non_neg_integer() => origin()}
   def origins(bill, code, loaded \\ nil) do
     case lineage(loaded || rows(bill), code) do
-      {[_, _ | _] = keyed, target} ->
-        target |> Enum.with_index() |> Map.new(fn {{key, _}, i} -> {i, origin(keyed, key)} end)
-
-      _ ->
-        %{}
+      {keyed, _target} -> origins_in(keyed)
+      nil -> %{}
     end
   end
+
+  # the last version's origins, from the keyed versions up to it
+  defp origins_in([_, _ | _] = keyed) do
+    {_code, last} = List.last(keyed)
+    last.ordered |> Enum.with_index() |> Map.new(fn {{key, _}, i} -> {i, origin(keyed, key)} end)
+  end
+
+  defp origins_in(_keyed), do: %{}
 
   @doc "`origins/3` for every version of the bill, by code, from one load of its versions."
   @spec all_origins(map()) :: %{String.t() => %{non_neg_integer() => origin()}}
   def all_origins(bill) do
     rows = rows(bill)
-    Map.new(rows, &{&1.code, origins(bill, &1.code, rows)})
+    # each version with sections keyed once, not once per later version
+    keyed =
+      for row <- rows, row.sections not in [nil, []], do: {row.code, keyed(row.sections)}
+
+    Map.new(rows, &{&1.code, origins_in(up_to(keyed, &1.code))})
+  end
+
+  # the keyed versions up to `code`; [] when `code` has no sections
+  defp up_to(keyed, code) do
+    case Enum.find_index(keyed, fn {c, _} -> c == code end) do
+      nil -> []
+      i -> Enum.take(keyed, i + 1)
+    end
   end
 
   # Bump when the way origins are worked out changes (keys, normalizing,
@@ -407,7 +424,7 @@ defmodule EverydayCitizen.BillHistory do
   end
 
   defp origin([{first, _} | _] = keyed, key) do
-    present = for {code, map} <- keyed, Map.has_key?(map, key), do: {code, normalized(map[key])}
+    present = for {code, map} <- keyed, Map.has_key?(map, key), do: {code, map.normalized[key]}
     [{added_in, _} | _] = present
 
     changed_in =
