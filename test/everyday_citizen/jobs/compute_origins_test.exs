@@ -17,6 +17,7 @@ defmodule EverydayCitizen.Jobs.ComputeOriginsTest do
     do: bill |> Legislation.get_version(code) |> BillHistory.stored_origins()
 
   test "stores each version's origins, as worked out from all its versions", %{bill: bill} do
+    Repo.update_all(from(v in BillVersion, where: v.bill_id == ^bill.id), set: [origins: nil])
     assert stored(bill, "eh") == nil
     assert :ok = perform_job(ComputeOrigins, %{"bill_id" => bill.id})
 

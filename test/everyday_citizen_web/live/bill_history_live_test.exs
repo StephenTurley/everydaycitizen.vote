@@ -4,9 +4,11 @@ defmodule EverydayCitizenWeb.BillHistoryLiveTest do
 
   import Phoenix.LiveViewTest
   import EverydayCitizen.HistoryFixtures
+  import Ecto.Query
 
   alias EverydayCitizen.Ingest
   alias EverydayCitizen.Ingest.Records
+  alias EverydayCitizen.Repo
 
   @src Records.SourceRef.new("https://x.test/v", "v")
 
@@ -120,16 +122,77 @@ defmodule EverydayCitizenWeb.BillHistoryLiveTest do
     assert has_element?(view, "#section-2", "Added Jul 22")
   end
 
-  # working out each section's history reads every version's text, so the first
-  # render (all a crawler gets) leaves it to the live page
-  test "the first render has no history; the live page adds it", %{conn: conn} do
+  # an opened section's history reads every version's text, so the first render
+  # (all a crawler gets) leaves it to the live page; the stored tags show at once
+  test "the first render has the tags but no history panel; the live page adds it", %{
+    conn: conn
+  } do
     html = conn |> get(~p"/bills/119-s-5?version=eh&section=2") |> html_response(200)
-    assert html =~ "Text of the bill"
-    refute html =~ "Since introduced"
-    refute html =~ "Added Jul 22"
+    assert html =~ "Added Jul 22"
+    refute html =~ ~s(id="origin-2")
 
     {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=eh&section=2")
+    assert has_element?(view, "#origin-2")
+  end
+
+  test "the tags come from the origins stored on the version", %{conn: conn, bill: bill} do
+    stored = %{"0" => %{"status" => "added", "added_in" => "rh", "changed_in" => []}}
+
+    Repo.update_all(
+      from(v in EverydayCitizen.Legislation.BillVersion,
+        where: v.bill_id == ^bill.id and v.code == "eh"
+      ),
+      set: [origins: stored]
+    )
+
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=eh")
+    assert has_element?(view, "#section-0", "Added")
+    refute has_element?(view, "#section-0", "Since introduced")
+    refute has_element?(view, "#section-1 span", "Changed")
+  end
+
+  test "the page reads only the shown version's sections, not every version's", %{conn: conn} do
+    test = self()
+    id = "sections-queries-#{inspect(test)}"
+
+    :telemetry.attach(
+      id,
+      [:everyday_citizen, :repo, :query],
+      fn _event, _measures, %{query: sql}, _config ->
+        if test in [self() | Process.get(:"$callers", [])] and sql =~ ~r/SELECT[^F]*"sections"/,
+          do: send(test, {:sections_query, sql})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(id) end)
+
+    {:ok, view, _html} = live(conn, ~p"/bills/119-s-5?version=eh")
     assert has_element?(view, "#section-2", "Added Jul 22")
+
+    queries = collect_sections_queries([])
+    assert queries != []
+    assert Enum.all?(queries, &(&1 =~ ~r/"code" = \$2/)), Enum.join(queries, "\n")
+  end
+
+  defp collect_sections_queries(acc) do
+    receive do
+      {:sections_query, sql} -> collect_sections_queries([sql | acc])
+    after
+      0 -> acc
+    end
+  end
+
+  test "a version whose origins aren't worked out yet shows no tags", %{conn: conn, bill: bill} do
+    Repo.update_all(
+      from(v in EverydayCitizen.Legislation.BillVersion, where: v.bill_id == ^bill.id),
+      set: [origins: nil]
+    )
+
+    {:ok, view, html} = live(conn, ~p"/bills/119-s-5?version=eh")
+    assert html =~ "Text of the bill"
+    refute has_element?(view, "#section-0", "Since introduced")
+    refute has_element?(view, "#section-2", "Added")
   end
 
   test "an added section shows the step that added it, the rule's vote and your reps' part", %{
