@@ -55,7 +55,8 @@ defmodule EverydayCitizen.HistoryFixtures do
     if sections,
       do: :ok = Legislation.put_sections(Legislation.get_version(bill, code).id, sections, 2)
 
-    :ok
+    # what the queued job stores once it runs
+    :ok = EverydayCitizen.Jobs.ComputeOrigins.perform(%Oban.Job{args: %{"bill_id" => bill.id}})
   end
 
   @doc "Writes versions ih, rh, eh of 119-s-5; returns the bill."

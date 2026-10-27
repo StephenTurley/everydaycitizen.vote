@@ -20,7 +20,7 @@ defmodule EverydayCitizen.BillPage do
   """
   import Ecto.Query
 
-  alias EverydayCitizen.Legislation
+  alias EverydayCitizen.{BillHistory, Legislation}
   alias EverydayCitizen.Legislation.{BillAction, BillVersion, Sponsorship}
   alias EverydayCitizen.Legislature.{Body, Person}
   alias EverydayCitizen.Repo
@@ -108,6 +108,20 @@ defmodule EverydayCitizen.BillPage do
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
     for option <- @options, people = by_option[option], do: {option, people}
+  end
+
+  @doc """
+  Where each section of one of the bill's versions came from, as stored by
+  `Jobs.ComputeOrigins` (`%{}` until it has run, or with nothing to compare).
+  """
+  @spec origins(struct(), String.t() | nil) :: %{non_neg_integer() => BillHistory.origin()}
+  def origins(_bill, nil), do: %{}
+
+  def origins(bill, code) do
+    from(v in BillVersion, where: v.bill_id == ^bill.id and v.code == ^code, select: v.origins)
+    |> Repo.one()
+    |> then(&BillHistory.stored_origins(%{origins: &1}))
+    |> Kernel.||(%{})
   end
 
   @doc "The sections of one of the bill's versions (`[]` when not split yet)."

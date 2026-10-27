@@ -51,6 +51,67 @@ defmodule EverydayCitizen.BillHistory do
     end
   end
 
+  @doc "`origins/3` for every version of the bill, by code, from one load of its versions."
+  @spec all_origins(map()) :: %{String.t() => %{non_neg_integer() => origin()}}
+  def all_origins(bill) do
+    rows = rows(bill)
+    Map.new(rows, &{&1.code, origins(bill, &1.code, rows)})
+  end
+
+  # Bump when the way origins are worked out changes (keys, normalizing,
+  # paragraphs): stored origins of another format count as not worked out, and
+  # `Jobs.ComputeOrigins.fill/0` redoes them.
+  @origins_format 1
+
+  @doc "The format stored origins are written in; see `stored_origins/1`."
+  @spec origins_format() :: pos_integer()
+  def origins_format, do: @origins_format
+
+  @doc """
+  Origins as stored: `%{"v" => format, "sections" => %{index => origin}}`, with
+  string keys as jsonb keeps them.
+  """
+  @spec encode_origins(%{non_neg_integer() => origin()}) :: map()
+  def encode_origins(origins) do
+    sections =
+      Map.new(origins, fn {i, o} ->
+        {Integer.to_string(i),
+         %{
+           "status" => Atom.to_string(o.status),
+           "added_in" => o.added_in,
+           "changed_in" => o.changed_in
+         }}
+      end)
+
+    %{"v" => @origins_format, "sections" => sections}
+  end
+
+  @doc """
+  A version's stored origins, as `origins/3` gives them; nil if not worked out
+  yet, or worked out in another format or with a status this code doesn't know.
+  """
+  @spec stored_origins(map() | nil) :: %{non_neg_integer() => origin()} | nil
+  def stored_origins(%{origins: %{"v" => @origins_format, "sections" => sections}})
+      when is_map(sections) do
+    Enum.reduce_while(sections, %{}, fn {i, o}, acc ->
+      case status(o["status"]) do
+        nil ->
+          {:halt, nil}
+
+        status ->
+          origin = %{status: status, added_in: o["added_in"], changed_in: o["changed_in"] || []}
+          {:cont, Map.put(acc, String.to_integer(i), origin)}
+      end
+    end)
+  end
+
+  def stored_origins(_version), do: nil
+
+  defp status("original"), do: :original
+  defp status("changed"), do: :changed
+  defp status("added"), do: :added
+  defp status(_other), do: nil
+
   @doc """
   The subjects of a version's summary (each naming the section numbers it comes
   from) whose sections were all added after the bill's first version, each with

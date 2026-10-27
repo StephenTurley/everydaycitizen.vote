@@ -21,9 +21,11 @@ defmodule EverydayCitizen.Ingest.Writer.Legislation do
   known are skipped, not fatal), or `{:error, {:unknown_*, value}}`.
   """
   import Ecto.Query
+  import Ecto.Changeset, only: [changed?: 2]
 
   alias EverydayCitizen.Ingest.Records
   alias EverydayCitizen.Ingest.Writer.Support
+  alias EverydayCitizen.Jobs.ComputeOrigins
 
   alias EverydayCitizen.Legislation.{
     Bill,
@@ -167,22 +169,12 @@ defmodule EverydayCitizen.Ingest.Writer.Legislation do
 
   defp do_write(%Records.BillVersion{} = r, source_id) do
     with {:ok, j} <- jurisdiction(r.jurisdiction),
-         {:ok, bill} <- bill(j, r.bill_external_id) do
-      upsert(
-        BillVersion,
-        %{
-          bill_id: bill.id,
-          code: r.code,
-          classification: r.classification,
-          date: r.date,
-          xml_url: r.xml_url,
-          text_url: r.text_url,
-          source_id: source_id
-        },
-        [:bill_id, :code],
-        replace:
-          {:replace, [:classification, :date, :xml_url, :text_url, :source_id, :updated_at]}
-      )
+         {:ok, bill} <- bill(j, r.bill_external_id),
+         stored = stored_date(bill.id, r.code),
+         {:ok, version} <- upsert_version(r, bill, source_id) do
+      # a new version, or one moved in date order, changes where sections came from
+      if stored != {:ok, r.date}, do: {:ok, _} = ComputeOrigins.enqueue(bill.id)
+      {:ok, version}
     end
   end
 
@@ -196,17 +188,54 @@ defmodule EverydayCitizen.Ingest.Writer.Legislation do
              :unknown_bill_version,
              {r.bill_external_id, r.code}
            ) do
-      version
-      |> BillVersion.text_changeset(%{
-        xml: r.xml,
-        xml_schema: r.xml_schema,
-        plain_text: r.plain_text,
-        sections: r.sections,
-        sections_version: r.sections_version,
-        text_source_id: source_id
-      })
-      |> Repo.update()
+      changeset =
+        BillVersion.text_changeset(version, %{
+          xml: r.xml,
+          xml_schema: r.xml_schema,
+          plain_text: r.plain_text,
+          sections: r.sections,
+          sections_version: r.sections_version,
+          text_source_id: source_id
+        })
+
+      changeset |> Repo.update() |> enqueue_origins(bill.id, changed?(changeset, :sections))
     end
+  end
+
+  # new sections change where the bill's sections came from
+  defp enqueue_origins({:ok, _} = written, bill_id, true) do
+    {:ok, _} = ComputeOrigins.enqueue(bill_id)
+    written
+  end
+
+  defp enqueue_origins(result, _bill_id, _changed), do: result
+
+  defp stored_date(bill_id, code) do
+    case Repo.one(
+           from v in BillVersion,
+             where: v.bill_id == ^bill_id and v.code == ^code,
+             select: {v.id, v.date}
+         ) do
+      {_id, date} -> {:ok, date}
+      nil -> :none
+    end
+  end
+
+  defp upsert_version(r, bill, source_id) do
+    upsert(
+      BillVersion,
+      %{
+        bill_id: bill.id,
+        code: r.code,
+        classification: r.classification,
+        date: r.date,
+        xml_url: r.xml_url,
+        text_url: r.text_url,
+        source_id: source_id
+      },
+      [:bill_id, :code],
+      replace: {:replace, [:classification, :date, :xml_url, :text_url, :source_id, :updated_at]}
+    )
   end
 
   defp bill(jurisdiction, external_id) do

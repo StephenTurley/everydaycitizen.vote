@@ -138,12 +138,37 @@ defmodule EverydayCitizen.Legislation do
     |> Repo.all()
   end
 
+  @doc "Stores each version's origins (`BillHistory.encode_origins/1`), by code, in one transaction."
+  @spec put_origins(integer(), %{String.t() => map()}) :: :ok
+  def put_origins(bill_id, by_code) do
+    Repo.transact(fn ->
+      for {code, origins} <- by_code do
+        # unchanged origins aren't rewritten
+        BillVersion
+        |> where([v], v.bill_id == ^bill_id and v.code == ^code)
+        |> where([v], fragment("? IS DISTINCT FROM ?", v.origins, type(^origins, :map)))
+        |> Repo.update_all(set: [origins: origins])
+      end
+
+      {:ok, :ok}
+    end)
+
+    :ok
+  end
+
   @doc "Stores a version's sections and the format they were split with."
   @spec put_sections(integer(), [map()], pos_integer()) :: :ok
   def put_sections(version_id, sections, format) do
+    stored =
+      Repo.one(from v in BillVersion, where: v.id == ^version_id, select: {v.bill_id, v.sections})
+
     BillVersion
     |> where([v], v.id == ^version_id)
     |> Repo.update_all(set: [sections: sections, sections_version: format])
+
+    # new sections change where the bill's sections came from
+    with {bill_id, old} when old != sections <- stored,
+         do: {:ok, _} = EverydayCitizen.Jobs.ComputeOrigins.enqueue(bill_id)
 
     :ok
   end

@@ -105,48 +105,35 @@ defmodule EverydayCitizenWeb.BillLive do
   def handle_info({:section_summary, index, {:error, _}}, socket),
     do: {:noreply, update(socket, :summaries, &Map.put(&1, index, :unavailable))}
 
-  # Where each section of the version came from (worked out again only when the
-  # version changes); for an opened section that changed or was added, the
-  # steps that touched it and the reps' part. All versions' sections are read
-  # at most once per request, and not at all for an unchanged section. Only
-  # once the page is live: it reads every version's text, too much to do twice
-  # per visit, or for a crawler (which never connects).
+  # Where each section of the version came from, as stored (read again only
+  # when the version changes); for an opened section that changed or was added,
+  # the steps that touched it and the reps' part. That panel reads every
+  # version's text, so only once the page is live: not twice per visit, and
+  # never for a crawler (which never connects).
   defp load_history(socket) do
-    if connected?(socket) do
-      {socket, rows} = assign_origins(socket)
-      assign_opened(assign(socket, history: nil, history_rows: nil), rows)
-    else
-      assign(socket, history: nil, history_rows: nil)
-    end
+    socket = socket |> assign_origins() |> assign(history: nil, history_rows: nil)
+    if connected?(socket), do: assign_opened(socket), else: socket
   end
 
-  # origins for the version, kept while the version stays the same; returns the
-  # versions' sections when it had to read them
+  # origins for the version, kept while the version stays the same
   defp assign_origins(%{assigns: %{page: page, version: version}} = socket) do
     code = version && version.code
 
-    cond do
-      is_nil(code) ->
-        {assign(socket, origins: %{}, origins_code: nil), nil}
-
-      socket.assigns.origins_code == code ->
-        {socket, nil}
-
-      true ->
-        rows = BillHistory.load(page.bill)
-
-        {assign(socket,
-           origins: BillHistory.origins(page.bill, code, rows),
-           origins_code: code,
-           version_dates: Map.new(BillHistory.versions(page.bill), &{&1.code, &1.date})
-         ), rows}
+    if socket.assigns.origins_code == code do
+      socket
+    else
+      assign(socket,
+        origins: BillPage.origins(page.bill, code),
+        origins_code: code,
+        version_dates: Map.new(page.versions, &{&1.code, &1.date})
+      )
     end
   end
 
-  defp assign_opened(%{assigns: %{page: page, open: open}} = socket, rows) do
+  defp assign_opened(%{assigns: %{page: page, open: open}} = socket) do
     case is_integer(open) && socket.assigns.origins[open] do
       %{status: status} = origin when status != :original ->
-        rows = rows || BillHistory.load(page.bill)
+        rows = BillHistory.load(page.bill)
         steps = socket.assigns.history_steps || BillHistory.steps(page.bill)
 
         assign(socket,
@@ -171,8 +158,16 @@ defmodule EverydayCitizenWeb.BillLive do
   defp load_change_summary(socket) do
     AiSummary.load(socket, :change_summary, :change, fn ->
       case socket.assigns.history do
-        %{index: i} -> Inputs.change(socket.assigns.page.bill, socket.assigns.version.code, i)
-        _ -> nil
+        %{index: i} ->
+          Inputs.change(
+            socket.assigns.page.bill,
+            socket.assigns.version.code,
+            i,
+            socket.assigns.history_rows
+          )
+
+        _ ->
+          nil
       end
     end)
   end
