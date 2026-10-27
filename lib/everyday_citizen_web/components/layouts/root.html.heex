@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
     <meta :if={assigns[:noindex]} name="robots" content="noindex" />
+    <link :if={assigns[:canonical]} rel="canonical" href={assigns[:canonical]} />
     <.live_title default="Everyday Citizen" suffix=" · Everyday Citizen" phx-no-format>{assigns[:page_title]}</.live_title>
     <link
       rel="preload"
