@@ -9,6 +9,8 @@ defmodule EverydayCitizen.Application do
   def start(_type, _args) do
     # a model without rates would be paid for and then fail to be recorded
     :ok = EverydayCitizen.Summaries.check_config!()
+    # page views and blocked crawlers, counted in Sentry (production only)
+    :ok = EverydayCitizen.SentryMetrics.attach()
 
     children = [
       EverydayCitizenWeb.Telemetry,

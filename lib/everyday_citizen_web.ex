@@ -53,6 +53,7 @@ defmodule EverydayCitizenWeb do
       use Phoenix.LiveView
 
       on_mount EverydayCitizenWeb.TimeZone
+      on_mount EverydayCitizenWeb.PageViews
 
       unquote(html_helpers())
     end
