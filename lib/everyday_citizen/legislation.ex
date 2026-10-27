@@ -138,6 +138,22 @@ defmodule EverydayCitizen.Legislation do
     |> Repo.all()
   end
 
+  @doc "Stores each version's origins (`BillHistory.encode_origins/1`), by code, in one transaction."
+  @spec put_origins(integer(), %{String.t() => map()}) :: :ok
+  def put_origins(bill_id, by_code) do
+    Repo.transact(fn ->
+      for {code, origins} <- by_code do
+        BillVersion
+        |> where([v], v.bill_id == ^bill_id and v.code == ^code)
+        |> Repo.update_all(set: [origins: origins])
+      end
+
+      {:ok, :ok}
+    end)
+
+    :ok
+  end
+
   @doc "Stores a version's sections and the format they were split with."
   @spec put_sections(integer(), [map()], pos_integer()) :: :ok
   def put_sections(version_id, sections, format) do

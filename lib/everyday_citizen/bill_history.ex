@@ -51,6 +51,45 @@ defmodule EverydayCitizen.BillHistory do
     end
   end
 
+  @doc "`origins/3` for every version of the bill, by code, from one load of its versions."
+  @spec all_origins(map()) :: %{String.t() => %{non_neg_integer() => origin()}}
+  def all_origins(bill) do
+    rows = rows(bill)
+    Map.new(rows, &{&1.code, origins(bill, &1.code, rows)})
+  end
+
+  @doc "Origins as stored (string keys, as jsonb keeps them)."
+  @spec encode_origins(%{non_neg_integer() => origin()}) :: map()
+  def encode_origins(origins) do
+    Map.new(origins, fn {i, o} ->
+      {Integer.to_string(i),
+       %{
+         "status" => Atom.to_string(o.status),
+         "added_in" => o.added_in,
+         "changed_in" => o.changed_in
+       }}
+    end)
+  end
+
+  @doc "A version's stored origins, as `origins/3` gives them; nil if not worked out yet."
+  @spec stored_origins(map() | nil) :: %{non_neg_integer() => origin()} | nil
+  def stored_origins(%{origins: stored}) when is_map(stored) do
+    Map.new(stored, fn {i, o} ->
+      {String.to_integer(i),
+       %{
+         status: status(o["status"]),
+         added_in: o["added_in"],
+         changed_in: o["changed_in"] || []
+       }}
+    end)
+  end
+
+  def stored_origins(_version), do: nil
+
+  defp status("original"), do: :original
+  defp status("changed"), do: :changed
+  defp status("added"), do: :added
+
   @doc """
   The subjects of a version's summary (each naming the section numbers it comes
   from) whose sections were all added after the bill's first version, each with

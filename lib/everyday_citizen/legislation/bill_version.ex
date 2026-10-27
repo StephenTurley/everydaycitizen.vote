@@ -19,6 +19,9 @@ defmodule EverydayCitizen.Legislation.BillVersion do
     field :plain_text, :string
     field :sections, {:array, :map}
     field :sections_version, :integer
+    # `BillHistory.origins/3` for this version, stored by `Jobs.ComputeOrigins`;
+    # read with `BillHistory.stored_origins/1` (nil until worked out)
+    field :origins, :map
     belongs_to :bill, EverydayCitizen.Legislation.Bill
     belongs_to :source, EverydayCitizen.Provenance.Source
     belongs_to :text_source, EverydayCitizen.Provenance.Source
