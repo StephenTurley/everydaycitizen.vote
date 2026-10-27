@@ -14,11 +14,50 @@ defmodule EverydayCitizen.Jobs.ComputeOrigins do
     unique: [period: 300, keys: [:bill_id], states: [:available, :scheduled, :retryable]]
 
   alias EverydayCitizen.{BillHistory, Legislation, Repo}
-  alias EverydayCitizen.Legislation.Bill
+  alias EverydayCitizen.Legislation.{Bill, BillVersion}
+
+  import Ecto.Query
 
   @doc "Queues the job for a bill."
   @spec enqueue(integer()) :: {:ok, Oban.Job.t()} | {:error, term()}
   def enqueue(bill_id), do: Oban.insert(new(%{"bill_id" => bill_id}))
+
+  @doc """
+  Fills origins not worked out yet: versions of one-version bills get `%{}`
+  (nothing to compare) directly, and every other bill with a version missing
+  them is queued, unless its job is already waiting. Safe to run again.
+  """
+  @spec fill() :: %{one_version: non_neg_integer(), queued: non_neg_integer()}
+  def fill do
+    several =
+      from v in BillVersion, group_by: v.bill_id, having: count(v.id) > 1, select: v.bill_id
+
+    {one, _} =
+      Repo.update_all(
+        from(v in BillVersion, where: is_nil(v.origins) and v.bill_id not in subquery(several)),
+        set: [origins: %{}]
+      )
+
+    waiting =
+      from j in Oban.Job,
+        where:
+          j.worker == ^inspect(__MODULE__) and j.state in ["available", "scheduled", "retryable"],
+        select: fragment("(?->>'bill_id')::bigint", j.args)
+
+    ids =
+      Repo.all(
+        from v in BillVersion,
+          where: is_nil(v.origins) and v.bill_id in subquery(several),
+          where: v.bill_id not in subquery(waiting),
+          distinct: true,
+          select: v.bill_id
+      )
+
+    for chunk <- Enum.chunk_every(ids, 500),
+        do: Oban.insert_all(Enum.map(chunk, &new(%{"bill_id" => &1})))
+
+    %{one_version: one, queued: length(ids)}
+  end
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"bill_id" => bill_id}}) do

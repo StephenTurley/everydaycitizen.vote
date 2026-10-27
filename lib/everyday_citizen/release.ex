@@ -53,6 +53,17 @@ defmodule EverydayCitizen.Release do
   end
 
   @doc """
+  Fills in section origins not worked out yet (`Jobs.ComputeOrigins.fill/0`)
+  and prints the counts; the queued jobs then run in the app:
+
+      bin/everyday_citizen rpc 'EverydayCitizen.Release.compute_origins()'
+  """
+  def compute_origins do
+    %{one_version: one, queued: queued} = EverydayCitizen.Jobs.ComputeOrigins.fill()
+    IO.puts("origins: #{one} one-version bills filled, #{queued} bills queued")
+  end
+
+  @doc """
   Prints the latest coverage checks from the running app and returns `:ok`, or
   `{:error, failed_count}` if any failed. The release counterpart of
   `mix everyday_citizen.coverage`:
