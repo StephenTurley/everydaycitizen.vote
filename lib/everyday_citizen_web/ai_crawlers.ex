@@ -24,8 +24,18 @@ defmodule EverydayCitizenWeb.AiCrawlers do
 
   @doc "Whether a user agent is one of them."
   @spec ai_crawler?(String.t() | nil) :: boolean()
-  def ai_crawler?(nil), do: false
-  def ai_crawler?(agent), do: Regex.match?(@pattern, agent)
+  def ai_crawler?(agent), do: match(agent) != nil
+
+  @doc "Which of the names a user agent is (as listed), or nil."
+  @spec match(String.t() | nil) :: String.t() | nil
+  def match(nil), do: nil
+
+  def match(agent) do
+    case Regex.run(@pattern, agent) do
+      [found] -> Enum.find(@agents, &(String.downcase(&1) == String.downcase(found)))
+      nil -> nil
+    end
+  end
 
   @impl Plug
   def init(opts), do: opts
@@ -34,15 +44,18 @@ defmodule EverydayCitizenWeb.AiCrawlers do
   def call(%Plug.Conn{request_path: "/robots.txt"} = conn, _opts), do: conn
 
   def call(conn, _opts) do
-    if conn |> get_req_header("user-agent") |> List.first() |> ai_crawler?() do
-      :telemetry.execute([:everyday_citizen, :crawler_blocked], %{count: 1}, %{})
-
-      conn
-      |> put_resp_content_type("text/plain")
-      |> send_resp(403, "AI crawlers are not allowed on this site; see /robots.txt.\n")
-      |> halt()
-    else
-      conn
+    case conn |> get_req_header("user-agent") |> List.first() |> match() do
+      nil -> conn
+      name -> turn_away(conn, name)
     end
+  end
+
+  defp turn_away(conn, name) do
+    :telemetry.execute([:everyday_citizen, :crawler_blocked], %{count: 1}, %{agent: name})
+
+    conn
+    |> put_resp_content_type("text/plain")
+    |> send_resp(403, "AI crawlers are not allowed on this site; see /robots.txt.\n")
+    |> halt()
   end
 end

@@ -2,7 +2,7 @@ defmodule EverydayCitizen.SentryMetrics do
   @moduledoc """
   Sends the site's counters to Sentry's metrics: `page.view` (by `page` and
   `visitor`, `EverydayCitizenWeb.PageViews`) and `crawler.blocked`
-  (`EverydayCitizenWeb.AiCrawlers`). Only those labels are sent. Attached at
+  (by `agent`, the crawler's listed name, `EverydayCitizenWeb.AiCrawlers`). Only those labels are sent. Attached at
   start when Sentry is configured (production).
   """
 
@@ -21,6 +21,6 @@ defmodule EverydayCitizen.SentryMetrics do
   def handle_event([:everyday_citizen, :page_view], _measures, meta, _config),
     do: Sentry.Metrics.count("page.view", 1, attributes: Map.take(meta, [:page, :visitor]))
 
-  def handle_event([:everyday_citizen, :crawler_blocked], _measures, _meta, _config),
-    do: Sentry.Metrics.count("crawler.blocked", 1)
+  def handle_event([:everyday_citizen, :crawler_blocked], _measures, meta, _config),
+    do: Sentry.Metrics.count("crawler.blocked", 1, attributes: Map.take(meta, [:agent]))
 end
