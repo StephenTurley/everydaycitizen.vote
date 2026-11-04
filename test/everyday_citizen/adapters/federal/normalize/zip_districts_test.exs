@@ -8,8 +8,13 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.ZipDistrictsTest do
   @src SourceRef.new("https://www2.census.gov/x.txt", "x")
 
   test "each ZIP area's districts with their share of its land, keyed like the reps pages" do
-    assert %PostalDistricts{jurisdiction: "federal", rows: rows, source: @src} =
-             ZipDistricts.parse(@file_text, @src)
+    assert %PostalDistricts{
+             jurisdiction: "federal",
+             district_map: "119",
+             rows: rows,
+             source: @src
+           } =
+             ZipDistricts.parse(@file_text, @src, 119)
 
     by_zip =
       Enum.group_by(rows, & &1.postal_code, &{&1.district_key, Float.round(&1.land_share, 3)})
@@ -20,7 +25,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.ZipDistrictsTest do
   end
 
   test "water with no ZIP area, and unassigned (ZZ) districts, are skipped" do
-    rows = ZipDistricts.parse(@file_text, @src).rows
+    rows = ZipDistricts.parse(@file_text, @src, 119).rows
     assert Enum.all?(rows, &(&1.postal_code =~ ~r/^\d{5}$/))
     refute Enum.any?(rows, &(&1.postal_code == "06437"))
   end

@@ -23,23 +23,26 @@ defmodule EverydayCitizenWeb.UserSessionControllerTest do
       conn: conn,
       user: user
     } do
-      conn = conn |> init_test_session(%{district: "IA-1"}) |> sign_in(user)
+      conn =
+        conn |> init_test_session(%{district: "IA-1", district_map: "119"}) |> sign_in(user)
 
       assert get_session(conn, :district) == "IA-1"
-      assert Accounts.get_user!(user.id).district == "IA-1"
+      assert get_session(conn, :district_map) == "119"
+      assert %{district: "IA-1", district_map: "119"} = Accounts.get_user!(user.id)
     end
 
     test "an account's district is used when the session has none", %{conn: conn, user: user} do
-      {:ok, user} = Accounts.put_district(user, "IA-1")
+      {:ok, user} = Accounts.put_district(user, "IA-1", "119")
       conn = sign_in(conn, user)
       assert get_session(conn, :district) == "IA-1"
+      assert get_session(conn, :district_map) == "119"
     end
 
     test "a new district found while signed out replaces the account's at sign-in", %{
       conn: conn,
       user: user
     } do
-      {:ok, user} = Accounts.put_district(user, "IA-1")
+      {:ok, user} = Accounts.put_district(user, "IA-1", "119")
       conn = conn |> init_test_session(%{district: "IA-2"}) |> sign_in(user)
 
       assert get_session(conn, :district) == "IA-2"
@@ -50,7 +53,7 @@ defmodule EverydayCitizenWeb.UserSessionControllerTest do
       conn: conn,
       user: user
     } do
-      {:ok, user} = Accounts.put_district(user, "IA-1")
+      {:ok, user} = Accounts.put_district(user, "IA-1", "119")
       {token, _hashed_token} = generate_user_magic_link_token(user)
 
       signed_in =
@@ -64,10 +67,11 @@ defmodule EverydayCitizenWeb.UserSessionControllerTest do
         |> get(~p"/this-week")
 
       assert get_session(conn, :district) == "IA-1"
+      assert get_session(conn, :district_map) == "119"
     end
 
     test "signed in, finding a new district replaces the account's", %{conn: conn, user: user} do
-      {:ok, user} = Accounts.put_district(user, "IA-1")
+      {:ok, user} = Accounts.put_district(user, "IA-1", "119")
       conn = conn |> sign_in(user) |> recycle() |> get(~p"/district/IA-2")
 
       assert get_session(conn, :district) == "IA-2"

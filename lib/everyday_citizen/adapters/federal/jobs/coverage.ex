@@ -9,7 +9,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.Coverage do
   """
   use Oban.Worker, queue: :ingest, max_attempts: 1
 
-  alias EverydayCitizen.Adapters.Federal.{Coverage, Job, Prerequisites}
+  alias EverydayCitizen.Adapters.Federal.{Congresses, Coverage, Job, Prerequisites}
   alias EverydayCitizen.Ingest.Coverage, as: Checks
   alias EverydayCitizen.SentryCrons
 
@@ -19,7 +19,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.Coverage do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
-    congress = args["congress"] || Application.fetch_env!(:everyday_citizen, :federal)[:congress]
+    congress = args["congress"] || Congresses.current()
 
     with :ok <- Prerequisites.after_other_jobs(job, []),
          do: SentryCrons.monitor(job, fn -> run(congress) end, slug: @sentry_monitor)

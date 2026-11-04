@@ -9,7 +9,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncMembers do
 
   require Logger
 
-  alias EverydayCitizen.Adapters.Federal.{HTTP, Job, Prerequisites}
+  alias EverydayCitizen.Adapters.Federal.{Congresses, HTTP, Job, Prerequisites}
   alias EverydayCitizen.Adapters.Federal.Normalize.{Committees, Members}
   alias EverydayCitizen.Ingest
   alias EverydayCitizen.Ingest.Records.{Body, Person}
@@ -20,9 +20,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncMembers do
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
     number =
-      to_string(
-        args["congress"] || Application.fetch_env!(:everyday_citizen, :federal)[:congress]
-      )
+      to_string(args["congress"] || Congresses.current())
 
     with :ok <- Prerequisites.check(job, [Prerequisites.session(number)]) do
       sync(number)

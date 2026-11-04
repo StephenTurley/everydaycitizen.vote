@@ -52,12 +52,18 @@ defmodule EverydayCitizenWeb.DistrictController do
     end
   end
 
-  # Signed in, the district is also saved on the account (replacing the last one).
+  # Signed in, the district is also saved on the account (replacing the last
+  # one). Either way it is saved with the map it was found on.
   defp remember(conn, district) do
-    with %{user: %Accounts.User{} = user} <- conn.assigns[:current_scope],
-         do: {:ok, _user} = Accounts.put_district(user, district)
+    map = Reps.district_map()
 
-    conn |> put_session(:district, district) |> redirect(to: ~p"/reps/#{district}")
+    with %{user: %Accounts.User{} = user} <- conn.assigns[:current_scope],
+         do: {:ok, _user} = Accounts.put_district(user, district, map)
+
+    conn
+    |> put_session(:district, district)
+    |> put_session(:district_map, map)
+    |> redirect(to: ~p"/reps/#{district}")
   end
 
   defp back_home(conn, reason),

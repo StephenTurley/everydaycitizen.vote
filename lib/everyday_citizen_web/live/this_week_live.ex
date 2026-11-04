@@ -10,6 +10,7 @@ defmodule EverydayCitizenWeb.ThisWeekLive do
   alias EverydayCitizen.Calendar, as: Schedule
   alias EverydayCitizen.Follows
   alias EverydayCitizen.Reps
+  alias EverydayCitizenWeb.TimeZone
 
   @impl true
   def mount(_params, session, socket) do
@@ -89,7 +90,10 @@ defmodule EverydayCitizenWeb.ThisWeekLive do
             This week
           </h1>
           <p class="m-0 text-[14px] lg:text-[15px] text-floor-muted">
-            {Calendar.strftime(@from, "%b %-d")} to {Calendar.strftime(Date.add(@from, 6), "%b %-d")}, times in {@zone_label}
+            {Calendar.strftime(@from, "%b %-d")} to {Calendar.strftime(Date.add(@from, 6), "%b %-d")}, times in {TimeZone.label(
+              @time_zone,
+              @from
+            )}
           </p>
         </section>
 

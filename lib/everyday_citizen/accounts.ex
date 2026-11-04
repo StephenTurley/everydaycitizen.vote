@@ -191,10 +191,14 @@ defmodule EverydayCitizen.Accounts do
     )
   end
 
-  @doc "Saves a district key (never an address) on the account."
-  @spec put_district(User.t(), String.t()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
-  def put_district(%User{} = user, district) when is_binary(district) do
-    user |> User.district_changeset(district) |> Repo.update()
+  @doc """
+  Saves a district key (never an address) and the district map it was found on
+  on the account; nil for both forgets it.
+  """
+  @spec put_district(User.t(), String.t() | nil, String.t() | nil) ::
+          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def put_district(%User{} = user, district, district_map) do
+    user |> User.district_changeset(district, district_map) |> Repo.update()
   end
 
   ## Session

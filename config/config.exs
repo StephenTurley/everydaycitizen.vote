@@ -153,10 +153,20 @@ config :sentry,
 config :everyday_citizen, :ingest_adapters, [EverydayCitizen.Adapters.Federal.Jobs]
 
 config :everyday_citizen, :federal,
-  congress: 119,
+  # the sitting congress comes from the date (Federal.Congresses)
   # Census Geocoder geography vintage holding each congress's districts (the
   # current vintage already has the next congress's)
-  census_vintages: %{119 => "ACS2025_Current"}
+  census_vintages: %{119 => "ACS2025_Current", 120 => "ACS2026_Current"},
+  # Census's district to ZIP area file for each congress (published months after
+  # it sits; docs/ops/new-congress.md)
+  zip_files: %{
+    119 =>
+      "https://www2.census.gov/geo/docs/maps-data/data/rel2020/cd-sld/tab20_cd11920_zcta520_natl.txt"
+  }
+
+# The district map a saved district with none recorded was found on: districts
+# were saved before maps were recorded (EverydayCitizenWeb.SavedDistrict).
+config :everyday_citizen, :legacy_district_map, "119"
 
 # The jurisdiction public pages show, and how each finds an address's seats.
 config :everyday_citizen, :default_jurisdiction, "federal"

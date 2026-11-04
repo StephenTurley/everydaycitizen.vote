@@ -39,32 +39,42 @@ defmodule EverydayCitizenWeb.UserAuth do
   """
   def log_in_user(conn, user, params \\ %{}) do
     user_return_to = get_session(conn, :user_return_to)
-    district = settle_district(user, get_session(conn, :district))
+    saved = settle_district(user, get_session(conn, :district), get_session(conn, :district_map))
 
     conn
     |> create_or_extend_session(user, params)
     |> delete_session(:user_return_to)
-    |> then(&if(district, do: put_session(&1, :district, district), else: &1))
+    |> put_district(saved)
     |> redirect(to: user_return_to || signed_in_path(conn))
   end
 
   # The district survives the session reset at sign-in. One looked up before
   # signing in is the newer address, so it is saved on the account; with none in
   # the session, the account's is used.
-  defp settle_district(%Accounts.User{district: district} = user, session_district)
+  # Each district goes with the map it was found on (`EverydayCitizenWeb.SavedDistrict`).
+  defp settle_district(%Accounts.User{} = user, session_district, session_map)
        when is_binary(session_district) do
-    if session_district != district,
-      do: {:ok, _user} = Accounts.put_district(user, session_district)
+    if {session_district, session_map} != {user.district, user.district_map},
+      do: {:ok, _user} = Accounts.put_district(user, session_district, session_map)
 
-    session_district
+    {session_district, session_map}
   end
 
-  defp settle_district(%Accounts.User{district: district}, nil), do: district
+  defp settle_district(%Accounts.User{district: district, district_map: map}, nil, _map),
+    do: {district, map}
+
+  defp put_district(conn, {district, map}) when is_binary(district),
+    do: conn |> put_session(:district, district) |> put_session(:district_map, map)
+
+  defp put_district(conn, _saved), do: conn
 
   # A session restored from the remember-me cookie (after a browser restart)
   # starts empty: bring back the account's district.
-  defp restore_district(conn, %Accounts.User{district: district}) when is_binary(district) do
-    if get_session(conn, :district), do: conn, else: put_session(conn, :district, district)
+  defp restore_district(conn, %Accounts.User{district: district} = user)
+       when is_binary(district) do
+    if get_session(conn, :district),
+      do: conn,
+      else: put_district(conn, {district, user.district_map})
   end
 
   defp restore_district(conn, _user), do: conn

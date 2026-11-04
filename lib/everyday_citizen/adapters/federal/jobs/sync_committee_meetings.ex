@@ -11,7 +11,14 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeetings do
   """
   use Oban.Worker, queue: :ingest, max_attempts: 3
 
-  alias EverydayCitizen.Adapters.Federal.{CongressGov, Job, Prerequisites, VoteSupport}
+  alias EverydayCitizen.Adapters.Federal.{
+    Congresses,
+    CongressGov,
+    Job,
+    Prerequisites,
+    VoteSupport
+  }
+
   alias EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeeting
   alias EverydayCitizen.Calendar
 
@@ -21,7 +28,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeetings do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
-    congress = args["congress"] || Application.fetch_env!(:everyday_citizen, :federal)[:congress]
+    congress = args["congress"] || Congresses.current()
     checks = [Prerequisites.session(congress), Prerequisites.committees()]
 
     with :ok <- Prerequisites.check(job, checks), do: sync(congress)

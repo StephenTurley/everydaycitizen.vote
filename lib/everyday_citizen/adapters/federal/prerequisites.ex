@@ -9,6 +9,8 @@ defmodule EverydayCitizen.Adapters.Federal.Prerequisites do
   Snoozing is bounded: after 24 snoozes (~2 h) a missing prerequisite becomes
   `{:error, {:missing_prerequisite, name}}` so Oban retries and eventually discards
   it, and a job waiting for other ingest jobs (`after_other_jobs/2`) runs anyway.
+  A missing congress session is waited for up to a day (288 snoozes): on the day
+  a new congress sits, Congress.gov may list it hours after the night's jobs start.
   """
   import Ecto.Query
 
@@ -19,6 +21,7 @@ defmodule EverydayCitizen.Adapters.Federal.Prerequisites do
 
   @snooze_seconds 300
   @max_snoozes 24
+  @max_session_snoozes 288
   @active ~w(available scheduled retryable executing)
 
   @type check :: {atom(), (-> boolean())}
@@ -28,7 +31,7 @@ defmodule EverydayCitizen.Adapters.Federal.Prerequisites do
   def check(%Oban.Job{} = job, checks) do
     case Enum.find(checks, fn {_name, fun} -> not fun.() end) do
       nil -> :ok
-      {name, _} -> if snoozes(job) < @max_snoozes, do: snooze(), else: missing(name)
+      {name, _} -> if snoozes(job) < max_snoozes(name), do: snooze(), else: missing(name)
     end
   end
 
@@ -76,6 +79,9 @@ defmodule EverydayCitizen.Adapters.Federal.Prerequisites do
   @spec committees() :: check()
   def committees,
     do: {:committees, fn -> Legislature.any_body?("federal", ~w(committee subcommittee)) end}
+
+  defp max_snoozes(:session), do: @max_session_snoozes
+  defp max_snoozes(_name), do: @max_snoozes
 
   defp snoozes(%Oban.Job{meta: meta}), do: (meta || %{})["snoozed"] || 0
   defp snooze, do: {:snooze, @snooze_seconds}

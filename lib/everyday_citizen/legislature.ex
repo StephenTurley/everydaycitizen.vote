@@ -186,6 +186,7 @@ defmodule EverydayCitizen.Legislature do
       |> where([m], is_nil(m.end_date) or m.end_date >= ^on)
       |> select([m, b, _j, p], %{person: p, membership: m, body: b})
       |> Repo.all()
+      |> without_outgoing(on)
 
     rank = seats |> Enum.with_index() |> Map.new()
 
@@ -194,6 +195,19 @@ defmodule EverydayCitizen.Legislature do
     |> Enum.sort_by(
       &{Map.fetch!(rank, {&1.body.external_id, &1.membership.district}), &1.person.name}
     )
+  end
+
+  # A term ends on the day the next one starts: on that day, a member whose term
+  # ends gives way to one starting in the same seat (body and district).
+  defp without_outgoing(rows, on) do
+    starting =
+      for %{membership: %{start_date: ^on} = m, body: b} <- rows,
+          into: MapSet.new(),
+          do: {b.id, m.district}
+
+    Enum.reject(rows, fn %{membership: m, body: b} ->
+      m.end_date == on and MapSet.member?(starting, {b.id, m.district})
+    end)
   end
 
   defp seat_condition(seats) do
@@ -227,6 +241,7 @@ defmodule EverydayCitizen.Legislature do
       |> where([m], is_nil(m.end_date) or m.end_date >= ^on)
       |> select([m, b, _j, p], %{person: p, membership: m, body: b})
       |> Repo.all()
+      |> without_outgoing(on)
 
     rows
     |> Enum.uniq_by(& &1.person.id)
@@ -268,12 +283,16 @@ defmodule EverydayCitizen.Legislature do
     end
   end
 
-  @doc "District keys overlapping a postal code, largest share of its land first."
-  @spec postal_districts(String.t(), String.t()) :: [String.t()]
-  def postal_districts(jurisdiction_key, postal_code) do
+  @doc """
+  District keys overlapping a postal code on the given district map, largest
+  share of its land first.
+  """
+  @spec postal_districts(String.t(), String.t(), String.t()) :: [String.t()]
+  def postal_districts(jurisdiction_key, postal_code, district_map) do
     EverydayCitizen.Legislature.PostalDistrict
     |> join(:inner, [p], j in Jurisdiction, on: j.id == p.jurisdiction_id)
     |> where([p, j], j.key == ^jurisdiction_key and p.postal_code == ^postal_code)
+    |> where([p], p.district_map == ^district_map)
     |> order_by([p], desc: p.land_share, asc: p.district_key)
     |> select([p], p.district_key)
     |> Repo.all()

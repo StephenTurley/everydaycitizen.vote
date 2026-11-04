@@ -23,6 +23,12 @@ defmodule EverydayCitizen.Reps.Locator do
               {:ok, %{name: String.t(), seats: [{body_external_id :: String.t(), matcher()}]}}
               | :error
 
+  @doc """
+  The district map in use now. It changes when district lines are redrawn;
+  district keys from an older map may name different places.
+  """
+  @callback district_map() :: String.t()
+
   @doc "A district key in words, for display; an unknown key comes back as it is."
   @callback district_label(district :: String.t()) :: String.t()
 end

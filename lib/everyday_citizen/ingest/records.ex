@@ -24,10 +24,11 @@ defmodule EverydayCitizen.Ingest.Records do
   defmodule PostalDistricts do
     @moduledoc """
     A jurisdiction's complete postal-code-to-district table; replaces whatever is
-    stored. Each row is `%{postal_code, district_key, land_share}`.
+    stored. Each row is `%{postal_code, district_key, land_share}`, on the
+    district map `district_map`.
     """
-    @enforce_keys [:jurisdiction, :rows, :source]
-    defstruct [:jurisdiction, :rows, :source]
+    @enforce_keys [:jurisdiction, :district_map, :rows, :source]
+    defstruct [:jurisdiction, :district_map, :rows, :source]
 
     @type t :: %__MODULE__{}
   end

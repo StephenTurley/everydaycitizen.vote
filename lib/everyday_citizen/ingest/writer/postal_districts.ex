@@ -13,16 +13,17 @@ defmodule EverydayCitizen.Ingest.Writer.PostalDistricts do
   @spec write(Records.PostalDistricts.t(), integer() | nil) :: {:ok, map()} | {:error, term()}
   def write(%Records.PostalDistricts{} = r, run_id) do
     Support.transact(r, run_id, fn source_id ->
-      with {:ok, j} <- Support.jurisdiction(r.jurisdiction), do: replace(j, r.rows, source_id)
+      with {:ok, j} <- Support.jurisdiction(r.jurisdiction), do: replace(j, r, source_id)
     end)
   end
 
-  defp replace(jurisdiction, rows, source_id) do
+  defp replace(jurisdiction, %Records.PostalDistricts{rows: rows} = r, source_id) do
     Repo.delete_all(from p in PostalDistrict, where: p.jurisdiction_id == ^jurisdiction.id)
     now = DateTime.utc_now()
 
     extra = %{
       jurisdiction_id: jurisdiction.id,
+      district_map: r.district_map,
       source_id: source_id,
       inserted_at: now,
       updated_at: now

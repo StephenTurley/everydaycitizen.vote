@@ -21,9 +21,20 @@ defmodule EverydayCitizen.Reps do
     Legislature.current_members(jurisdiction(), locator().districts_for(key), Date.utc_today())
   end
 
-  @doc "District keys a postal code falls in, largest share first; `[]` when unknown."
+  @doc """
+  District keys a postal code falls in on the current district map, largest
+  share first; `[]` when unknown, or when the postal table is from another map.
+  """
   @spec districts_for_postal_code(String.t()) :: [String.t()]
-  def districts_for_postal_code(code), do: Legislature.postal_districts(jurisdiction(), code)
+  def districts_for_postal_code(code),
+    do: Legislature.postal_districts(jurisdiction(), code, district_map())
+
+  @doc """
+  The district map lookups use now. A district found on another map may name a
+  different place, so a saved one from another map is looked up again.
+  """
+  @spec district_map() :: String.t()
+  def district_map, do: locator().district_map()
 
   @doc "True when the district key names a place the locator knows."
   @spec known_district?(String.t()) :: boolean()
