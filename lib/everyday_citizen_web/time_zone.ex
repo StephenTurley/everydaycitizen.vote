@@ -44,4 +44,9 @@ defmodule EverydayCitizenWeb.TimeZone do
   end
 
   defp label(zone), do: zone |> DateTime.now!() |> Calendar.strftime("%Z")
+
+  @doc "The zone's abbreviation on a given day, at noon (EDT or EST)."
+  @spec label(String.t(), Date.t()) :: String.t()
+  def label(zone, %Date{} = date),
+    do: date |> DateTime.new!(~T[12:00:00], zone) |> Calendar.strftime("%Z")
 end
