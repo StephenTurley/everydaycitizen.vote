@@ -1,7 +1,8 @@
 defmodule EverydayCitizen.Accounts.User do
   @moduledoc """
   An account: an email (sign-in is by emailed link or passkey; there are no
-  passwords), the district key the person last looked up (never an address),
+  passwords), the district key the person last looked up (never an address)
+  and the district map it was found on,
   and their daily email settings. `digest_sent_at` is the cutoff the last
   digest covered.
   """
@@ -12,6 +13,7 @@ defmodule EverydayCitizen.Accounts.User do
     field :email, :string
     field :confirmed_at, :utc_datetime
     field :district, :string
+    field :district_map, :string
     field :digest_enabled, :boolean, default: true
     field :digest_sent_at, :utc_datetime
     # the passkey that started the current session, if any (from its token)
@@ -73,8 +75,9 @@ defmodule EverydayCitizen.Accounts.User do
     change(user, confirmed_at: now)
   end
 
-  @doc "Sets the district key (validated by the caller)."
-  def district_changeset(user, district), do: change(user, district: district)
+  @doc "Sets the district key and its map (validated by the caller)."
+  def district_changeset(user, district, district_map),
+    do: change(user, district: district, district_map: district_map)
 
   @doc "Turns the daily email on or off."
   def digest_changeset(user, enabled?), do: change(user, digest_enabled: enabled?)
