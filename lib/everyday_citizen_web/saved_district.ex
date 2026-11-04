@@ -4,7 +4,8 @@ defmodule EverydayCitizenWeb.SavedDistrict do
   outliving its district map. District lines are redrawn from time to time, and
   a district key from an older map may name a different place, so a saved one
   from an older map is dropped and the visitor is asked to look up their address
-  again. One saved before maps were recorded is taken to be on the current map.
+  again. One saved before maps were recorded is taken to be on the map in use
+  then (`config :everyday_citizen, :legacy_district_map`).
   Runs after `fetch_current_scope_for_user`, which restores an account's
   district into the session.
   """
@@ -23,9 +24,14 @@ defmodule EverydayCitizenWeb.SavedDistrict do
   @impl Plug
   def call(conn, _opts) do
     case {get_session(conn, :district), get_session(conn, :district_map)} do
-      {nil, _} -> conn
-      {_district, nil} -> stamp(conn)
-      {_district, map} -> if map == Reps.district_map(), do: conn, else: expire(conn)
+      {nil, _} ->
+        conn
+
+      {_district, nil} ->
+        if legacy_map() == Reps.district_map(), do: stamp(conn), else: expire(conn)
+
+      {_district, map} ->
+        if map == Reps.district_map(), do: conn, else: expire(conn)
     end
   end
 
@@ -55,6 +61,8 @@ defmodule EverydayCitizenWeb.SavedDistrict do
         |> put_flash(:info, @notice)
     end
   end
+
+  defp legacy_map, do: Application.fetch_env!(:everyday_citizen, :legacy_district_map)
 
   defp user(conn) do
     case conn.assigns[:current_scope] do

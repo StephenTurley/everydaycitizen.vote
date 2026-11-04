@@ -21,6 +21,16 @@ defmodule EverydayCitizen.Adapters.Federal.PrerequisitesTest do
     assert Repo.aggregate(IngestRun, :count) == 0
   end
 
+  test "a missing congress session is waited for up to a day" do
+    job = %Oban.Job{meta: %{"snoozed" => 100}}
+    assert {:snooze, 300} = Prerequisites.check(job, [{:session, fn -> false end}])
+
+    job = %Oban.Job{meta: %{"snoozed" => 288}}
+
+    assert {:error, {:missing_prerequisite, :session}} =
+             Prerequisites.check(job, [{:session, fn -> false end}])
+  end
+
   test "a missing prerequisite becomes an error after 24 snoozes" do
     job = %Oban.Job{meta: %{"snoozed" => 23}}
     assert {:snooze, 300} = Prerequisites.check(job, [{:x, fn -> false end}])

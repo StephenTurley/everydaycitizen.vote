@@ -10,7 +10,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCongress do
   alias EverydayCitizen.Adapters.Federal.Normalize.Congress
   alias EverydayCitizen.Ingest
 
-  @not_listed_snooze 6 * 3600
+  @not_listed_snooze 30 * 60
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do

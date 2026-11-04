@@ -164,6 +164,10 @@ config :everyday_citizen, :federal,
       "https://www2.census.gov/geo/docs/maps-data/data/rel2020/cd-sld/tab20_cd11920_zcta520_natl.txt"
   }
 
+# The district map a saved district with none recorded was found on: districts
+# were saved before maps were recorded (EverydayCitizenWeb.SavedDistrict).
+config :everyday_citizen, :legacy_district_map, "119"
+
 # The jurisdiction public pages show, and how each finds an address's seats.
 config :everyday_citizen, :default_jurisdiction, "federal"
 config :everyday_citizen, :locators, %{"federal" => EverydayCitizen.Adapters.Federal.Geocoder}

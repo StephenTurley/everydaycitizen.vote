@@ -28,8 +28,8 @@ person. See DECISIONS, 2026-11-04.
 
 ## On and after Jan 3
 
-- `sync_congress` waits (snoozes 6 hours) while Congress.gov does not list the
-  new congress; the other jobs wait for its session. Check `fly logs` that it
+- `sync_congress` tries again every 30 minutes while Congress.gov does not
+  list the new congress; the other jobs wait up to a day for its session. Check `fly logs` that it
   ran, and the coverage report the next morning.
 - Visitors and accounts with a saved district see "District lines have changed
   since you last looked up your address" once, and look it up again.

@@ -19,7 +19,8 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncHouseFloor do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
-    congress = args["congress"] || Congresses.current()
+    # nil: each week's own congress, for a schedule that does not name it
+    congress = args["congress"]
 
     Job.run("sync_house_floor", fn run_id, _cursor ->
       args |> today() |> mondays() |> sync(congress, run_id)
@@ -49,6 +50,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncHouseFloor do
 
     case HTTP.get("#{@base}/#{stamp}/#{stamp}.xml", limiter: :house_docs, decode: :raw) do
       {:ok, %{raw: raw, source: source}} ->
+        congress = congress || Congresses.current(monday)
         if HTTP.html?(raw), do: :missing, else: store(raw, source, stamp, congress, run_id)
 
       {:error, {:http_status, 404}} ->

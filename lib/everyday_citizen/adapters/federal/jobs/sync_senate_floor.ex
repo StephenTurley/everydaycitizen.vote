@@ -20,7 +20,8 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncSenateFloor do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
-    congress = args["congress"] || Congresses.current()
+    # nil: each issue's own congress (the last issues before Jan 3 belong to the old one)
+    congress = args["congress"]
 
     Job.run("sync_senate_floor", fn run_id, _cursor -> sync(congress, run_id) end)
   end
@@ -60,7 +61,8 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncSenateFloor do
            CongressGov.get("/daily-congressional-record/#{volume}/#{number}/articles"),
          url when is_binary(url) <- next_meeting_url(articles),
          {:ok, %{raw: raw, source: source}} <- HTTP.get(url, limiter: :congress_gov, decode: :raw) do
-      {:ok, SenateFloor.event(raw, issue_date(at), source, congress)}
+      date = issue_date(at)
+      {:ok, SenateFloor.event(raw, date, source, congress || Congresses.current(date))}
     else
       nil -> {:ok, nil}
       error -> error
