@@ -3,17 +3,25 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.Members do
   Normalizes unitedstates/congress-legislators entries into people and chamber
   memberships (one per term overlapping the session). Legislators with no
   overlapping term are dropped, which also filters the large historical file.
+
+  An appointed senator's term is listed as ending on the special election's date
+  (`"end-type": "special-election"`), but the appointee serves until the winner
+  takes the seat, weeks later. So in the current file (`current: true`), a
+  member's last term ending that way is left open; the source updates it when
+  the successor is sworn in.
   """
   alias EverydayCitizen.Ingest.Records.{Membership, Person, SourceRef}
 
   @jurisdiction "federal"
   @schemes ~w(bioguide lis govtrack thomas)
 
-  @spec records([map()], Date.t(), SourceRef.t()) :: [Person.t() | Membership.t()]
-  def records(legislators, %Date{} = session_start, %SourceRef{} = source) do
+  @spec records([map()], Date.t(), SourceRef.t(), keyword()) :: [Person.t() | Membership.t()]
+  def records(legislators, %Date{} = session_start, %SourceRef{} = source, opts \\ []) do
     in_range =
       for legislator <- legislators,
-          terms = Enum.filter(legislator["terms"] || [], &overlaps?(&1, session_start)),
+          terms = legislator["terms"] || [],
+          terms = if(opts[:current], do: open_last(terms), else: terms),
+          terms = Enum.filter(terms, &overlaps?(&1, session_start)),
           terms != [],
           identifiers = identifiers(legislator["id"]),
           identifiers != [] do
@@ -27,6 +35,20 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.Members do
 
     people ++ memberships
   end
+
+  defp open_last([]), do: []
+
+  defp open_last(terms) do
+    case List.last(terms) do
+      %{"end-type" => "special-election"} = last ->
+        List.replace_at(terms, -1, Map.put(last, "end", nil))
+
+      _ ->
+        terms
+    end
+  end
+
+  defp overlaps?(%{"end" => nil}, _session_start), do: true
 
   defp overlaps?(%{"end" => end_date}, session_start),
     do: Date.compare(Date.from_iso8601!(end_date), session_start) != :lt
@@ -56,7 +78,7 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.Members do
       party: term["party"],
       district: district(term),
       start_date: Date.from_iso8601!(term["start"]),
-      end_date: Date.from_iso8601!(term["end"]),
+      end_date: term["end"] && Date.from_iso8601!(term["end"]),
       source: source
     }
   end
