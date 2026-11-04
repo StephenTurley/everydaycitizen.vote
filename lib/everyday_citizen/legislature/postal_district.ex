@@ -11,6 +11,8 @@ defmodule EverydayCitizen.Legislature.PostalDistrict do
     field :postal_code, :string
     field :district_key, :string
     field :land_share, :float
+    # the district map these rows belong to (`Reps.district_map/0`)
+    field :district_map, :string
     belongs_to :jurisdiction, EverydayCitizen.Legislature.Jurisdiction
     belongs_to :source, EverydayCitizen.Provenance.Source
     timestamps(type: :utc_datetime_usec)

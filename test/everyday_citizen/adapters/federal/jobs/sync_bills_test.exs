@@ -3,6 +3,8 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBillsTest do
   use EverydayCitizen.DataCase, async: false
   use Oban.Testing, repo: EverydayCitizen.Repo
 
+  import EverydayCitizen.FederalDate
+
   alias EverydayCitizen.Adapters.Federal.Job
   alias EverydayCitizen.Adapters.Federal.Jobs.{SyncBill, SyncBills, SyncCongress}
 
@@ -29,12 +31,6 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBillsTest do
           )
       end
     end)
-  end
-
-  defp on(date) do
-    previous = Application.fetch_env!(:everyday_citizen, :federal)
-    Application.put_env(:everyday_citizen, :federal, Keyword.put(previous, :today, date))
-    on_exit(fn -> Application.put_env(:everyday_citizen, :federal, previous) end)
   end
 
   setup do

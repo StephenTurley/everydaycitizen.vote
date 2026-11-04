@@ -16,10 +16,19 @@ defmodule EverydayCitizen.Adapters.Federal.Geocoder do
   @url "https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress"
 
   @impl true
+  def district_map, do: Integer.to_string(Congresses.current())
+
+  @impl true
   def locate(address) do
     congress = Congresses.current()
-    vintage = Application.fetch_env!(:everyday_citizen, :federal)[:census_vintages][congress]
 
+    case Application.fetch_env!(:everyday_citizen, :federal)[:census_vintages][congress] do
+      nil -> {:error, :unavailable}
+      vintage -> locate(address, congress, vintage)
+    end
+  end
+
+  defp locate(address, congress, vintage) do
     params = [address: address, benchmark: "Public_AR_Current", vintage: vintage, format: "json"]
 
     # A person is waiting: one try with a short timeout, no shared rate limit.
@@ -95,7 +104,7 @@ defmodule EverydayCitizen.Adapters.Federal.Geocoder do
   # not "we couldn't find that address". `ZZ` marks an area with no district.
   defp district(geographies, congress) do
     with {:ok, state} <- state(geographies["States"]),
-         {:ok, geoid} <- layer(geographies["#{congress}th Congressional Districts"]),
+         {:ok, geoid} <- layer(geographies["#{ordinal(congress)} Congressional Districts"]),
          {:ok, code} <- code(String.slice(geoid, 2, 2)) do
       key = "#{state}-#{code}"
       {:ok, key, districts_for(key)}

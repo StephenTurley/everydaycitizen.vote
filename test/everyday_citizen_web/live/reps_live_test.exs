@@ -16,6 +16,7 @@ defmodule EverydayCitizenWeb.RepsLiveTest do
       EverydayCitizen.Ingest.write(
         %EverydayCitizen.Ingest.Records.PostalDistricts{
           jurisdiction: "federal",
+          district_map: "119",
           rows: [
             %{postal_code: "52240", district_key: "IA-1", land_share: 1.0},
             %{postal_code: "52031", district_key: "IA-1", land_share: 0.947},

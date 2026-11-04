@@ -26,7 +26,12 @@ defmodule EverydayCitizen.PostalDistrictsTest do
   defp write!(rows) do
     {:ok, _} =
       Ingest.write(
-        %Records.PostalDistricts{jurisdiction: "federal", rows: rows, source: @src},
+        %Records.PostalDistricts{
+          jurisdiction: "federal",
+          district_map: "119",
+          rows: rows,
+          source: @src
+        },
         nil
       )
   end

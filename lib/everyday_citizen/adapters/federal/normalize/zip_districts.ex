@@ -67,14 +67,16 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.ZipDistricts do
     "78" => "VI"
   }
 
-  @spec parse(binary(), SourceRef.t()) :: PostalDistricts.t()
-  def parse(text, %SourceRef{} = source) do
+  @spec parse(binary(), SourceRef.t(), pos_integer()) :: PostalDistricts.t()
+  def parse(text, %SourceRef{} = source, congress) when is_integer(congress) do
     [header | lines] =
       text |> String.replace_prefix("﻿", "") |> String.split(["\r\n", "\n"], trim: true)
 
     columns = String.split(header, "|")
     at = fn name -> Enum.find_index(columns, &(&1 == name)) end
-    {cd, zcta, land} = {at.("GEOID_CD119_20"), at.("GEOID_ZCTA5_20"), at.("AREALAND_PART")}
+
+    {cd, zcta, land} =
+      {at.("GEOID_CD#{congress}_20"), at.("GEOID_ZCTA5_20"), at.("AREALAND_PART")}
 
     parts =
       for line <- lines,
@@ -89,7 +91,12 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.ZipDistricts do
       |> Enum.group_by(&elem(&1, 0))
       |> Enum.flat_map(fn {zip, zip_parts} -> shares(zip, zip_parts) end)
 
-    %PostalDistricts{jurisdiction: "federal", rows: rows, source: source}
+    %PostalDistricts{
+      jurisdiction: "federal",
+      district_map: Integer.to_string(congress),
+      rows: rows,
+      source: source
+    }
   end
 
   defp shares(zip, parts) do
