@@ -186,6 +186,7 @@ defmodule EverydayCitizen.Legislature do
       |> where([m], is_nil(m.end_date) or m.end_date >= ^on)
       |> select([m, b, _j, p], %{person: p, membership: m, body: b})
       |> Repo.all()
+      |> without_outgoing(on)
 
     rank = seats |> Enum.with_index() |> Map.new()
 
@@ -194,6 +195,19 @@ defmodule EverydayCitizen.Legislature do
     |> Enum.sort_by(
       &{Map.fetch!(rank, {&1.body.external_id, &1.membership.district}), &1.person.name}
     )
+  end
+
+  # A term ends on the day the next one starts: on that day, a member whose term
+  # ends gives way to one starting in the same seat (body and district).
+  defp without_outgoing(rows, on) do
+    starting =
+      for %{membership: %{start_date: ^on} = m, body: b} <- rows,
+          into: MapSet.new(),
+          do: {b.id, m.district}
+
+    Enum.reject(rows, fn %{membership: m, body: b} ->
+      m.end_date == on and MapSet.member?(starting, {b.id, m.district})
+    end)
   end
 
   defp seat_condition(seats) do
@@ -227,6 +241,7 @@ defmodule EverydayCitizen.Legislature do
       |> where([m], is_nil(m.end_date) or m.end_date >= ^on)
       |> select([m, b, _j, p], %{person: p, membership: m, body: b})
       |> Repo.all()
+      |> without_outgoing(on)
 
     rows
     |> Enum.uniq_by(& &1.person.id)
