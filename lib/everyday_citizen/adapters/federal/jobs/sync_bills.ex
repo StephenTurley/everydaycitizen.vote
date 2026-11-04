@@ -21,7 +21,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBills do
   """
   use Oban.Worker, queue: :ingest, max_attempts: 3
 
-  alias EverydayCitizen.Adapters.Federal.{BulkBatch, CongressGov, Job, Prerequisites}
+  alias EverydayCitizen.Adapters.Federal.{BulkBatch, Congresses, CongressGov, Job, Prerequisites}
   alias EverydayCitizen.Adapters.Federal.Jobs.{BackfillBillText, BulkBillsChunk, SyncBill}
   alias EverydayCitizen.Provenance
 
@@ -34,7 +34,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBills do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
-    congress = args["congress"] || Application.fetch_env!(:everyday_citizen, :federal)[:congress]
+    congress = args["congress"] || Congresses.current()
 
     with :ok <-
            Prerequisites.check(job, [

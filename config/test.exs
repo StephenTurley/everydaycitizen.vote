@@ -63,6 +63,9 @@ config :everyday_citizen, :federal_rate_limits,
 
 config :everyday_citizen, :congress_gov_api_key, "test-key"
 
+# the date the sitting congress is worked out from (Federal.Congresses)
+config :everyday_citizen, :federal, today: ~D[2026-11-04]
+
 config :everyday_citizen, :anthropic_req_options,
   plug: {Req.Test, EverydayCitizen.Claude},
   retry: false

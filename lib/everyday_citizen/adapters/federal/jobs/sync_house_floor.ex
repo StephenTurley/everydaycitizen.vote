@@ -12,14 +12,14 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncHouseFloor do
 
   require Logger
 
-  alias EverydayCitizen.Adapters.Federal.{HTTP, Job}
+  alias EverydayCitizen.Adapters.Federal.{Congresses, HTTP, Job}
   alias EverydayCitizen.Adapters.Federal.Normalize.HouseFloor
 
   @base "https://docs.house.gov/floor/Download.aspx?file=/billsthisweek"
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
-    congress = args["congress"] || Application.fetch_env!(:everyday_citizen, :federal)[:congress]
+    congress = args["congress"] || Congresses.current()
 
     Job.run("sync_house_floor", fn run_id, _cursor ->
       args |> today() |> mondays() |> sync(congress, run_id)

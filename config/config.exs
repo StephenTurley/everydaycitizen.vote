@@ -153,7 +153,7 @@ config :sentry,
 config :everyday_citizen, :ingest_adapters, [EverydayCitizen.Adapters.Federal.Jobs]
 
 config :everyday_citizen, :federal,
-  congress: 119,
+  # the sitting congress comes from the date (Federal.Congresses)
   # Census Geocoder geography vintage holding each congress's districts (the
   # current vintage already has the next congress's)
   census_vintages: %{119 => "ACS2025_Current"}

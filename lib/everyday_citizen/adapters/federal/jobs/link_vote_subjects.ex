@@ -9,7 +9,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.LinkVoteSubjects do
   """
   use Oban.Worker, queue: :ingest, max_attempts: 3
 
-  alias EverydayCitizen.Adapters.Federal.{CongressGov, Job}
+  alias EverydayCitizen.Adapters.Federal.{Congresses, CongressGov, Job}
   alias EverydayCitizen.Adapters.Federal.Normalize.VoteSubjects
   alias EverydayCitizen.Ingest
   alias EverydayCitizen.Ingest.Records.VoteSubject
@@ -17,7 +17,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.LinkVoteSubjects do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
-    congress = args["congress"] || Application.fetch_env!(:everyday_citizen, :federal)[:congress]
+    congress = args["congress"] || Congresses.current()
 
     Job.run("link_vote_subjects", fn run_id, _cursor -> link(congress, run_id) end)
   end

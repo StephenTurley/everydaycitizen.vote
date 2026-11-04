@@ -13,14 +13,14 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncSenateFloor do
 
   require Logger
 
-  alias EverydayCitizen.Adapters.Federal.{CongressGov, HTTP, Job}
+  alias EverydayCitizen.Adapters.Federal.{Congresses, CongressGov, HTTP, Job}
   alias EverydayCitizen.Adapters.Federal.Normalize.SenateFloor
 
   @issues 3
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
-    congress = args["congress"] || Application.fetch_env!(:everyday_citizen, :federal)[:congress]
+    congress = args["congress"] || Congresses.current()
 
     Job.run("sync_senate_floor", fn run_id, _cursor -> sync(congress, run_id) end)
   end

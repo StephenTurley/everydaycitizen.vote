@@ -9,6 +9,7 @@ defmodule EverydayCitizen.Adapters.Federal.Geocoder do
   """
   @behaviour EverydayCitizen.Reps.Locator
 
+  alias EverydayCitizen.Adapters.Federal.Congresses
   alias EverydayCitizen.Adapters.Federal.HTTP
   alias EverydayCitizen.Adapters.Federal.States
 
@@ -16,7 +17,7 @@ defmodule EverydayCitizen.Adapters.Federal.Geocoder do
 
   @impl true
   def locate(address) do
-    congress = Application.fetch_env!(:everyday_citizen, :federal)[:congress]
+    congress = Congresses.current()
     vintage = Application.fetch_env!(:everyday_citizen, :federal)[:census_vintages][congress]
 
     params = [address: address, benchmark: "Public_AR_Current", vintage: vintage, format: "json"]

@@ -20,4 +20,10 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCongressTest do
     assert Repo.aggregate(Session, :count) == 3
     assert EverydayCitizen.Provenance.last_succeeded_run("federal", "sync_congress")
   end
+
+  test "waits while the congress is not listed yet" do
+    Req.Test.stub(EverydayCitizen.Federal, fn conn -> Plug.Conn.send_resp(conn, 404, "{}") end)
+
+    assert {:snooze, 21_600} = perform_job(SyncCongress, %{"congress" => 120})
+  end
 end

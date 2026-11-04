@@ -4,7 +4,7 @@ defmodule EverydayCitizen.Adapters.Federal.Coverage do
   `expected_fun` asks the source (`{:ok, n} | {:error, reason}`); `actual_fun`
   counts what is stored. Tolerance is a fraction we may lag the source by.
   """
-  alias EverydayCitizen.Adapters.Federal.{CongressGov, Sessions, Voteview}
+  alias EverydayCitizen.Adapters.Federal.{Congresses, CongressGov, Sessions, Voteview}
   alias EverydayCitizen.Adapters.Federal.Normalize.SenateVoteview
   alias EverydayCitizen.{Legislation, Legislature, Votes}
 
@@ -127,7 +127,7 @@ defmodule EverydayCitizen.Adapters.Federal.Coverage do
   defp terms_list(items) when is_list(items), do: items
   defp terms_list(_), do: []
 
-  defp congress, do: Application.fetch_env!(:everyday_citizen, :federal)[:congress]
+  defp congress, do: Congresses.current()
 
   defp count_bills(congress) do
     case Legislature.get_session(@jurisdiction, "#{congress}") do

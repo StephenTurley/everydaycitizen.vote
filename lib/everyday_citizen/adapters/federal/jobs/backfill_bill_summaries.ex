@@ -7,7 +7,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.BackfillBillSummaries do
   """
   use Oban.Worker, queue: :ingest, max_attempts: 3
 
-  alias EverydayCitizen.Adapters.Federal.{BulkBatch, Job}
+  alias EverydayCitizen.Adapters.Federal.{BulkBatch, Congresses, Job}
   alias EverydayCitizen.Adapters.Federal.Jobs.BulkBillsChunk
 
   # Counting the zips takes minutes; it must end before Lifeline (2 h) would
@@ -17,7 +17,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.BackfillBillSummaries do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
-    congress = args["congress"] || Application.fetch_env!(:everyday_citizen, :federal)[:congress]
+    congress = args["congress"] || Congresses.current()
 
     BulkBatch.run(
       %{

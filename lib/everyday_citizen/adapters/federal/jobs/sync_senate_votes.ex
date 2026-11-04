@@ -9,7 +9,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncSenateVotes do
   """
   use Oban.Worker, queue: :ingest, max_attempts: 3
 
-  alias EverydayCitizen.Adapters.Federal.{Job, Prerequisites, Sessions, Voteview}
+  alias EverydayCitizen.Adapters.Federal.{Congresses, Job, Prerequisites, Sessions, Voteview}
   alias EverydayCitizen.Adapters.Federal.Normalize.SenateVoteview
   alias EverydayCitizen.{Ingest, Votes}
 
@@ -17,7 +17,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncSenateVotes do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
-    congress = args["congress"] || Application.fetch_env!(:everyday_citizen, :federal)[:congress]
+    congress = args["congress"] || Congresses.current()
     checks = [Prerequisites.child_sessions(congress), Prerequisites.people()]
 
     with :ok <- Prerequisites.check(job, checks), do: sync(congress, args)

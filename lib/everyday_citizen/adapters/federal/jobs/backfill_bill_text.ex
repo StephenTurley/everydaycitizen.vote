@@ -11,7 +11,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.BackfillBillText do
 
   require Logger
 
-  alias EverydayCitizen.Adapters.Federal.{Bulk, BulkBatch, Job, Sessions}
+  alias EverydayCitizen.Adapters.Federal.{Bulk, BulkBatch, Congresses, Job, Sessions}
   alias EverydayCitizen.Adapters.Federal.Jobs.{BulkBillTextChunk, SyncBillText}
   alias EverydayCitizen.Legislation
 
@@ -24,7 +24,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.BackfillBillText do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
-    congress = args["congress"] || Application.fetch_env!(:everyday_citizen, :federal)[:congress]
+    congress = args["congress"] || Congresses.current()
 
     BulkBatch.run(
       %{
