@@ -77,4 +77,51 @@ defmodule EverydayCitizen.Adapters.Federal.Normalize.MembersTest do
     assert people != []
     assert Enum.all?(rest, &match?(%Membership{}, &1))
   end
+
+  describe "an appointed senator awaiting a special election's winner" do
+    defp appointee(terms) do
+      %{
+        "id" => %{"bioguide" => "H001104"},
+        "name" => %{"first" => "Jon", "last" => "Husted", "official_full" => "Jon Husted"},
+        "terms" => terms
+      }
+    end
+
+    @appointed %{
+      "type" => "sen",
+      "start" => "2025-01-21",
+      "end" => "2026-11-03",
+      "how" => "appointment",
+      "end-type" => "special-election",
+      "state" => "OH",
+      "party" => "Republican"
+    }
+
+    test "stays a member past the election date while listed as current" do
+      records =
+        Members.records([appointee([@appointed])], @session_start, source(), current: true)
+
+      assert [%Membership{start_date: ~D[2025-01-21], end_date: nil}] =
+               memberships(records, "H001104")
+    end
+
+    test "keeps the listed end date in the historical file" do
+      records = Members.records([appointee([@appointed])], @session_start, source())
+      assert [%Membership{end_date: ~D[2026-11-03]}] = memberships(records, "H001104")
+    end
+
+    test "keeps the listed end date when a later term follows" do
+      elected =
+        %{@appointed | "start" => "2026-12-01", "end" => "2029-01-03"}
+        |> Map.drop(["how", "end-type"])
+
+      records =
+        Members.records([appointee([@appointed, elected])], @session_start, source(),
+          current: true
+        )
+
+      assert [%Membership{end_date: ~D[2026-11-03]}, %Membership{end_date: ~D[2029-01-03]}] =
+               memberships(records, "H001104")
+    end
+  end
 end

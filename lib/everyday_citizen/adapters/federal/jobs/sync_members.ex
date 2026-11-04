@@ -35,7 +35,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncMembers do
            {:ok, committees, src_committees} <- fetch("committees-current"),
            {:ok, seats, src_seats} <- fetch("committee-membership-current") do
         member_records =
-          Members.records(current, session_start, src_current) ++
+          Members.records(current, session_start, src_current, current: true) ++
             Members.records(historical, session_start, src_historical)
 
         committee_records = Committees.records(committees, seats, src_committees, src_seats)
