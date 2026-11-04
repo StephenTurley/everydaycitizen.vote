@@ -16,6 +16,11 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBills do
   the next run loads again (cheaply: unchanged bills are skipped). Bulk files lag
   the API by hours; the next run's 2-day overlap picks up what changed since.
 
+  Until 30 days after a new congress sits, the previous congress's bills are
+  listed too (`Federal.Congresses.syncing/0`), so a bill passed in December
+  still gets its signing or veto; the first-run bulk load covers only the
+  sitting congress.
+
   Snoozes until the congress session is stored and a members sync has succeeded
   (sponsorships need people).
   """
@@ -34,21 +39,28 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBills do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
-    congress = args["congress"] || Congresses.current()
+    congresses = if args["congress"], do: [args["congress"]], else: Congresses.syncing()
+    congress = hd(congresses)
 
     with :ok <-
            Prerequisites.check(job, [
              Prerequisites.session(congress),
              Prerequisites.members_synced()
            ]) do
-      sync(congress)
+      sync(congresses)
     end
   end
 
-  defp sync(congress) do
+  # The listings share one cursor: each lists what changed since the last run.
+  defp sync([congress | _] = congresses) do
     case Provenance.last_succeeded_run("federal", "sync_bills") do
-      nil -> bulk(congress)
-      _ -> Job.run("sync_bills", fn run_id, cursor -> list(congress, run_id, cursor) end)
+      nil ->
+        bulk(congress)
+
+      _ ->
+        Job.run("sync_bills", fn run_id, cursor ->
+          {:ok, Map.new(congresses, &{to_string(&1), list(&1, run_id, cursor)})}
+        end)
     end
   end
 
@@ -63,7 +75,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncBills do
         n + 1
       end)
 
-    {:ok, %{enqueued: count}}
+    %{enqueued: count}
   end
 
   # First run: the bulk load, as chunk jobs (`BulkBatch`). `sync_bills` is recorded
