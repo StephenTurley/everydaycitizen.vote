@@ -21,6 +21,8 @@ defmodule EverydayCitizen.Adapters.Federal.BillSections do
   `format/0` numbers this output shape, so text split by an older one is redone.
   """
 
+  alias EverydayCitizen.Adapters.Federal.XmlText
+
   @containers ~w(division subdivision title subtitle part subpart chapter subchapter)
   @levels %{
     "subsection" => 0,
@@ -47,7 +49,7 @@ defmodule EverydayCitizen.Adapters.Federal.BillSections do
 
   @spec parse(binary()) :: {:ok, [entry()]} | {:error, term()}
   def parse(xml) when is_binary(xml) do
-    case Saxy.SimpleForm.parse_string(xml) do
+    case xml |> XmlText.drop_nul_refs() |> Saxy.SimpleForm.parse_string() do
       {:ok, root} -> {:ok, root |> walk([]) |> Enum.reverse()}
       {:error, _} = error -> error
     end

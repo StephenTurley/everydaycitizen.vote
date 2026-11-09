@@ -22,6 +22,10 @@ defmodule EverydayCitizen.Adapters.Federal.XmlTextTest do
     assert {:error, _} = XmlText.plain_text(File.read!("#{@dir}/malformed.xml"))
   end
 
+  test "plain_text drops NUL character references (which the database cannot store)" do
+    assert {:ok, "a b\nc"} = XmlText.plain_text("<bill><p>a&#0; b&#x00;</p><p>c</p></bill>")
+  end
+
   test "schema detects USLM namespaces" do
     assert XmlText.schema(File.read!("#{@dir}/uslm_sample.xml")) == "uslm"
     assert XmlText.schema(File.read!("#{@dir}/BILLS-119hr22ih.xml")) == "other"

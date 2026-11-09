@@ -121,10 +121,10 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.BackfillBillTextTest do
   end
 
   test "an entry that raises while storing falls back and the run continues" do
-    # A NUL character reference survives parsing; Postgres rejects NUL in text.
+    # A NUL byte in a comment survives parsing; Postgres rejects NUL in the stored XML.
     stub(
       zip([
-        {"BILLS-119hr22eh.xml", "<bill><legis-body>x&#0;y</legis-body></bill>"},
+        {"BILLS-119hr22eh.xml", <<"<bill><!-- a", 0, "b --><legis-body>xy</legis-body></bill>">>},
         {"BILLS-119hr22ih.xml", File.read!(@fixture)}
       ])
     )

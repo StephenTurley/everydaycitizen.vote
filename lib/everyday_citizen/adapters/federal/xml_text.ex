@@ -10,7 +10,7 @@ defmodule EverydayCitizen.Adapters.Federal.XmlText do
 
   @spec plain_text(binary()) :: {:ok, String.t()} | {:error, term()}
   def plain_text(xml) when is_binary(xml) do
-    case Saxy.parse_string(xml, __MODULE__, {[], []}) do
+    case Saxy.parse_string(drop_nul_refs(xml), __MODULE__, {[], []}) do
       {:ok, {lines, current}} ->
         {:ok, [current | lines] |> Enum.reverse() |> finish_lines() |> Enum.join("\n")}
 
@@ -18,6 +18,14 @@ defmodule EverydayCitizen.Adapters.Federal.XmlText do
         {:error, reason}
     end
   end
+
+  @doc """
+  `xml` without NUL character references (`&#0;`, `&#x0;`), which some bill texts
+  carry: XML forbids the character, Saxy rejects the document, and the database
+  cannot store it.
+  """
+  @spec drop_nul_refs(binary()) :: binary()
+  def drop_nul_refs(xml), do: String.replace(xml, ~r/&#(?:0+|[xX]0+);/, "")
 
   @doc "Returns uslm when the document declares a USLM namespace, otherwise other."
   @spec schema(binary()) :: String.t()
