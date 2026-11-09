@@ -8,7 +8,7 @@ defmodule EverydayCitizen.CalendarUpcomingTest do
   @src Records.SourceRef.new("https://x.test/up", "u")
   @today ~D[2026-10-25]
 
-  defp event!(id, classification, at, bills) do
+  defp event!(id, classification, at, bills, status \\ "scheduled") do
     {:ok, _} =
       Ingest.write(
         %Records.Event{
@@ -16,6 +16,7 @@ defmodule EverydayCitizen.CalendarUpcomingTest do
           body_external_id: "senate",
           external_id: id,
           classification: classification,
+          status: status,
           title: "Event #{id}",
           date: at |> DateTime.shift_zone!("America/New_York") |> DateTime.to_date(),
           start_at: at,
@@ -48,6 +49,16 @@ defmodule EverydayCitizen.CalendarUpcomingTest do
     assert next.external_id == "bare"
 
     assert %{items: [%{external_id: "soon"}]} = Calendar.upcoming_floor(1, @today)
+  end
+
+  test "called-off floor events are neither items nor next" do
+    event!("canceled", "floor", ~U[2026-10-26 14:00:00Z], ["119-s-5"], "canceled")
+    event!("removed", "floor", ~U[2026-10-26 15:00:00Z], ["119-s-5"], "removed")
+    event!("postponed", "floor", ~U[2026-10-26 16:00:00Z], ["119-s-5"], "postponed")
+    event!("rescheduled", "floor", ~U[2026-10-27 14:00:00Z], ["119-s-5"], "rescheduled")
+
+    assert %{items: [%{external_id: "rescheduled"}], next: %{external_id: "rescheduled"}} =
+             Calendar.upcoming_floor(5, @today)
   end
 
   test "nothing upcoming: no items and no next" do

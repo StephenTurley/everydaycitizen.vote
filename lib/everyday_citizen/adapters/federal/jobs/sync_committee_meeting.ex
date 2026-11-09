@@ -3,7 +3,9 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeeting do
   Fetches and stores one committee meeting (`congress`, `chamber`, `event_id`).
 
   A meeting whose committee is not stored is written without a body: an unknown
-  committee must not fail the event.
+  committee must not fail the event. A meeting the API no longer has (404) was
+  taken off the schedule: a stored one is kept with status `removed`, and the
+  job succeeds, since retrying cannot bring it back.
   """
   use Oban.Worker, queue: :ingest, priority: 5, max_attempts: 5
 
@@ -11,6 +13,7 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeeting do
 
   alias EverydayCitizen.Adapters.Federal.CongressGov
   alias EverydayCitizen.Adapters.Federal.Normalize.CommitteeMeeting
+  alias EverydayCitizen.Calendar
   alias EverydayCitizen.Ingest
   alias EverydayCitizen.Legislature
 
@@ -18,9 +21,15 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeeting do
   def perform(%Oban.Job{
         args: %{"congress" => congress, "chamber" => chamber, "event_id" => id} = args
       }) do
-    with {:ok, detail, source} <-
-           CongressGov.get("/committee-meeting/#{congress}/#{chamber}/#{id}") do
-      write(CommitteeMeeting.event(detail, source), id, args["run_id"])
+    case CongressGov.get("/committee-meeting/#{congress}/#{chamber}/#{id}") do
+      {:ok, detail, source} ->
+        write(CommitteeMeeting.event(detail, source), id, args["run_id"])
+
+      {:error, {:http_status, 404}} ->
+        Calendar.mark_removed("federal", CommitteeMeeting.external_id(id))
+
+      error ->
+        error
     end
   end
 

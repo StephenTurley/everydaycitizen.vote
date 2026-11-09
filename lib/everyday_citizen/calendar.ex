@@ -7,6 +7,9 @@ defmodule EverydayCitizen.Calendar do
   alias EverydayCitizen.Legislature.{Body, Jurisdiction, Membership}
   alias EverydayCitizen.Repo
 
+  # statuses of events that will not take place on their date
+  @called_off ~w(canceled cancelled postponed removed)
+
   @doc "Events dated in `[from, to)`, earliest first."
   @spec list_events(Date.t(), Date.t()) :: [Event.t()]
   def list_events(from, to) do
@@ -14,6 +17,21 @@ defmodule EverydayCitizen.Calendar do
     |> where([e], e.date >= ^from and e.date < ^to)
     |> earliest_first()
     |> Repo.all()
+  end
+
+  @doc """
+  Marks the jurisdiction's event `removed`: its source no longer lists it. The
+  row and its source are kept. `:ok` whether or not the event is stored.
+  """
+  @spec mark_removed(String.t(), String.t()) :: :ok
+  def mark_removed(jurisdiction_key, external_id) do
+    jurisdiction = from j in Jurisdiction, where: j.key == ^jurisdiction_key, select: j.id
+
+    Event
+    |> where([e], e.external_id == ^external_id and e.jurisdiction_id in subquery(jurisdiction))
+    |> Repo.update_all(set: [status: "removed", updated_at: DateTime.utc_now()])
+
+    :ok
   end
 
   @doc "Source URLs of the events dated in `[from, to)`, earliest first."
@@ -51,7 +69,8 @@ defmodule EverydayCitizen.Calendar do
   end
 
   @doc """
-  What is coming up on the floor from `today` on: `items`, the first `limit`
+  What is coming up on the floor from `today` on, leaving out canceled,
+  postponed and removed events: `items`, the first `limit`
   floor events with bills linked (earliest first, with their body and bills),
   and `next`, the earliest floor event with or without bills (nil if none).
   """
@@ -63,6 +82,7 @@ defmodule EverydayCitizen.Calendar do
     upcoming =
       Event
       |> where([e], e.classification == "floor" and e.date >= ^today)
+      |> where([e], e.status not in @called_off)
       |> earliest_first()
 
     with_bills = from eb in EventBill, select: eb.event_id
