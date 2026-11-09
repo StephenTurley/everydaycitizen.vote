@@ -95,6 +95,21 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeetingsTest do
       assert :ok = perform_job(SyncCommitteeMeeting, args("house", "118405"))
       assert Repo.one!(Event).status == "canceled"
     end
+
+    test "a stored meeting the source no longer has is kept as removed" do
+      stub_detail("house_118809")
+      assert :ok = perform_job(SyncCommitteeMeeting, args("house", "118809"))
+
+      stub_not_found()
+      assert :ok = perform_job(SyncCommitteeMeeting, args("house", "118809"))
+      assert Repo.one!(Event).status == "removed"
+    end
+
+    test "a meeting the source no longer has and never stored is not an error" do
+      stub_not_found()
+      assert :ok = perform_job(SyncCommitteeMeeting, args("senate", "338808"))
+      assert Repo.aggregate(Event, :count) == 0
+    end
   end
 
   describe "SyncCommitteeMeetings" do
@@ -184,6 +199,14 @@ defmodule EverydayCitizen.Adapters.Federal.Jobs.SyncCommitteeMeetingsTest do
       conn
       |> Plug.Conn.put_resp_content_type("application/json")
       |> Plug.Conn.send_resp(200, body)
+    end)
+  end
+
+  defp stub_not_found do
+    Req.Test.stub(EverydayCitizen.Federal, fn conn ->
+      conn
+      |> Plug.Conn.put_status(404)
+      |> Req.Test.json(%{"error" => "No Meeting matches the given query."})
     end)
   end
 

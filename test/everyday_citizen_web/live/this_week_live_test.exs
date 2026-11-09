@@ -202,6 +202,37 @@ defmodule EverydayCitizenWeb.ThisWeekLiveTest do
     assert has_element?(view, "[data-term=pro-forma]", "brief formal meeting")
   end
 
+  test "a called-off meeting says so; a scheduled one has no status line", %{conn: conn} do
+    for {id, status, hour} <- [
+          {"m-canceled", "canceled", 10},
+          {"m-postponed", "postponed", 11},
+          {"m-removed", "removed", 12},
+          {"m-on", "scheduled", 13}
+        ] do
+      {:ok, _} =
+        EverydayCitizen.Ingest.write(
+          %EverydayCitizen.Ingest.Records.Event{
+            jurisdiction: "federal",
+            external_id: id,
+            classification: "hearing",
+            status: status,
+            title: "Hearing #{id}",
+            date: ~D[2026-10-26],
+            start_at: DateTime.new!(~D[2026-10-26], Time.new!(hour, 0, 0)),
+            source: EverydayCitizen.Ingest.Records.SourceRef.new("https://x.test/e", "e")
+          },
+          nil
+        )
+    end
+
+    {:ok, view, _html} = live(conn, ~p"/this-week?from=2026-10-26")
+
+    assert has_element?(view, "[data-status=canceled]", "Canceled")
+    assert has_element?(view, "[data-status=postponed]", "Postponed")
+    assert has_element?(view, "[data-status=removed]", "Taken off the official schedule")
+    refute has_element?(view, "[data-status=scheduled]")
+  end
+
   test "signed out, there is no Followed filter", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/this-week?from=2026-10-26&followed=1")
     refute has_element?(view, "a", "Followed")

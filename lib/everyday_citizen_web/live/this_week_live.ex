@@ -69,6 +69,12 @@ defmodule EverydayCitizenWeb.ThisWeekLive do
     ~p"/this-week?#{params}"
   end
 
+  # a status worth saying; a scheduled or rescheduled event needs none
+  defp status_label(status) when status in ["canceled", "cancelled"], do: "Canceled"
+  defp status_label("postponed"), do: "Postponed"
+  defp status_label("removed"), do: "Taken off the official schedule"
+  defp status_label(_status), do: nil
+
   defp time(%{start_at: nil}, _zone), do: "All day"
 
   defp time(event, zone),
@@ -170,6 +176,13 @@ defmodule EverydayCitizenWeb.ThisWeekLive do
                   do: event.body.name}
               </span>
               <p class="m-0 text-[16px] font-semibold leading-snug lg:col-start-2">{event.title}</p>
+              <p
+                :if={status_label(event.status)}
+                data-status={event.status}
+                class="m-0 text-[14px] font-semibold text-floor-ink-2 lg:col-start-2"
+              >
+                {status_label(event.status)}
+              </p>
               <p
                 :if={pro_forma?(event)}
                 data-term="pro-forma"

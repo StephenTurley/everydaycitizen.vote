@@ -292,3 +292,6 @@ The sitting congress comes from the date (`Federal.Congresses`: Jan 3 of odd yea
 
 ## 2026-11-04 — An appointed senator stays listed until the successor is sworn in
 congress-legislators lists an appointee's term as ending on the special election's date (`"end-type": "special-election"`; Jon Husted's on Nov 3, 2026), so Ohio's reps lost a senator the morning after the election, though an appointee serves until the winner is certified and sworn in. In the current file only, a member's last term that ends that way is stored with no end date; the source replaces it with the real date (or a new term) when the seat changes hands. The historical file keeps its dates.
+
+## 2026-11-09 — A meeting the source deletes is kept as removed; called-off events say so
+Congress.gov deleted a Senate committee meeting (its detail page answers 404 and the listing dropped it), but the stored copy stayed on the calendar as scheduled and the daily re-fetch failed five times a day in Sentry. A 404 for a meeting now marks the stored event `removed` (the row and its source are kept, as for House floor items) and the job succeeds. Statuses were stored but never shown: "This week" now labels canceled, postponed and removed events ("Taken off the official schedule"), and the home page's coming-up list leaves them out.
